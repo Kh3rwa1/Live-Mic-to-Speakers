@@ -5,43 +5,25 @@ import android.os.Handler;
 import android.os.Looper;
 
 public class GetSmartAdmob {
-    private final Context context;
     private final SmartListener listener;
-    private final String[] adsId;
-
-    public GetSmartAdmob(Context context, String[] adsId, SmartListener listener) {
-        this.context = context != null ? context.getApplicationContext() : null;
-        this.adsId = adsId;
-        this.listener = listener;
-        if (context != null) {
-            AdsHandler.getInstance(context);
-        }
+    private final String[] ids;
+    public GetSmartAdmob(Context context, String[] ids, SmartListener listener) {
+        this.ids = ids; this.listener = listener;
+        if (context != null) AdsHandler.getInstance(context);
     }
-
     public GetSmartAdmob execute() {
-        boolean success = false;
-        try {
-            if (adsId != null) {
-                if (adsId.length > 0) AdsHandler.bannerId = adsId[0];
-                if (adsId.length > 1) AdsHandler.nativeId = adsId[1];
-                if (adsId.length > 2) AdsHandler.interstitialId = adsId[2];
-                if (adsId.length > 3) AdsHandler.openAds = adsId[3];
-                if (adsId.length > 4) AdsHandler.rewardedId = adsId[4];
-            }
-            if (AdsHandler.openAds != null && !AdsHandler.openAds.isEmpty() && !AdsHandler.openAds.equals("0")) {
-                AdsApplication.appOpenManager = new AppOpenManager(AdsApplication.getInstance());
-            }
-            success = true;
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (ids != null) {
+            if (ids.length > 0) AdsHandler.bannerId = ids[0];
+            if (ids.length > 1) AdsHandler.nativeId = ids[1];
+            if (ids.length > 2) AdsHandler.interstitialId = ids[2];
+            if (ids.length > 3) AdsHandler.openAds = ids[3];
+            if (ids.length > 4) AdsHandler.rewardedId = ids[4];
         }
-
-        final boolean finalSuccess = success;
-        new Handler(Looper.getMainLooper()).post(() -> {
-            if (listener != null) {
-                listener.onFinish(finalSuccess);
-            }
-        });
+        if (AdsApplication.appOpenManager == null && AdsApplication.getInstance() != null
+                && AdsHandler.openAds != null && !AdsHandler.openAds.isEmpty() && !"0".equals(AdsHandler.openAds)) {
+            AdsApplication.appOpenManager = new AppOpenManager(AdsApplication.getInstance());
+        }
+        new Handler(Looper.getMainLooper()).post(() -> { if (listener != null) listener.onFinish(true); });
         return this;
     }
 }

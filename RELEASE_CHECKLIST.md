@@ -1,31 +1,50 @@
 # Release gates — do not publish on source review alone
 
-## Automated
-- [ ] GitHub build, JVM tests and Android lint pass on the final commit.
-- [ ] API 34 instrumentation checks pass on the final commit.
-- [ ] Signed release build is installable; run tests against the release variant as well as debug.
+These are release sign-off checks, not a list of unimplemented features. Record evidence for the final commit before marking a gate complete.
+
+## Implemented safeguards to verify
+
+- Serialized live-audio sessions and asynchronous recorder preparation/finalization.
+- Cancellation while preparing, invalid-recording cleanup and stale-UI callback suppression.
+- Shared focus-aware/noisy-route-aware previews and background pause/stop behavior.
+- UMP-gated SDK initialization/ad requests, measurement deferral, screen-owned ad cleanup and privacy-options access.
+- Exactly-once fullscreen completion after resume, with pending navigation cancelled on destruction.
+- Off-main history/MediaStore loading, content-URI playback and corrected search/filter identity.
+- Read-only recording sharing with a narrow provider allowlist; unrelated private/cache/external files are excluded.
+- Additional JVM and Android recording/filter/sharing tests, debug/release builds and an API 24/34 CI matrix.
+
+## Automated and release builds
+
+- [ ] Build, JVM tests and Android lint pass on the final commit, for both debug and release where configured.
+- [ ] API 24 and API 34 instrumentation checks pass on the final commit.
+- [ ] Signed release build is installable; run device tests against the actual release artifact.
 
 ## Real-device audio matrix
+
 - [ ] Test representative Android 7/12/14 and current Android devices.
-- [ ] Open and leave live mic without starting: no retained microphone resources.
-- [ ] Rapidly start/stop/restart repeatedly: only one session, no stale UI, no crash.
-- [ ] Deny microphone permission, grant it later, and revoke it in Settings.
+- [ ] Open/leave live mic without starting: no microphone resources retained.
+- [ ] Rapidly start/stop/restart and release hold-to-record during preparation: no overlap, late capture or stale UI.
+- [ ] Deny/grant/revoke microphone and audio-library permissions, including Settings revocation.
 - [ ] Use the phone speaker with Bluetooth permission denied.
 - [ ] Test wired/USB/Bluetooth outputs; disconnect and reconnect during audio.
-- [ ] Measure actual end-to-end latency for each output route; publish measured ranges, not "zero latency".
-- [ ] Verify low-volume startup guidance; test feedback resistance cautiously, never at high volume.
-- [ ] Test calls, audio-focus loss, screen lock, Home, Back, and process recreation.
-- [ ] Play a saved file, pause, leave and return: retain position and paused state.
-- [ ] Make short/cancelled recordings and simulate storage-full/finalization errors: no corrupt file represented as saved.
-- [ ] Validate saved M4A files with another player; confirm export/share MIME types and file-provider paths.
-- [ ] Test TalkBack start/stop, hold-to-record fallback, large text and small screens.
+- [ ] Measure end-to-end latency for each route; publish measured ranges, not “zero latency”.
+- [ ] Verify low-volume guidance; test feedback resistance cautiously, never at high volume.
+- [ ] Test calls, focus loss/ducking, headphone unplug, screen lock, Home, Back and process recreation across every player/recorder.
+- [ ] Verify saved-track and preview pause/resume behavior, position, and filter changes while a track plays.
+- [ ] Test short/cancelled recordings, storage-full and finalization failures; no corrupt file shown as saved.
+- [ ] Validate M4A files in another player. Long-press to share; verify target apps can read but not modify the source, with no raw file URI exposure. Include older/misnamed recordings and unavailable sharing apps.
+- [ ] Confirm legacy public-folder files stay playable when accessible; sharing them should explain the Files-app alternative, not broaden provider access.
+- [ ] Test large audio libraries, empty libraries, missing files, search and rapid navigation while loading.
+- [ ] Test TalkBack, hold-to-record's double-tap fallback, large text, small screens and localization.
 
-## Remaining product/security work
-- [ ] Audit all ad entrypoints and add a region-appropriate consent flow before ad requests where required. Existing Mobile Ads initialization has NOT been replaced with a consent implementation by this hardening pass.
-- [ ] Audit banner/native/interstitial resource cleanup and singleton Activity references throughout the ads module.
-- [ ] Review the broad external FileProvider path and external-library sharing flows together before restricting paths.
-- [ ] Move remaining saved-history/MediaStore queries and metadata scans off the UI thread; harden the legacy local-audio picker and preview focus handling.
-- [ ] Check dependency resolution/security reports, application ID, versioning, privacy policy, Data Safety, and current Play target-SDK requirements. This branch intentionally retains targetSdk 34; it is NOT a claim of current store-submission compliance.
-- [ ] Complete design/device QA, localization and accessibility audit beyond the changed controls.
+## Privacy, security and store sign-off
 
-Background playback/capture is intentionally out of scope. Implement a correctly typed foreground service, user-visible notification, and platform permission flow before advertising it.
+- [ ] Configure AdMob UMP messages and test fresh install, prior consent, denial, offline/error, privacy-options changes, Activity recreation and applicable regions with designated test devices.
+- [ ] Confirm no SDK/ad requests occur before consent permits initialization/requests, including mediation adapters. Verify banner/native cleanup and fullscreen dismissal before/after owner resume. Automated tests do not validate live ads or network behavior.
+- [ ] Verify narrow FileProvider roots and grant revocation with another app, including traversal, unrelated files and unsupported/legacy paths.
+- [ ] Verify privacy-policy URL/content, Data Safety declarations, ad IDs and consent-console settings.
+- [ ] Check dependencies/security reports and current Play target-SDK requirements. This pass retains targetSdk 34; no claim of current store-submission compliance is made.
+- [ ] Confirm application ID, provider authority, versioning and signing. Identity was deliberately preserved; changing it can break upgrades to an existing installation.
+- [ ] Complete visual/device QA and an accessibility/localization audit beyond the changed controls.
+
+Background playback/capture remains out of scope. Implement a correctly typed foreground service, user-visible notification and platform permissions before advertising it.

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <external-cache-path name="cache" path="camera"/>
-    <external-path name="external_files" path="."/>
+    <!-- Expose only recordings owned by this app, never all external storage. -->
+    <external-files-path name="recordings" path="Music/Recording/" />
+    <external-files-path name="hold_recordings" path="Music/HPRecording/" />
+    <!-- MyPref uses these folders when external app storage is unavailable. -->
+    <files-path name="internal_recordings" path="Recording/" />
+    <files-path name="internal_hold_recordings" path="HPRecording/" />
 </paths>
