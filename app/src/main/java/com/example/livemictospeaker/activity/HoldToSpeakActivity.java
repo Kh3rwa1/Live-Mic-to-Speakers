@@ -1,378 +1,120 @@
 package com.example.livemictospeaker.activity;
 
 import android.Manifest;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.media.AudioDeviceInfo;
-import android.media.AudioManager;
-import android.media.MediaScannerConnection;
-import android.os.Build;
+import android.media.MediaPlayer;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.RelativeLayout;
 import android.widget.Toast;
-
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-
-import com.github.piasy.rxandroidaudio.AudioRecorder;
-import com.github.piasy.rxandroidaudio.PlayConfig;
-import com.github.piasy.rxandroidaudio.RxAmplitude;
-import com.github.piasy.rxandroidaudio.RxAudioPlayer;
 import com.example.livemictospeaker.R;
-import com.example.livemictospeaker.Utils.AppConstants;
 import com.example.livemictospeaker.Utils.EUGeneralClass;
 import com.example.livemictospeaker.Utils.MyPref;
-import com.thekhaeng.pushdownanim.PushDownAnim;
-import com.trello.rxlifecycle2.components.support.RxAppCompatActivity;
-
+import com.example.livemictospeaker.audio.RecordingSession;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.Callable;
-
 import demo.ads.GoogleAds;
-import io.reactivex.Observable;
-import io.reactivex.ObservableSource;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Action;
-import io.reactivex.functions.Consumer;
-import io.reactivex.functions.Function;
-import io.reactivex.internal.functions.Functions;
-import io.reactivex.schedulers.Schedulers;
 
-
-public class HoldToSpeakActivity extends RxAppCompatActivity implements AudioRecorder.OnErrorListener {
-    private static final String TAG = "HoldToSpeakActivity";
-    private static final int SAMPLE_RATE = 44100;
-    private static final int BIT_RATE = 128000;
-
-    private CompositeDisposable compositeDisposable = new CompositeDisposable();
-    ImageView iv_back;
-    ImageView iv_history;
-    ImageView iv_mic;
-    private File mAudioFile;
-    private Queue<File> mAudioFiles = new LinkedList();
-    private AudioRecorder mAudioRecorder;
-    private Disposable mRecordDisposable;
-    public RxAudioPlayer mRxAudioPlayer;
-    MyPref myPref;
-    RelativeLayout rel_ad_layout;
-    ImageView rl_play;
-    ImageView rl_start_stop;
-    String value;
-    private boolean isScoReceiverRegistered = false;
-    private final BroadcastReceiver scoReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1)
-                    == AudioManager.SCO_AUDIO_STATE_CONNECTED) {
-                AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-                if (am != null) {
-                    am.setBluetoothScoOn(true);
-                }
-                if (mRxAudioPlayer != null) {
-                    mRxAudioPlayer.stopPlay();
-                    startPlay();
-                }
-            }
-        }
-    };
-
-    @Override
-    public void onCreate(Bundle bundle) {
-        super.onCreate(bundle);
+public class HoldToSpeakActivity extends AppCompatActivity {
+    private final RecordingSession recording = new RecordingSession();
+    private final Queue<File> queue = new ArrayDeque<>();
+    private MediaPlayer preview;
+    private ImageView button, mic, play;
+    private boolean suppressClick;
+    private final ActivityResultLauncher<String> permission = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> message(granted
+                    ? "Permission granted. Hold the button to record."
+                    : "Microphone access is required. You can allow it in Settings."));
+    @Override public void onCreate(Bundle state) {
+        super.onCreate(state);
         setContentView(R.layout.activity_hold_to_speak_new);
         EUGeneralClass.BottomNavigationColor(this);
         GoogleAds.getInstance().admobBanner(this, findViewById(R.id.nativeLay));
-
-        this.myPref = new MyPref(this);
-        this.iv_back = (ImageView) findViewById(R.id.iv_back);
-        this.iv_mic = (ImageView) findViewById(R.id.iv_mic);
-        this.iv_history = (ImageView) findViewById(R.id.iv_history);
-        this.rl_start_stop = (ImageView) findViewById(R.id.iv_start_stop_new);
-        this.rl_play = (ImageView) findViewById(R.id.iv_play);
-        setVolumeControlStream(AudioManager.STREAM_MUSIC);
-        final AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        if (audioManager != null) {
-            audioManager.setMode(AudioManager.MODE_NORMAL);
-            audioManager.setSpeakerphoneOn(true);
-            setupCommunicationDevice(audioManager);
-        }
-        this.mAudioRecorder = AudioRecorder.getInstance();
-        this.mRxAudioPlayer = RxAudioPlayer.getInstance();
-        this.mAudioRecorder.setOnErrorListener(this);
-        this.rl_start_stop.setOnTouchListener(new View.OnTouchListener() {
-            public final boolean onTouch(View view, MotionEvent motionEvent) {
-                return HoldToSpeakActivity.this.handleHoldTouch(view, motionEvent);
+        button = findViewById(R.id.iv_start_stop_new);
+        mic = findViewById(R.id.iv_mic);
+        play = findViewById(R.id.iv_play);
+        label(R.id.iv_back, "Back").setOnClickListener(v -> finish());
+        label(R.id.iv_history, "Saved recordings").setOnClickListener(v ->
+                startActivity(new Intent(this, MySavedHoldtoSpeakActivity.class)));
+        play.setContentDescription("Play queued recordings");
+        play.setOnClickListener(v -> { if (preview != null) stopPreview(); else playNext(); });
+        mic.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        button.setFocusable(true);
+        button.setOnClickListener(v -> {
+            if (!suppressClick) { if (recording.isRecording()) finishRecording(true, true); else startRecording(); }
+        });
+        button.setOnTouchListener((view, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN: startRecording(); return true;
+                case MotionEvent.ACTION_UP:
+                    finishRecording(true, true);
+                    suppressClick = true;
+                    view.performClick();
+                    suppressClick = false;
+                    return true;
+                case MotionEvent.ACTION_CANCEL: finishRecording(false, false); return true;
+                default: return true;
             }
         });
-        initBluetoothSco(audioManager);
-        PushDownAnim.setPushDownAnimTo(this.iv_back, this.iv_history, this.rl_play).setOnClickListener((View.OnClickListener) new View.OnClickListener() {
-            public void onClick(View view) {
-                if (view == HoldToSpeakActivity.this.iv_back) {
-                    HoldToSpeakActivity.this.onBackPressed();
-                } else if (view == HoldToSpeakActivity.this.iv_history) {
-                    HoldToSpeakActivity.this.startActivity(new Intent(HoldToSpeakActivity.this, MySavedHoldtoSpeakActivity.class));
-                } else if (view == HoldToSpeakActivity.this.rl_play) {
-                    HoldToSpeakActivity.this.startPlay();
-                }
-            }
-        });
+        updateControls();
     }
-
-    private void setupCommunicationDevice(AudioManager audioManager) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                AudioDeviceInfo current = audioManager.getCommunicationDevice();
-                if (current != null && current.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
-                    return;
-                }
-                for (AudioDeviceInfo device : audioManager.getAvailableCommunicationDevices()) {
-                    if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
-                        audioManager.setCommunicationDevice(device);
-                        break;
-                    }
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "setCommunicationDevice failed", e);
-            }
-        }
+    private View label(int id, String description) {
+        View view = findViewById(id); view.setContentDescription(description); return view;
     }
-
-    private void initBluetoothSco(AudioManager audioManager) {
-        if (audioManager == null) return;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            boolean hasBtPermission = ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
-            if (!hasBtPermission) return;
+    private void startRecording() {
+        if (recording.isRecording()) return;
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            permission.launch(Manifest.permission.RECORD_AUDIO); return;
         }
+        stopPreview();
+        try { recording.start(this, new File(MyPref.creatsDirsforholdspeak(this))); }
+        catch (IOException error) { message(error.getMessage()); }
+        updateControls();
+    }
+    private void finishRecording(boolean keep, boolean notify) {
+        if (!recording.isRecording()) return;
         try {
-            if (audioManager.isBluetoothScoAvailableOffCall()) {
-                registerReceiver(this.scoReceiver,
-                        new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED));
-                this.isScoReceiverRegistered = true;
-                audioManager.startBluetoothSco();
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Bluetooth SCO error", e);
-        }
+            File file = recording.stop(keep);
+            if (file != null) { queue.offer(file); if (notify) message("Recording saved"); }
+            else if (keep && notify) message("Recording too short. Hold for at least half a second.");
+        } catch (IOException error) { message(error.getMessage()); }
+        updateControls();
     }
-
-    public boolean handleHoldTouch(View view, MotionEvent motionEvent) {
-        int action = motionEvent.getAction();
-        if (action == MotionEvent.ACTION_DOWN) {
-            pressToRecord();
-        } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
-            releaseToSend();
-        }
-        return true;
+    private void updateControls() {
+        boolean active = recording.isRecording();
+        button.setImageResource(active ? R.drawable.click_press_to_speak : R.drawable.click_to_speak);
+        button.setContentDescription(active ? "Stop recording" : "Hold to record. Screen reader users can double-tap to start or stop.");
+        mic.setImageResource(active ? R.drawable.pink_microphone : R.drawable.yellow_microphone);
+        play.setEnabled(!active);
     }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        if (this.isScoReceiverRegistered) {
-            try {
-                unregisterReceiver(this.scoReceiver);
-                this.isScoReceiverRegistered = false;
-            } catch (Exception ignored) {}
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                if (am != null) {
-                    am.clearCommunicationDevice();
-                }
-            } catch (Exception ignored) {}
-        }
-        RxAudioPlayer rxAudioPlayer = this.mRxAudioPlayer;
-        if (rxAudioPlayer != null) {
-            rxAudioPlayer.stopPlay();
-        }
-        if (mRecordDisposable != null && !mRecordDisposable.isDisposed()) {
-            mRecordDisposable.dispose();
-        }
-        this.compositeDisposable.dispose();
-    }
-
-    private void pressToRecord() {
-        this.rl_start_stop.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.click_press_to_speak));
-        this.iv_mic.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.pink_microphone));
-        recordAfterPermissionGranted();
-    }
-
-    private void recordAfterPermissionGranted() {
-        this.mRecordDisposable = Observable.fromCallable(new Callable<Boolean>() {
-            @Override
-            public final Boolean call() throws Exception {
-                return HoldToSpeakActivity.this.prepareRecordingFile();
-            }
-        }).flatMap(new Function<Boolean, ObservableSource<Boolean>>() {
-            @Override
-            public final ObservableSource<Boolean> apply(Boolean ready) throws Exception {
-                return HoldToSpeakActivity.this.playReadyTone(ready);
-            }
-        }).doOnComplete(new Action() {
-            @Override
-            public final void run() throws Exception {
-                HoldToSpeakActivity.this.onRecordPrepared();
-            }
-        }).doOnNext(new Consumer<Boolean>() {
-            @Override
-            public void accept(Boolean ready) throws Exception {
-                Log.d(HoldToSpeakActivity.TAG, "startRecord success");
-            }
-        }).flatMap(new Function<Boolean, ObservableSource<Integer>>() {
-            @Override
-            public final ObservableSource<Integer> apply(Boolean ready) throws Exception {
-                return HoldToSpeakActivity.this.observeAmplitude(ready);
-            }
-        }).compose(bindToLifecycle()).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Consumer<Integer>() {
-            @Override
-            public final void accept(Integer amplitude) throws Exception {
-                HoldToSpeakActivity.this.onAmplitudeUpdate(amplitude);
-            }
-        }, new Consumer<Throwable>() {
-            public void accept(Throwable th) throws Exception {
-                Log.e(TAG, "Record error", th);
-            }
-        });
-    }
-
-    public Boolean prepareRecordingFile() throws Exception {
-        File dir = new File(MyPref.creatsDirsforholdspeak(this));
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-        File file = new File(dir, "rec_" + System.currentTimeMillis() + "_hp.mp3");
-        this.mAudioFile = file;
-        Log.d(TAG, "to prepare record");
-        return Boolean.valueOf(this.mAudioRecorder.prepareRecord(1, 2, 1, SAMPLE_RATE, BIT_RATE, this.mAudioFile));
-    }
-
-    public ObservableSource<Boolean> playReadyTone(Boolean ready) throws Exception {
-        return this.mRxAudioPlayer.play(PlayConfig.res(getApplicationContext(), R.raw.audio_record_ready).build());
-    }
-
-    public void onRecordPrepared() throws Exception {
-        this.mAudioRecorder.startRecord();
-    }
-
-    public ObservableSource<Integer> observeAmplitude(Boolean ready) throws Exception {
-        return RxAmplitude.from(this.mAudioRecorder);
-    }
-
-    public void onAmplitudeUpdate(Integer amplitude) throws Exception {
-        int progress = this.mAudioRecorder.progress();
-        Log.d(TAG, "amplitude: " + amplitude + ", progress: " + progress);
-    }
-
-    public void refreshGallery(File file) {
-        if (file == null) return;
+    private void playNext() {
+        if (recording.isRecording()) return;
+        File file = queue.poll();
+        if (file == null) { message("Record something first"); return; }
+        stopPreview();
+        MediaPlayer player = new MediaPlayer();
+        preview = player;
         try {
-            MediaScannerConnection.scanFile(this, new String[]{file.getAbsolutePath()},
-                    null, (path, uri) -> Log.d(TAG, "Scanned: " + path + " -> " + uri));
-        } catch (Exception e) {
-            Log.e(TAG, "Media scan failed", e);
-        }
+            player.setDataSource(file.getAbsolutePath());
+            player.setOnPreparedListener(mp -> { if (preview == mp) { mp.start(); play.setContentDescription("Stop playback"); } });
+            player.setOnCompletionListener(mp -> { stopPreview(); if (!queue.isEmpty()) playNext(); });
+            player.setOnErrorListener((mp, what, extra) -> { stopPreview(); message("Could not play recording"); return true; });
+            player.prepareAsync();
+        } catch (IOException | RuntimeException error) { stopPreview(); message("Could not open recording"); }
     }
-
-    private void releaseToSend() {
-        this.rl_start_stop.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.click_to_speak));
-        this.iv_mic.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.yellow_microphone));
-        Disposable disposable = this.mRecordDisposable;
-        if (disposable != null && !disposable.isDisposed()) {
-            this.mRecordDisposable.dispose();
-            this.mRecordDisposable = null;
-        }
-        this.compositeDisposable.add(Observable.fromCallable(new Callable<Boolean>() {
-            @Override
-            public final Boolean call() throws Exception {
-                return HoldToSpeakActivity.this.finalizeRecording();
-            }
-        }).compose(bindToLifecycle()).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Consumer<Boolean>() {
-            @Override
-            public void accept(Boolean saved) throws Exception {
-                if (saved != null && saved && mAudioFile != null) {
-                    refreshGallery(mAudioFile);
-                }
-            }
-        }, new Consumer<Throwable>() {
-            public void accept(Throwable th) throws Exception {
-                Log.e(TAG, "Stop record error", th);
-            }
-        }));
+    private void stopPreview() {
+        if (preview != null) { preview.release(); preview = null; }
+        if (play != null) play.setContentDescription("Play queued recordings");
     }
-
-    public Boolean finalizeRecording() throws Exception {
-        int stopRecord = this.mAudioRecorder.stopRecord();
-        Log.d(TAG, "stopRecord: " + stopRecord);
-        if (stopRecord < 2) {
-            return false;
-        }
-        this.mAudioFiles.offer(this.mAudioFile);
-        return true;
-    }
-
-    public void startPlay() {
-        if (!this.mAudioFiles.isEmpty()) {
-            this.rl_play.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.click_play));
-            this.compositeDisposable.add(this.mRxAudioPlayer.play(PlayConfig.file(this.mAudioFiles.poll()).streamType(AudioManager.STREAM_MUSIC).build()).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(Functions.emptyConsumer(), new Consumer<Throwable>() {
-                public void accept(Throwable th) throws Exception {
-                    Log.e(TAG, "Play error", th);
-                }
-            }, new Action() {
-                @Override
-                public final void run() {
-                    HoldToSpeakActivity.this.startPlay();
-                }
-            }));
-        }
-    }
-
-    @Override
-    public void onError(final int code) {
-        runOnUiThread(new Runnable() {
-            public final void run() {
-                HoldToSpeakActivity.this.showRecorderError(code);
-            }
-        });
-    }
-
-    public void showRecorderError(int code) {
-        Toast.makeText(this, "Recording error: " + code, Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        RxAudioPlayer rxAudioPlayer = this.mRxAudioPlayer;
-        if (rxAudioPlayer != null) {
-            rxAudioPlayer.stopPlay();
-        }
-        this.compositeDisposable.dispose();
-        finish();
-        AppConstants.overridePendingTransitionExit(this);
-    }
-
-    @Override
-    protected void onResume() {
-        try {
-            super.onResume();
-            this.value = this.myPref.getPref(MyPref.HoldSpeakActivity, "");
-        } catch (Exception e) {
-            Log.e(TAG, "onResume error", e);
-        }
-    }
+    private void message(String text) { Toast.makeText(this, text, Toast.LENGTH_LONG).show(); }
+    @Override protected void onStop() { finishRecording(true, false); stopPreview(); super.onStop(); }
+    @Override protected void onDestroy() { recording.close(); stopPreview(); super.onDestroy(); }
 }
