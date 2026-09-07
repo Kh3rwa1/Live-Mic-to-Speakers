@@ -16,12 +16,14 @@ import com.example.livemictospeaker.player.LocalAudio;
 import com.example.livemictospeaker.player.MediaPlayerUtils;
 import java.util.ArrayList;
 import java.util.List;
-import io.reactivex.functions.Function3;
 
 /** Playback identity survives filtering. Clicks resolve their current binding position. */
 public final class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.ViewHolder> implements Filterable {
+    public interface AudioActionListener {
+        void onAudioAction(LocalAudio audio, int position, View clicked);
+    }
     private final Context context;
-    private final Function3<? super LocalAudio, ? super Integer, ? super View, Void> listener;
+    private final AudioActionListener listener;
     public final ArrayList<LocalAudio> localAudioLists;
     private ArrayList<LocalAudio> visible;
     private LocalAudio current;
@@ -37,7 +39,7 @@ public final class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.ViewHo
         }
     };
     public AudioAdapter(Context context, ArrayList<LocalAudio> audio,
-            Function3<? super LocalAudio, ? super Integer, ? super View, Void> listener) {
+            AudioActionListener listener) {
         this.context = context; this.listener = listener;
         localAudioLists = new ArrayList<>(audio); visible = new ArrayList<>(audio);
     }
@@ -66,8 +68,8 @@ public final class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.ViewHo
             View.OnClickListener click = clicked -> {
                 int position = getBindingAdapterPosition();
                 if (position == RecyclerView.NO_POSITION || position >= visible.size()) return;
-                try { listener.apply(visible.get(position), position, clicked); }
-                catch (Exception error) { android.util.Log.w("AudioAdapter", "Audio selection failed", error); }
+                try { listener.onAudioAction(visible.get(position), position, clicked); }
+                catch (RuntimeException error) { android.util.Log.w("AudioAdapter", "Audio selection failed", error); }
             };
             view.findViewById(R.id.playLayout).setOnClickListener(click);
             view.findViewById(R.id.select_song).setOnClickListener(click);

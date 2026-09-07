@@ -14,13 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+          validate-wrappers: true
       - name: Verify CI helper regressions
         run: python3 -m unittest discover -s tools/tests -v
       - name: Verify core accessibility source contract
@@ -32,15 +37,17 @@ jobs:
           if bash ./gradlew --no-daemon :app:verifyProductionRelease -PproductionRelease=false > production-demo-gate.log 2>&1; then
             echo 'Production gate unexpectedly accepted a demo configuration'; exit 1
           fi
-          grep -q 'Production release blocked' production-demo-gate.log
+          grep -q 'Production release blocked' production-demo-gate.log || { tail -n 100 production-demo-gate.log; exit 1; }
           if bash ./gradlew --no-daemon :app:verifyProductionRelease -PproductionRelease=true > production-missing-gate.log 2>&1; then
             echo 'Production gate unexpectedly accepted missing settings'; exit 1
           fi
-          grep -q 'Configure a non-test LIVE_MIC_ADMOB_APP_ID' production-missing-gate.log
+          grep -q 'Configure a non-test LIVE_MIC_ADMOB_APP_ID' production-missing-gate.log || { tail -n 100 production-missing-gate.log; exit 1; }
       - name: App and ads unit tests, lint and debug/release builds
         run: |
           set -o pipefail
-          bash ./gradlew --no-daemon --continue :app:testDebugUnitTest :app:testReleaseUnitTest :ads:testDebugUnitTest :ads:testReleaseUnitTest :app:lintDebug :app:lintRelease :ads:lintDebug :app:assembleDebug :app:assembleRelease 2>&1 | tee build.log
+          bash ./gradlew --no-daemon --continue :app:testDebugUnitTest :app:testReleaseUnitTest :ads:testDebugUnitTest :ads:testReleaseUnitTest :app:lintDebug :app:lintRelease :ads:lintDebug :app:assembleDebug :app:assembleRelease :app:writeDependencyInventory 2>&1 | tee build.log
+      - name: Verify resolved runtime dependency support policy
+        run: python3 tools/check_dependency_policy.py app/build/reports/runtime-dependencies.json
       - name: Verify release native-library alignment
         run: |
           set -euo pipefail
@@ -50,7 +57,7 @@ jobs:
           for apk in app/build/outputs/apk/release/*.apk; do "$zipalign" -c -P 16 -v 4 "$apk"; done > native-zip-alignment.log
       - name: Upload reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: android-test-and-lint-reports
           path: |
@@ -64,7 +71,7 @@ jobs:
             native-zip-alignment.log
           if-no-files-found: ignore
       - name: Upload installable debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: live-mic-debug-apk
           path: app/build/outputs/apk/debug/*.apk
@@ -84,25 +91,34 @@ jobs:
             font: '1.0'
           - api: 36
             font: '2.0'
+          - api: 37
+            font: '1.0'
+          - api: 37
+            font: '2.0'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+          validate-wrappers: true
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - uses: reactivecircus/android-emulator-runner@v2
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
           api-level: ${{ matrix.api }}
           arch: x86_64
           disable-animations: true
           script: bash tools/run_device_checks.sh '${{ matrix.font }}'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: android-device-reports-api-${{ matrix.api }}-font-${{ matrix.font }}
@@ -123,7 +139,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Summarize failed jobs without weakening checks
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const jobs = await github.paginate('GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs', {

@@ -128,7 +128,6 @@ public final class LocalAudioPickerFragment extends Fragment {
                         startActivity(new Intent(requireContext(), MusicActivity.class)
                                 .putExtra("SONG_URI", audio.getAudioUri()).putExtra("SONG_NAME", audio.getAudioTitle()));
                     } else choose(audio, position);
-                    return null;
                 });
                 list.setAdapter(adapter);
                 list.setVisibility(result.isEmpty() ? View.GONE : View.VISIBLE);
