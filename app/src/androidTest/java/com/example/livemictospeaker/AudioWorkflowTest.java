@@ -78,7 +78,7 @@ public class AudioWorkflowTest {
                 ArrayList<LocalAudio> audio = new ArrayList<>();
                 audio.add(new LocalAudio(1, "Drum.wav", "", 1000, "content://media/external/audio/media/1", "0"));
                 audio.add(new LocalAudio(2, "Voice.m4a", "", 1000, "content://media/external/audio/media/2", "0"));
-                AudioAdapter adapter = new AudioAdapter(activity, audio, (item, position, view) -> null);
+                AudioAdapter adapter = new AudioAdapter(activity, audio, (item, position, view) -> { });
                 adapter.setCurrentPlayingPos(1); ref.set(adapter); adapter.getFilter().filter("drum", count -> filtered.countDown());
             });
             assertTrue(filtered.await(5, TimeUnit.SECONDS));

@@ -4,16 +4,20 @@ Android utility for live microphone monitoring, hold-to-record announcements, sa
 
 ## Build and test
 
-- JDK 17, Android SDK 36, Gradle 8.11.1 (wrapper included), AGP 8.10.1.
+- JDK 17, Android SDK 37, Gradle 9.7.1 (checksum-pinned wrapper distribution), AGP 9.4.0.
+- Android 7 / API 24 remains the minimum supported version.
 - `bash ./gradlew :app:assembleDebug :app:assembleRelease`
 - `bash ./gradlew :app:testDebugUnitTest :app:testReleaseUnitTest :ads:testDebugUnitTest :ads:testReleaseUnitTest`
 - `bash ./gradlew :app:lintDebug :app:lintRelease :ads:lintDebug`
 - With an API 24+ device/emulator: `bash ./gradlew :app:connectedDebugAndroidTest`
 - `python3 tools/check_quality_contract.py`
+- `python3 -m unittest discover -s tools/tests -v`
+- `bash ./gradlew :app:writeDependencyInventory`
+- `python3 tools/check_dependency_policy.py app/build/reports/runtime-dependencies.json`
 
-GitHub Actions builds debug/release, runs lint and JVM regression checks, and runs Android tests on API 24, 34 and 36, including API 36 at 200% font scale. Native screenshots are uploaded with the device-test reports for visual review. Inspect the checks on the pull request: a configured workflow is not proof that the final commit passed. A successful build also uploads `live-mic-debug-apk` for installation testing. Default release output uses demo ad configuration and is not a signed, device-verified production build.
+GitHub Actions builds debug/release, runs lint and JVM regression checks, and runs Android tests on API 24, 34, 36 and 37, including APIs 36 and 37 at 200% font scale. Native screenshots are uploaded with the device-test reports for visual review. Inspect the checks on the pull request: a configured workflow is not proof that the final commit passed. A successful build also uploads `live-mic-debug-apk` for installation testing. Default release output uses demo ad configuration and is not a signed, device-verified production build.
 
-See [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) for the API 36 migration, core-screen accessibility changes, production configuration and remaining sign-off. Production bundles require explicit configuration; no real ad IDs or signing credentials are invented or committed.
+See [NON_UI_MODERNIZATION.md](NON_UI_MODERNIZATION.md) for the Android 17 toolchain, lifecycle migration, dependency policy and maintenance safeguards. Visual design is deferred. [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) retains the production configuration and earlier core-screen accessibility work. Production bundles require explicit configuration; no real ad IDs or signing credentials are invented or committed.
 
 ## Audio and storage behavior
 
@@ -21,7 +25,7 @@ See [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) for the API 36 migration,
 - Output follows Android's selected media route. Hardware echo cancellation/noise suppression are optional, not guarantees of feedback-free or low-latency audio.
 - Recorder preparation, finalization and cleanup use a serialized worker. Releasing a hold during preparation cancels the pending start. A queued save can finish after the screen closes without updating a destroyed Activity.
 - Recording previews and the local-library preview share audio-focus and headphone-disconnect handling. Preview preparation is asynchronous.
-- Microphone capture and playback are foreground-screen features, not background services. Saved-track playback retains its existing track/position/playing-intent restoration behavior.
+- Microphone capture and playback are foreground-screen features, not background services. Saved-track playback retains its existing track/position/playing-intent restoration behavior, with lifecycle-owned typed state and immediate pause before unbinding.
 - New recordings stay under a `.pending` name until successful finalization, then become AAC in MPEG-4 (`.m4a`). History refreshes after publication, so unfinished files are not listed as saved. Existing MP3/M4A/WAV/AAC history remains readable.
 - Cancelled, empty, sub-500ms and recorder-finalization failures are discarded. If publishing a completed recording fails, its `.pending` file is retained for recovery rather than overwriting an existing recording.
 - Recordings remain in their existing app-specific folders. They are normally removed on uninstall; export anything important before uninstalling.
@@ -45,6 +49,6 @@ The provider exposes only the app's `Recording` and `HPRecording` folders (exter
 
 Start at low speaker volume and keep the microphone away from speakers; headphones are safer. Acoustic feedback can become very loud. The input meter is a relative PCM indicator, not a calibrated sound-pressure meter.
 
-JVM checks cover session ownership, cancellation, finalization, restart serialization, failure cleanup, finalized-file publication, consent readiness, deferred ad completion, search logic and audio MIME mapping. Android tests additionally exercise readable M4A recording, unpublished in-progress recordings, filtered playback identity, recording-provider boundaries, read-only sharing, measurement-deferral metadata and ad-flow resume/destruction with ads disabled, alongside navigation/recreation and core-layout checks. They do not validate regional consent, mediation network traffic or live ad rendering.
+JVM checks cover session ownership, cancellation, finalization, restart serialization, failure cleanup, finalized-file publication, consent readiness, deferred ad completion, search logic, audio MIME mapping and playback-state invariants. Android tests additionally exercise readable M4A recording, unpublished in-progress recordings, filtered playback identity, recording-provider boundaries, read-only sharing, measurement-deferral metadata and ad-flow resume/destruction with ads disabled, alongside navigation/recreation and core-layout checks. New tests cover recording-change owner lifecycles, service preparation without autoplay, typed errors, cleanup and installed-manifest policy. They do not validate regional consent, mediation network traffic or live ad rendering.
 
-See [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) for device, privacy, sharing, accessibility and release sign-off. Source changes and emulator checks cannot establish real-device latency, Bluetooth quality or production readiness.
+See [VALIDATION.md](VALIDATION.md) and [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) for evidence and device, privacy, sharing, accessibility and release sign-off. Source changes and emulator checks cannot establish real-device latency, Bluetooth quality or production readiness.

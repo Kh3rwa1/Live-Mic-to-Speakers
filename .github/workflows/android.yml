@@ -115,6 +115,8 @@ jobs:
       - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
           api-level: ${{ matrix.api }}
+          target: ${{ matrix.api == 37 && 'google_apis' || 'default' }}
+          ram-size: ${{ matrix.api == 37 && '4096M' || '' }}
           arch: x86_64
           disable-animations: true
           script: bash tools/run_device_checks.sh '${{ matrix.font }}'
@@ -158,7 +160,7 @@ jobs:
                 const lines = log.replace(/\u001b\[[0-9;]*m/g, '').split('\n');
                 const selected = new Set();
                 lines.forEach((line, i) => {
-                  if (/FAILED|AssertionError|ComparisonFailure|error:|What went wrong:|Error:|expected:|Unable to|No space left/.test(line)) {
+                  if (/FAILED|AssertionError|ComparisonFailure|error:|What went wrong:|Error:|expected:|Unable to|No space left|Failed to find package|Package path is not valid|Failed to install|Warning:.*package/.test(line)) {
                     for (let j = Math.max(0, i - 1); j < Math.min(lines.length, i + 7); j++) selected.add(j);
                   }
                 });

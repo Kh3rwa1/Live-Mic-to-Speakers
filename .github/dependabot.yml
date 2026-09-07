@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      ads-and-consent:
+        patterns:
+          - 'com.google.android.gms:play-services-ads*'
+          - 'com.google.ads.mediation:*'
+          - 'com.google.android.ump:*'
+      androidx:
+        patterns:
+          - 'androidx.*'
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      action-maintenance:
+        patterns: ['*']
+        update-types: [minor, patch]
