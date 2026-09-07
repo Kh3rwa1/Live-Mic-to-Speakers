@@ -7,10 +7,8 @@ import android.graphics.drawable.ColorDrawable;
 import android.view.View;
 import android.view.ViewGroup;
 import androidx.core.graphics.ColorUtils;
-import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 /** Shared safe-area handling for both the modern tools and legacy library screens. */
@@ -33,16 +31,9 @@ public final class EUGeneralClass {
         bars.setAppearanceLightStatusBars(light);
         bars.setAppearanceLightNavigationBars(light);
         if (content.getTag(com.example.livemictospeaker.R.id.quality_insets_installed) != null) return;
-        content.setTag(com.example.livemictospeaker.R.id.quality_insets_installed, Boolean.TRUE);
-        final int left = content.getPaddingLeft(), top = content.getPaddingTop();
-        final int right = content.getPaddingRight(), bottom = content.getPaddingBottom();
-        ViewCompat.setOnApplyWindowInsetsListener(content, (view, windowInsets) -> {
-            Insets safe = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()
-                    | WindowInsetsCompat.Type.displayCutout() | WindowInsetsCompat.Type.ime());
-            // Always use the original padding: repeat delivery must never accumulate insets.
-            view.setPadding(left + safe.left, top + safe.top, right + safe.right, bottom + safe.bottom);
-            return WindowInsetsCompat.CONSUMED;
-        });
+        SafeAreaInsets padding = new SafeAreaInsets(content);
+        content.setTag(com.example.livemictospeaker.R.id.quality_insets_installed, padding);
+        ViewCompat.setOnApplyWindowInsetsListener(content, padding::apply);
         ViewCompat.requestApplyInsets(content);
     }
 }
