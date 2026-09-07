@@ -43,9 +43,8 @@ public class RecordAudioActivity extends AppCompatActivity {
         }
     };
     private final ActivityResultLauncher<String> permission = registerForActivityResult(
-            new ActivityResultContracts.RequestPermission(), granted -> message(granted
-                    ? "Permission granted. Tap Start to record."
-                    : "Allow microphone access in Settings to record."));
+            new ActivityResultContracts.RequestPermission(), granted -> message(getString(granted
+                    ? R.string.tool_permission_record : R.string.tool_permission_denied)));
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_record_audio_new);
@@ -53,23 +52,21 @@ public class RecordAudioActivity extends AppCompatActivity {
         GoogleAds.getInstance().admobBanner(this, findViewById(R.id.nativeLay));
         toggle = findViewById(R.id.iv_start_stop_new); play = findViewById(R.id.iv_play);
         timer = findViewById(R.id.tv_timer); label = findViewById(R.id.tv_start_stop_new);
-        findViewById(R.id.iv_back).setContentDescription("Back");
         findViewById(R.id.iv_back).setOnClickListener(v -> finish());
-        findViewById(R.id.iv_history).setContentDescription("Saved recordings");
         findViewById(R.id.iv_history).setOnClickListener(v -> startActivity(new Intent(this, MySavedAnnounceActivity.class)));
         if (state != null && state.getString("lastSaved") != null) lastSaved = new File(state.getString("lastSaved"));
         preview = new PreviewPlayer(this, new PreviewPlayer.Listener() {
             public void onChanged() { updatePreview(); }
             public void onCompleted() { preview.stop(); }
-            public void onError() { message("Could not play recording. Check the file or other audio apps."); }
+            public void onError() { message(getString(R.string.tool_play_error)); }
         });
         recording = RecordingSession.controller(this, new File(MyPref.creatsDirsforApp(this)), new RecordingController.Listener<File>() {
             public void onStateChanged() { updateControls(); }
             public void onFinished(File file, boolean keep) {
-                if (file != null) { lastSaved = file; message("Recording saved"); }
-                else if (keep) message("Recording too short or cancelled before starting; no file saved.");
+                if (file != null) { lastSaved = file; message(getString(R.string.tool_saved_message)); }
+                else if (keep) message(getString(R.string.tool_too_short));
             }
-            public void onError(Exception error) { message(error.getMessage()); }
+            public void onError(Exception error) { message(getString(R.string.tool_record_error)); }
         });
         toggle.setOnClickListener(v -> {
             if (recording.isActive()) { recording.stop(true); return; }
@@ -81,7 +78,7 @@ public class RecordAudioActivity extends AppCompatActivity {
         play.setOnClickListener(v -> {
             if (preview.wantsPlayback()) { preview.pause(); return; }
             if (preview.hasTrack()) { preview.resume(); return; }
-            if (lastSaved == null || !lastSaved.isFile()) { message("No saved recording. Record first."); return; }
+            if (lastSaved == null || !lastSaved.isFile()) { message(getString(R.string.tool_no_recording)); return; }
             preview.play(Uri.fromFile(lastSaved));
         });
         updateControls(); updatePreview();
@@ -89,11 +86,11 @@ public class RecordAudioActivity extends AppCompatActivity {
     private void updateControls() {
         RecordingController.State state = recording.getState();
         boolean active = recording.isActive();
-        toggle.setImageResource(active ? R.drawable.click_time_start : R.drawable.time_start);
+        toggle.setImageResource(active ? R.drawable.tool_stop : R.drawable.tool_record);
         toggle.setEnabled(state != RecordingController.State.STOPPING && state != RecordingController.State.CLOSED);
-        toggle.setContentDescription(active ? "Stop recording" : "Start recording");
-        label.setText(state == RecordingController.State.STARTING ? "Preparing…"
-                : state == RecordingController.State.STOPPING ? "Saving…" : active ? "Stop" : "Start");
+        toggle.setContentDescription(getString(active ? R.string.tool_stop_recording : R.string.tool_start_recording));
+        label.setText(state == RecordingController.State.STARTING ? R.string.tool_preparing
+                : state == RecordingController.State.STOPPING ? R.string.tool_saving : active ? R.string.tool_stop : R.string.tool_start);
         play.setEnabled(state == RecordingController.State.IDLE);
         if (state == RecordingController.State.RECORDING && startedAt == 0) {
             startedAt = SystemClock.elapsedRealtime(); handler.post(tick);
@@ -102,8 +99,8 @@ public class RecordAudioActivity extends AppCompatActivity {
     }
     private void updatePreview() {
         boolean active = preview != null && preview.wantsPlayback();
-        play.setImageResource(active ? R.drawable.pause : R.drawable.play);
-        play.setContentDescription(active ? "Pause playback" : "Play last recording");
+        play.setImageResource(active ? R.drawable.tool_pause : R.drawable.tool_play);
+        play.setContentDescription(getString(active ? R.string.tool_pause : R.string.tool_play_last));
     }
     private void message(String text) { if (visible) Toast.makeText(this, text, Toast.LENGTH_LONG).show(); }
     @Override protected void onStart() { super.onStart(); visible = true; }

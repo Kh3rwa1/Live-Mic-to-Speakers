@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -13,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import com.example.livemictospeaker.R;
+import com.example.livemictospeaker.Utils.EUGeneralClass;
 import com.example.livemictospeaker.player.activity.MusicListActivity;
 import demo.ads.AdConsent;
 import demo.ads.GoogleAds;
@@ -30,19 +30,13 @@ public class MainActivity extends AppCompatActivity implements AdConsent.HomeScr
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_main_new);
+        EUGeneralClass.BottomNavigationColor(this);
         ViewCompat.setAccessibilityHeading(findViewById(R.id.quality_headline), true);
         if (state != null) {
             for (Class<?> candidate : new Class<?>[]{LiveMicrophoneActivity.class, HoldToSpeakActivity.class,
                     RecordAudioActivity.class, MusicListActivity.class})
                 if (candidate.getName().equals(state.getString("pendingScreen"))) pendingScreen = candidate;
         }
-        getWindow().setStatusBarColor(ContextCompat.getColor(this, R.color.quality_canvas));
-        int appearance = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-        if (Build.VERSION.SDK_INT >= 26) {
-            getWindow().setNavigationBarColor(ContextCompat.getColor(this, R.color.quality_canvas));
-            appearance |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
-        }
-        getWindow().getDecorView().setSystemUiVisibility(appearance);
         GoogleAds.getInstance().addNativeView(this, findViewById(R.id.nativeLay));
         findViewById(R.id.iv_back).setOnClickListener(v -> startActivity(new Intent(this, Setting_Activity.class)));
         findViewById(R.id.cv_live_microphone).setOnClickListener(v -> onLiveMicrophoneClick());
