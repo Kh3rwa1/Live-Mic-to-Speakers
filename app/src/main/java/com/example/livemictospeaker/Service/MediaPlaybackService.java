@@ -67,6 +67,7 @@ public class MediaPlaybackService extends Service implements MediaPlayer.OnPrepa
         } catch (RuntimeException error) { fail(); }
     }
     public void play() {
+        if (player == null) { playWhenReady = false; broadcast(MPS_ERROR); return; }
         playWhenReady = true;
         if (!prepared || player == null) return;
         if (!hasFocus) hasFocus = audio != null && audio.requestAudioFocus(focus, AudioManager.STREAM_MUSIC,

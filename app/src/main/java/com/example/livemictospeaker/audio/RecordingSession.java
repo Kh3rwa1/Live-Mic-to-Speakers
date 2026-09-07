@@ -1,6 +1,9 @@
 package com.example.livemictospeaker.audio;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import androidx.core.content.ContextCompat;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.SystemClock;
@@ -17,6 +20,8 @@ public final class RecordingSession implements AutoCloseable {
 
     public void start(Context context, File directory) throws IOException {
         if (recorder != null) throw new IllegalStateException("A recording is already active");
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
+            throw new IOException("Microphone permission required");
         if (!directory.isDirectory() && !directory.mkdirs()) throw new IOException("Cannot create recordings folder");
         file = File.createTempFile("Rec_", ".m4a", directory);
         try {

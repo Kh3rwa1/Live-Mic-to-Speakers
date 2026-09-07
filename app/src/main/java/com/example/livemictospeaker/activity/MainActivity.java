@@ -27,6 +27,10 @@ public class MainActivity extends AppCompatActivity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_main_new);
+        if (state != null) {
+            for (Class<?> candidate : new Class<?>[]{LiveMicrophoneActivity.class, HoldToSpeakActivity.class, RecordAudioActivity.class, MusicListActivity.class})
+                if (candidate.getName().equals(state.getString("pendingScreen"))) pendingScreen = candidate;
+        }
         EUGeneralClass.BottomNavigationColor(this);
         GoogleAds.getInstance().addNativeView(this, findViewById(R.id.nativeLay));
         findViewById(R.id.iv_back).setContentDescription("Back");
@@ -35,6 +39,10 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.cv_hold_to_speak).setOnClickListener(v -> onHoldToSpeakClick());
         findViewById(R.id.cv_record_audio).setOnClickListener(v -> onRecordAudioClick());
         findViewById(R.id.cv_music_list).setOnClickListener(v -> onMusicListClick());
+    }
+    @Override protected void onSaveInstanceState(Bundle state) {
+        if (pendingScreen != null) state.putString("pendingScreen", pendingScreen.getName());
+        super.onSaveInstanceState(state);
     }
     private void openWithPermission(String required, Class<?> screen) {
         if (ContextCompat.checkSelfPermission(this, required) == PackageManager.PERMISSION_GRANTED)
