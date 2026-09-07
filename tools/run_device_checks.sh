@@ -27,7 +27,7 @@ set -e
 result=${statuses[0]}
 if [[ "$result" == 0 && "${statuses[1]}" != 0 ]]; then result=1; fi
 mkdir -p app/build/quality-screenshots
-for screen in record hold live settings settings-rtl player keyboard; do rm -f "app/build/quality-screenshotshots/$screen.png"; done
+for screen in record hold live settings settings-rtl player keyboard; do rm -f "app/build/quality-screenshots/$screen.png"; done
 adb pull "/sdcard/Android/data/com.example.livemictospeaker/files/$output_dir/." app/build/quality-screenshots/ || true
 if [[ "$result" == 0 ]]; then
   for screen in record hold live settings settings-rtl player keyboard; do
