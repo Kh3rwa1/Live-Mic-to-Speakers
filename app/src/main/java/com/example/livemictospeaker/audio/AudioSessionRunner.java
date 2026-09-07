@@ -3,11 +3,16 @@ package com.example.livemictospeaker.audio;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 
 /** Serial, single-owner audio sessions. stop() never blocks the UI thread. */
 public final class AudioSessionRunner implements AutoCloseable {
     public interface Session extends AutoCloseable {
         void start() throws Exception;
+        /** Platform sessions should check cancellation again before turning capture on. */
+        default void start(BooleanSupplier stillWanted) throws Exception {
+            if (stillWanted.getAsBoolean()) start();
+        }
         /** Must return promptly; zero means no frames are currently available. */
         int pump() throws Exception;
         @Override void close();
@@ -44,7 +49,7 @@ public final class AudioSessionRunner implements AutoCloseable {
         if (!isCurrent(ticket)) return;
         try (Session session = factory.create(ticket)) {
             if (!isCurrent(ticket)) return;
-            session.start();
+            session.start(() -> isCurrent(ticket));
             if (!isCurrent(ticket)) return;
             listener.onStarted(ticket);
             while (isCurrent(ticket)) {

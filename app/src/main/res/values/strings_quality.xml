@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="quality_home_title">Your audio tools</string>
+    <string name="quality_home_subtitle">Monitor, record, and play. Choose a tool to begin.</string>
+    <string name="quality_settings">Settings and privacy choices</string>
+    <string name="quality_live_title">Live microphone</string>
+    <string name="quality_live_body">Hear your microphone through the selected audio output.</string>
+    <string name="quality_hold_title">Hold to speak</string>
+    <string name="quality_hold_body">Record short announcements and play them in sequence.</string>
+    <string name="quality_record_title">Record audio</string>
+    <string name="quality_record_body">Capture a recording, then preview or share it.</string>
+    <string name="quality_music_title">Audio library</string>
+    <string name="quality_music_body">Find and play audio stored on your device.</string>
+    <string name="quality_safety_note">Start at low volume. Headphones are safer. Audio stops when you leave its screen.</string>
+    <string name="quality_feature_permission">This feature needs permission. You can allow it in app Settings.</string>
+    <string name="quality_back">Back</string>
+    <string name="quality_start">Start</string>
+    <string name="quality_start_microphone">Start microphone</string>
+    <string name="quality_stop_microphone">Stop microphone</string>
+    <string name="quality_mic_permission_granted">Permission granted. Tap Start to use the microphone.</string>
+    <string name="quality_mic_permission_denied">Allow microphone access in Settings to use this feature.</string>
+    <string name="quality_mic_meter">Output: %1$s\nInput level: %2$d%% · Tap to stop</string>
+    <string name="quality_mic_on">Microphone on · Tap to stop</string>
+    <string name="quality_mic_off">Microphone off · Tap to start</string>
+    <string name="quality_mic_starting">Starting microphone…</string>
+    <string name="quality_mic_interrupted">Microphone stopped because the audio output or audio focus changed. Check your connection and volume before restarting.</string>
+    <string name="quality_mic_error">Microphone could not start or was interrupted. Check microphone access, your output connection, and other audio apps.</string>
+    <string name="quality_feedback_title">Prevent loud feedback</string>
+    <string name="quality_feedback_message">Start with low speaker volume. Keep the microphone away from speakers; headphones are safer. Echo cancellation cannot prevent all feedback. Disconnecting an external output stops monitoring and requires a new start.</string>
+</resources>
