@@ -1,312 +1,121 @@
 package com.example.livemictospeaker.activity;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
-import android.media.MediaRecorder;
-import android.media.MediaScannerConnection;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
-import android.util.Log;
-import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-
 import com.example.livemictospeaker.R;
-import com.example.livemictospeaker.Utils.AppConstants;
 import com.example.livemictospeaker.Utils.EUGeneralClass;
 import com.example.livemictospeaker.Utils.MyPref;
-
+import com.example.livemictospeaker.audio.RecordingSession;
 import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Locale;
-
 import demo.ads.GoogleAds;
 
 public class RecordAudioActivity extends AppCompatActivity {
-    private static final String TAG = "RecordAudioActivity";
-    private static final long MIN_CLICK_INTERVAL = 1000;
-
-    private long startTime = 0;
-    private long timeBuff = 0;
-    private long millisecondTime = 0;
-    private long updateTime = 0;
-
+    private final RecordingSession recording = new RecordingSession();
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private boolean isRecordingRunning = false;
-    private long lastClickTime = 0;
-
-    private MediaPlayer mediaPlayer;
-    private MediaRecorder mediaRecorder;
-    private MyPref myPref;
-
-    private String outputDir;
-    private String currentFilePath = null;
-
-    private ImageView rl_start_stop;
-    private ImageView iv_play;
-    private TextView timer;
-    private TextView tv_start_stop;
-
-    private final Runnable timerRunnable = new Runnable() {
-        @Override
-        public void run() {
-            millisecondTime = SystemClock.uptimeMillis() - startTime;
-            updateTime = timeBuff + millisecondTime;
-
-            int totalSeconds = (int) (updateTime / 1000);
-            int seconds = totalSeconds % 60;
-            int minutes = (totalSeconds / 60) % 60;
-            long hours = totalSeconds / 3600;
-
-            timer.setText(String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds));
-            handler.postDelayed(this, 100);
+    private ImageView toggle, play;
+    private TextView timer, label;
+    private MediaPlayer preview;
+    private File lastSaved;
+    private long startedAt;
+    private final Runnable tick = new Runnable() {
+        @Override public void run() {
+            if (!recording.isRecording()) return;
+            long seconds = (SystemClock.elapsedRealtime() - startedAt) / 1000;
+            timer.setText(String.format(Locale.getDefault(), "%02d:%02d:%02d", seconds / 3600, (seconds / 60) % 60, seconds % 60));
+            handler.postDelayed(this, 250);
         }
     };
-
-    private final ActivityResultLauncher<String[]> permissionLauncher =
-            registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
-                Boolean recordGranted = result.get(Manifest.permission.RECORD_AUDIO);
-                if (recordGranted != null && recordGranted) {
-                    startRecording();
-                } else {
-                    Toast.makeText(this, "Microphone permission is required to record audio", Toast.LENGTH_SHORT).show();
-                }
-            });
-
-    @Override
-    public void onCreate(Bundle bundle) {
-        super.onCreate(bundle);
+    private final ActivityResultLauncher<String> permission = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> message(granted
+                    ? "Permission granted. Tap Start to record."
+                    : "Allow microphone access in Settings to record."));
+    @Override public void onCreate(Bundle state) {
+        super.onCreate(state);
         setContentView(R.layout.activity_record_audio_new);
-        GoogleAds.getInstance().admobBanner(this, findViewById(R.id.nativeLay));
         EUGeneralClass.BottomNavigationColor(this);
-
-        this.myPref = new MyPref(this);
-        this.outputDir = MyPref.creatsDirsforApp(this);
-
-        findViewById(R.id.iv_back).setOnClickListener(v -> onBackPressed());
-
-        this.rl_start_stop = findViewById(R.id.iv_start_stop_new);
-        this.iv_play = findViewById(R.id.iv_play);
-        this.timer = findViewById(R.id.tv_timer);
-        this.tv_start_stop = findViewById(R.id.tv_start_stop_new);
-
-        findViewById(R.id.iv_history).setOnClickListener(v ->
-                startActivity(new Intent(RecordAudioActivity.this, MySavedAnnounceActivity.class))
-        );
-
-        this.rl_start_stop.setOnClickListener(v -> {
-            long elapsedRealtime = SystemClock.elapsedRealtime();
-            if (elapsedRealtime - lastClickTime < MIN_CLICK_INTERVAL) {
-                return;
+        GoogleAds.getInstance().admobBanner(this, findViewById(R.id.nativeLay));
+        toggle = findViewById(R.id.iv_start_stop_new);
+        play = findViewById(R.id.iv_play);
+        timer = findViewById(R.id.tv_timer);
+        label = findViewById(R.id.tv_start_stop_new);
+        findViewById(R.id.iv_back).setContentDescription("Back");
+        findViewById(R.id.iv_back).setOnClickListener(v -> finish());
+        findViewById(R.id.iv_history).setContentDescription("Saved recordings");
+        findViewById(R.id.iv_history).setOnClickListener(v -> startActivity(new Intent(this, MySavedAnnounceActivity.class)));
+        if (state != null && state.getString("lastSaved") != null) lastSaved = new File(state.getString("lastSaved"));
+        toggle.setOnClickListener(v -> {
+            if (recording.isRecording()) { stopRecording(true); return; }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                permission.launch(Manifest.permission.RECORD_AUDIO); return;
             }
-            lastClickTime = elapsedRealtime;
-
-            if (!isRecordingRunning) {
-                checkPermissionAndRecord();
-            } else {
-                stopRecording();
-            }
-        });
-
-        this.iv_play.setOnClickListener(v -> {
-            if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                stopPlaying();
-                return;
-            }
-
-            if (currentFilePath != null && new File(currentFilePath).exists()) {
-                startPlaying(currentFilePath);
-            } else {
-                Toast.makeText(this, "No recorded audio found. Please record first.", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private void checkPermissionAndRecord() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            startRecording();
-        } else {
-            permissionLauncher.launch(new String[]{Manifest.permission.RECORD_AUDIO});
-        }
-    }
-
-    private void startRecording() {
-        stopPlaying();
-
-        startTime = SystemClock.uptimeMillis();
-        timeBuff = 0;
-        updateTime = 0;
-        handler.removeCallbacks(timerRunnable);
-        handler.post(timerRunnable);
-
-        if (!initMediaRecorder()) {
-            handler.removeCallbacks(timerRunnable);
-            Toast.makeText(this, "Failed to initialize recorder", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        try {
-            mediaRecorder.prepare();
-            mediaRecorder.start();
-            isRecordingRunning = true;
-            rl_start_stop.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.click_time_start));
-            tv_start_stop.setText("Stop");
-        } catch (Exception e) {
-            Log.e(TAG, "Error starting recorder", e);
-            handler.removeCallbacks(timerRunnable);
-            releaseRecorder();
-            Toast.makeText(this, "Could not start audio recorder", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void stopRecording() {
-        if (!isRecordingRunning) return;
-
-        handler.removeCallbacks(timerRunnable);
-        try {
-            if (mediaRecorder != null) {
-                mediaRecorder.stop();
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error stopping recorder", e);
-        } finally {
-            releaseRecorder();
-        }
-
-        isRecordingRunning = false;
-        rl_start_stop.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.time_start));
-        tv_start_stop.setText("Start");
-
-        if (currentFilePath != null) {
-            scanFile(this, currentFilePath);
-        }
-    }
-
-    private boolean initMediaRecorder() {
-        try {
-            releaseRecorder();
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                mediaRecorder = new MediaRecorder(this);
-            } else {
-                mediaRecorder = new MediaRecorder();
-            }
-
-            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-            mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-            mediaRecorder.setAudioSamplingRate(44100);
-            mediaRecorder.setAudioEncodingBitRate(128000);
-
-            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-            File outputFile = new File(outputDir, "Rec_" + timeStamp + ".m4a");
-            currentFilePath = outputFile.getAbsolutePath();
-            mediaRecorder.setOutputFile(currentFilePath);
-            return true;
-        } catch (Exception e) {
-            Log.e(TAG, "Error preparing MediaRecorder", e);
-            return false;
-        }
-    }
-
-    private void startPlaying(String filePath) {
-        stopPlaying();
-        try {
-            mediaPlayer = new MediaPlayer();
-            mediaPlayer.setDataSource(filePath);
-            mediaPlayer.prepare();
-            mediaPlayer.start();
-            iv_play.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.pause));
-
-            mediaPlayer.setOnCompletionListener(mp -> stopPlaying());
-        } catch (IOException e) {
-            Log.e(TAG, "Error playing audio", e);
-            stopPlaying();
-        }
-    }
-
-    private void stopPlaying() {
-        if (mediaPlayer != null) {
+            stopPreview();
             try {
-                if (mediaPlayer.isPlaying()) {
-                    mediaPlayer.stop();
-                }
-                mediaPlayer.release();
-            } catch (Exception e) {
-                Log.e(TAG, "Error releasing player", e);
-            }
-            mediaPlayer = null;
-        }
-        iv_play.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.play));
+                recording.start(this, new File(MyPref.creatsDirsforApp(this)));
+                startedAt = SystemClock.elapsedRealtime();
+                handler.post(tick);
+            } catch (IOException error) { message(error.getMessage()); }
+            updateControls();
+        });
+        play.setOnClickListener(v -> { if (preview != null) stopPreview(); else playRecording(); });
+        updateControls();
+        stopPreview();
     }
-
-    private void releaseRecorder() {
-        if (mediaRecorder != null) {
-            try {
-                mediaRecorder.reset();
-                mediaRecorder.release();
-            } catch (Exception e) {
-                Log.e(TAG, "Error releasing recorder", e);
-            }
-            mediaRecorder = null;
-        }
-    }
-
-    public static void scanFile(Context context, String path) {
-        if (path == null) return;
-        MediaScannerConnection.scanFile(context, new String[]{path}, null, (scanPath, uri) ->
-                Log.i(TAG, "Scanned: " + scanPath + " -> " + uri)
-        );
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (isRecordingRunning) {
-            stopRecording();
-        }
-        stopPlaying();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        handler.removeCallbacks(timerRunnable);
-        releaseRecorder();
-        stopPlaying();
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (isRecordingRunning) {
-            stopRecording();
-        }
-        stopPlaying();
-        super.onBackPressed();
-        AppConstants.overridePendingTransitionExit(this);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
+    private void stopRecording(boolean notify) {
+        handler.removeCallbacks(tick);
+        if (!recording.isRecording()) return;
         try {
-            if (myPref != null) {
-                myPref.getPref(MyPref.RecordAudioActivity, "");
-            }
-        } catch (Exception ignored) {}
+            File saved = recording.stop(true);
+            if (saved != null) { lastSaved = saved; if (notify) message("Recording saved"); }
+            else if (notify) message("Recording too short; incomplete file removed.");
+        } catch (IOException error) { message(error.getMessage()); }
+        updateControls();
     }
+    private void updateControls() {
+        boolean active = recording.isRecording();
+        toggle.setImageResource(active ? R.drawable.click_time_start : R.drawable.time_start);
+        toggle.setContentDescription(active ? "Stop recording" : "Start recording");
+        label.setText(active ? "Stop" : "Start");
+        play.setEnabled(!active);
+    }
+    private void playRecording() {
+        if (recording.isRecording()) return;
+        if (lastSaved == null || !lastSaved.isFile()) { message("No saved recording. Record first."); return; }
+        MediaPlayer player = new MediaPlayer();
+        preview = player;
+        try {
+            player.setDataSource(lastSaved.getAbsolutePath());
+            player.setOnPreparedListener(mp -> {
+                if (preview == mp) { mp.start(); play.setImageResource(R.drawable.pause); play.setContentDescription("Stop playback"); }
+            });
+            player.setOnCompletionListener(mp -> stopPreview());
+            player.setOnErrorListener((mp, what, extra) -> { stopPreview(); message("Could not play recording"); return true; });
+            player.prepareAsync();
+        } catch (IOException | RuntimeException error) { stopPreview(); message("Could not open recording"); }
+    }
+    private void stopPreview() {
+        if (preview != null) { preview.release(); preview = null; }
+        if (play != null) { play.setImageResource(R.drawable.play); play.setContentDescription("Play last recording"); }
+    }
+    private void message(String text) { Toast.makeText(this, text, Toast.LENGTH_LONG).show(); }
+    @Override protected void onSaveInstanceState(Bundle state) {
+        if (lastSaved != null) state.putString("lastSaved", lastSaved.getAbsolutePath());
+        super.onSaveInstanceState(state);
+    }
+    @Override protected void onStop() { stopRecording(false); stopPreview(); super.onStop(); }
+    @Override protected void onDestroy() { handler.removeCallbacks(tick); recording.close(); stopPreview(); super.onDestroy(); }
 }
