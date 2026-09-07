@@ -49,6 +49,10 @@ jobs:
   device-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Temporary report access; remove this scope after the device failures are diagnosed.
+    permissions:
+      contents: read
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
@@ -70,10 +74,65 @@ jobs:
           api-level: ${{ matrix.api }}
           arch: x86_64
           disable-animations: true
-          script: bash ./gradlew --no-daemon :app:connectedDebugAndroidTest
+          script: bash -o pipefail -c 'bash ./gradlew --no-daemon :app:connectedDebugAndroidTest 2>&1 | tee device-test.log'
+      - name: Report emulator failures for diagnosis (temporary)
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        env:
+          ANDROID_API: ${{ matrix.api }}
+          DEVICE_OUTCOME: ${{ job.status }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const reports = [];
+            function walk(dir, depth = 0) {
+              if (depth > 8 || reports.length >= 30 || !fs.existsSync(dir)) return;
+              for (const entry of fs.readdirSync(dir, {withFileTypes: true})) {
+                const file = path.join(dir, entry.name);
+                if (entry.isDirectory()) walk(file, depth + 1);
+                else if (entry.isFile() && file.endsWith('.xml') && fs.statSync(file).size < 5000000) reports.push(file);
+              }
+            }
+            walk('app/build/outputs/androidTest-results/connected');
+            function decode(text) {
+              return text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+            }
+            const failures = [];
+            let tests = 0;
+            for (const file of reports) {
+              const xml = fs.readFileSync(file, 'utf8');
+              for (const test of xml.matchAll(/<testcase\b(?![^>]*\/>)([^>]*)>([\s\S]*?)<\/testcase>/g)) {
+                tests++;
+                const failure = test[2].match(/<(?:failure|error)\b([^>]*)>([\s\S]*?)<\/(?:failure|error)>/);
+                if (!failure) continue;
+                const name = (test[1].match(/(?:^|\s)name="([^"]*)"/) || [,'unknown test'])[1];
+                const message = (failure[1].match(/message="([^"]*)"/) || [,''])[1];
+                failures.push(decode(name + '\n' + message + '\n' + failure[2]).trim().slice(0, 1800));
+              }
+            }
+            let excerpt = failures.join('\n\n');
+            if (!excerpt && process.env.DEVICE_OUTCOME !== 'success' && fs.existsSync('device-test.log')) {
+              const lines = fs.readFileSync('device-test.log', 'utf8').split('\n');
+              const selected = new Set();
+              lines.forEach((line, i) => {
+                if (/FAILED|AssertionError|Exception|FAILURE:|Error:/.test(line))
+                  for (let j = Math.max(0, i - 1); j < Math.min(lines.length, i + 10); j++) selected.add(j);
+              });
+              excerpt = [...selected].sort((a,b) => a-b).map(i => lines[i]).join('\n');
+            }
+            if (!excerpt) excerpt = reports.length ? 'No failure elements found in ' + reports.length + ' JUnit report(s).' : 'No JUnit reports were generated; inspect the emulator job.';
+            excerpt = excerpt.replace(/\u001b\[[0-9;]*m/g, '').replace(/(?:gh[a-z]_|github_pat_)[A-Za-z0-9_]+/g, '[redacted]').replace(/```/g, "'''").slice(0, 9000);
+            await github.rest.issues.createComment({
+              ...context.repo, issue_number: context.issue.number,
+              body: '### Emulator diagnostics — API ' + process.env.ANDROID_API + '\nCommit: `' + context.payload.pull_request.head.sha + '`\nJob outcome before upload: ' + process.env.DEVICE_OUTCOME + '\n\n```text\n' + excerpt + '\n```\n[Full check details](' + process.env.GITHUB_SERVER_URL + '/' + process.env.GITHUB_REPOSITORY + '/actions/runs/' + process.env.GITHUB_RUN_ID + ')'
+            });
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: android-device-test-reports-api-${{ matrix.api }}
-          path: app/build/reports/androidTests/
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+            device-test.log
           if-no-files-found: ignore
