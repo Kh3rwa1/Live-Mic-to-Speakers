@@ -1,0 +1,81 @@
+// Opt-in production configuration. Never commit signing secrets or invent ad IDs.
+// Ordinary assembleRelease stays an unsigned demo build for CI; bundleRelease is gated.
+def production = providers.gradleProperty('productionRelease').getOrElse('false').toBoolean()
+def readSetting = { String name ->
+    providers.environmentVariable(name).orElse(providers.gradleProperty(name)).getOrElse('')
+}
+def adKeys = [admob_app_id: 'LIVE_MIC_ADMOB_APP_ID', bnr_admob: 'LIVE_MIC_AD_BANNER',
+              native_admob: 'LIVE_MIC_AD_NATIVE', int_admob: 'LIVE_MIC_AD_INTERSTITIAL',
+              app_open_admob: 'LIVE_MIC_AD_OPEN', video_admob: 'LIVE_MIC_AD_REWARDED']
+def ads = adKeys.collectEntries { resource, key -> [(resource): readSetting(key)] }
+def signing = ['LIVE_MIC_KEYSTORE', 'LIVE_MIC_STORE_PASSWORD', 'LIVE_MIC_KEY_ALIAS', 'LIVE_MIC_KEY_PASSWORD']
+        .collectEntries { key -> [(key): readSetting(key)] }
+def versionCodeText = readSetting('LIVE_MIC_VERSION_CODE')
+def versionNameText = readSetting('LIVE_MIC_VERSION_NAME')
+def validVersionCode = versionCodeText ==~ /[1-9][0-9]{0,8}/
+def productionProblems = {
+    def problems = []
+    if (!production) problems << 'Set -PproductionRelease=true explicitly.'
+    adKeys.each { resource, key ->
+        def value = ads[resource]
+        def valid = resource == 'admob_app_id'
+                ? value ==~ /ca-app-pub-[0-9]{16}~[0-9]{10}/
+                : (value ==~ /ca-app-pub-[0-9]{16}\/[0-9]{10}/ || value ==~ /\/[0-9]+\/[A-Za-z0-9_\/-]+/)
+        if (!valid || value.contains('3940256099942544') || value.startsWith('/6499/'))
+            problems << "Configure a non-test ${key}."
+    }
+    signing.each { key, value -> if (!value) problems << "Configure ${key} securely." }
+    if (signing.LIVE_MIC_KEYSTORE && !file(signing.LIVE_MIC_KEYSTORE).isFile())
+        problems << 'LIVE_MIC_KEYSTORE must point to an existing keystore.'
+    if (!validVersionCode) problems << 'LIVE_MIC_VERSION_CODE must be a positive integer (maximum 9 digits).'
+    if (!versionNameText || versionNameText.length() > 80) problems << 'Configure LIVE_MIC_VERSION_NAME (1–80 characters).'
+    return problems
+}
+
+def verify = tasks.register('verifyProductionRelease') {
+    group = 'verification'
+    description = 'Reject missing production settings, sample ads, or absent signing configuration.'
+    doLast {
+        def problems = productionProblems()
+        if (!problems.isEmpty()) throw new GradleException('Production release blocked:\n- ' + problems.join('\n- '))
+        logger.lifecycle('Production configuration validated. Device, privacy and store sign-off remain required.')
+    }
+}
+
+if (production) {
+    if (validVersionCode) android.defaultConfig.versionCode = versionCodeText.toInteger()
+    if (versionNameText) android.defaultConfig.versionName = versionNameText
+    if (signing.values().every { it }) {
+        android.signingConfigs.create('production') {
+            storeFile file(signing.LIVE_MIC_KEYSTORE)
+            storePassword signing.LIVE_MIC_STORE_PASSWORD
+            keyAlias signing.LIVE_MIC_KEY_ALIAS
+            keyPassword signing.LIVE_MIC_KEY_PASSWORD
+        }
+        android.buildTypes.release.signingConfig = android.signingConfigs.production
+    }
+    // A release source-set overlay overrides demo strings without changing debug resources.
+    def generated = layout.buildDirectory.dir('generated/productionAds/res')
+    def generateAds = tasks.register('generateProductionAdResources') {
+        dependsOn verify
+        inputs.properties(ads)
+        outputs.dir(generated)
+        doLast {
+            def folder = new File(generated.get().asFile, 'values')
+            folder.mkdirs()
+            new File(folder, 'ads.xml').text = '<resources>\n' + ads.collect { resource, value ->
+                // Verification restricts the alphabet to XML-safe ad identifiers.
+                '    <string name="' + resource + '" translatable="false">' + value + '</string>'
+            }.join('\n') + '\n</resources>\n'
+        }
+    }
+    android.sourceSets.release.res.srcDir(generated)
+    tasks.configureEach { task ->
+        if (task.name == 'preReleaseBuild') task.dependsOn(generateAds)
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name == 'bundleRelease') task.dependsOn(verify)
+    if (production && task.name == 'preReleaseBuild') task.dependsOn(verify)
+}
