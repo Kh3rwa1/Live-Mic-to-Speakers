@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<notices>
+
+    <notice>
+        <name>Google Play Services</name>
+        <url>https://developer.android.com/google/play-services/index.html</url>
+        <copyright>© 2014 Google</copyright>
+        <license>Creative Commons Attribution-NoDerivs 3.0 Unported</license>
+    </notice>
+
+    <notice>
+        <name>Licenses Dialog</name>
+        <url>https://github.com/PSDev/LicensesDialog</url>
+        <copyright>© 2013 Philip Schiffer</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <!--<notice>-->
+    <!--<name>ZXing Android Embedded</name>-->
+    <!--<url>https:-->
+    <!--<copyright>© 2012-2018 ZXing authors, Journey Mobile</copyright>-->
+    <!--<license>Apache Software License 2.0</license>-->
+    <!--</notice>-->
+
+    <!--<notice>-->
+    <!--<name>RoundedImageView</name>-->
+    <!--<url>https:-->
+    <!--<copyright>© Copyright 2017 Vincent Mi</copyright>-->
+    <!--<license>Apache Software License 2.0</license>-->
+    <!--</notice>-->
+
+
+</notices>
+
