@@ -3,6 +3,7 @@ package com.example.livemictospeaker.Service;
 import android.app.Service;
 import android.content.Intent;
 import android.media.AudioAttributes;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Binder;
@@ -10,191 +11,116 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import java.io.IOException;
 
+/** Bound, foreground-screen playback. Call its methods from the main thread. */
 public class MediaPlaybackService extends Service implements MediaPlayer.OnPreparedListener, MediaPlayer.OnCompletionListener {
     public static final String MPS_COMPLETED = "com.example.livemictospeaker.MediaPlaybackService.COMPLETED";
     public static final String MPS_MESSAGE = "com.example.livemictospeaker.MediaPlaybackService.MESSAGE";
     public static final String MPS_PREPARE_COMPLETED = "com.example.livemictospeaker.MediaPlaybackService.PREPARE_COMPLETED";
     public static final String MPS_RESULT = "com.example.livemictospeaker.MediaPlaybackService.RESULT";
-
-    private LocalBroadcastManager broadcastManager;
+    public static final String MPS_ERROR = "com.example.livemictospeaker.MediaPlaybackService.ERROR";
+    private final IDBinder binder = new IDBinder();
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private MediaPlayer player;
+    private AudioManager audio;
     private Uri file;
-    private final IDBinder idBinder = new IDBinder();
-    private MediaPlayer mMediaPlayer = null;
-    private final Handler progressHandler = new Handler(Looper.getMainLooper());
-    private final Object playerLock = new Object();
-
-    private final Runnable sendUpdates = new Runnable() {
-        @Override
-        public void run() {
-            synchronized (playerLock) {
-                if (mMediaPlayer != null && isPlaying()) {
-                    sendElapsedTime();
-                    progressHandler.postDelayed(this, 500);
-                }
-            }
+    private boolean prepared, playWhenReady, hasFocus;
+    private int initialPosition;
+    private final AudioManager.OnAudioFocusChangeListener focus = change -> { if (change < 0) pause(); };
+    private final Runnable progress = new Runnable() {
+        @Override public void run() {
+            sendElapsedTime();
+            if (isPlaying()) handler.postDelayed(this, 500);
         }
     };
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        return Service.START_NOT_STICKY;
-    }
-
-    public class IDBinder extends Binder {
-        public MediaPlaybackService getService() {
-            return MediaPlaybackService.this;
-        }
-    }
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        this.broadcastManager = LocalBroadcastManager.getInstance(this);
-    }
-
-    @Override
-    public void onDestroy() {
+    public class IDBinder extends Binder { public MediaPlaybackService getService() { return MediaPlaybackService.this; } }
+    @Override public void onCreate() { super.onCreate(); audio = (AudioManager) getSystemService(AUDIO_SERVICE); }
+    @Override public IBinder onBind(Intent intent) { return binder; }
+    @Override public int onStartCommand(Intent intent, int flags, int id) { return START_NOT_STICKY; }
+    @Override public boolean onUnbind(Intent intent) { stop(); return false; }
+    @Override public void onDestroy() { stop(); super.onDestroy(); }
+    public void init(Uri uri) { init(uri, 0, true); }
+    public void init(Uri uri, int position, boolean autoplay) {
         stop();
-        super.onDestroy();
+        file = uri;
+        initialPosition = Math.max(0, position);
+        playWhenReady = autoplay;
+        try {
+            player = new MediaPlayer();
+            player.setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());
+            player.setDataSource(this, uri);
+            player.setOnPreparedListener(this);
+            player.setOnCompletionListener(this);
+            player.setOnErrorListener((mp, what, extra) -> { if (mp == player) fail(); return true; });
+            player.prepareAsync();
+        } catch (Exception error) { fail(); }
     }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return this.idBinder;
+    @Override public void onPrepared(MediaPlayer ready) {
+        if (ready != player) return;
+        prepared = true;
+        try {
+            ready.seekTo(Math.min(initialPosition, Math.max(0, ready.getDuration())));
+            if (playWhenReady) play();
+            broadcast(MPS_PREPARE_COMPLETED);
+            sendElapsedTime();
+        } catch (RuntimeException error) { fail(); }
     }
-
-    @Override
-    public boolean onUnbind(Intent intent) {
-        stop();
-        return super.onUnbind(intent);
-    }
-
-    public void init(Uri uri) {
-        this.file = uri;
-        stop();
-        synchronized (playerLock) {
-            try {
-                MediaPlayer mediaPlayer = new MediaPlayer();
-                this.mMediaPlayer = mediaPlayer;
-                mediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .build());
-                this.mMediaPlayer.setDataSource(getApplicationContext(), uri);
-                this.mMediaPlayer.setOnPreparedListener(this);
-                this.mMediaPlayer.setOnCompletionListener(this);
-                this.mMediaPlayer.prepareAsync();
-            } catch (IOException e) {
-                e.printStackTrace();
-                stop();
-            }
-        }
-    }
-
-    @Override
-    public void onPrepared(MediaPlayer mediaPlayer) {
-        synchronized (playerLock) {
-            if (mMediaPlayer != null) {
-                mMediaPlayer.start();
-                startProgressUpdates();
-                if (broadcastManager != null) {
-                    broadcastManager.sendBroadcast(new Intent(MPS_PREPARE_COMPLETED));
-                }
-            }
-        }
-    }
-
-    public void pause() {
-        synchronized (playerLock) {
-            if (mMediaPlayer != null) {
-                try {
-                    if (mMediaPlayer.isPlaying()) {
-                        mMediaPlayer.pause();
-                    }
-                } catch (IllegalStateException ignored) {}
-                stopProgressUpdates();
-            }
-        }
-    }
-
     public void play() {
-        synchronized (playerLock) {
-            if (mMediaPlayer != null) {
-                try {
-                    mMediaPlayer.start();
-                    startProgressUpdates();
-                } catch (IllegalStateException ignored) {}
-            }
-        }
+        playWhenReady = true;
+        if (!prepared || player == null) return;
+        if (!hasFocus) hasFocus = audio != null && audio.requestAudioFocus(focus, AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+        if (!hasFocus) { playWhenReady = false; broadcast(MPS_ERROR); return; }
+        try { player.start(); handler.removeCallbacks(progress); handler.post(progress); }
+        catch (RuntimeException error) { fail(); }
     }
-
+    public void pause() {
+        playWhenReady = false;
+        if (prepared && player != null) { try { if (player.isPlaying()) player.pause(); } catch (RuntimeException ignored) {} }
+        handler.removeCallbacks(progress);
+        abandonFocus();
+        sendElapsedTime();
+    }
     public void stop() {
-        stopProgressUpdates();
-        synchronized (playerLock) {
-            if (mMediaPlayer != null) {
-                try {
-                    mMediaPlayer.reset();
-                    mMediaPlayer.release();
-                } catch (Exception ignored) {}
-                this.mMediaPlayer = null;
-                this.file = null;
-            }
-        }
+        handler.removeCallbacks(progress);
+        if (player != null) { try { player.release(); } catch (RuntimeException ignored) {} player = null; }
+        prepared = false;
+        playWhenReady = false;
+        file = null;
+        abandonFocus();
     }
-
+    private void abandonFocus() { if (hasFocus && audio != null) audio.abandonAudioFocus(focus); hasFocus = false; }
     public void seekTo(int position) {
-        synchronized (playerLock) {
-            if (mMediaPlayer != null) {
-                try {
-                    mMediaPlayer.seekTo(position);
-                } catch (IllegalStateException ignored) {}
-            }
-        }
+        initialPosition = Math.max(0, position);
+        if (prepared && player != null) { try { player.seekTo(Math.min(initialPosition, getDuration())); } catch (RuntimeException error) { fail(); } }
     }
-
+    public int getCurrentPosition() {
+        if (prepared && player != null) { try { return player.getCurrentPosition(); } catch (RuntimeException ignored) {} }
+        return initialPosition;
+    }
+    public int getDuration() {
+        if (prepared && player != null) { try { return player.getDuration(); } catch (RuntimeException ignored) {} }
+        return 0;
+    }
     public boolean isPlaying() {
-        synchronized (playerLock) {
-            if (mMediaPlayer != null) {
-                try {
-                    return mMediaPlayer.isPlaying();
-                } catch (IllegalStateException ignored) {}
-            }
-            return false;
-        }
+        if (prepared && player != null) { try { return player.isPlaying(); } catch (RuntimeException ignored) {} }
+        return false;
     }
-
-    public Uri getFile() {
-        return this.file;
+    public boolean wantsPlayback() { return playWhenReady; }
+    public Uri getFile() { return file; }
+    @Override public void onCompletion(MediaPlayer completed) {
+        if (completed != player) return;
+        playWhenReady = false;
+        handler.removeCallbacks(progress);
+        abandonFocus();
+        sendElapsedTime();
+        broadcast(MPS_COMPLETED);
     }
-
-    @Override
-    public void onCompletion(MediaPlayer mediaPlayer) {
-        stopProgressUpdates();
-        if (broadcastManager != null) {
-            broadcastManager.sendBroadcast(new Intent(MPS_COMPLETED));
-        }
-    }
-
-    private void startProgressUpdates() {
-        stopProgressUpdates();
-        progressHandler.post(sendUpdates);
-    }
-
-    private void stopProgressUpdates() {
-        progressHandler.removeCallbacks(sendUpdates);
-    }
-
     public void sendElapsedTime() {
-        synchronized (playerLock) {
-            if (mMediaPlayer != null && broadcastManager != null) {
-                try {
-                    Intent intent = new Intent(MPS_RESULT);
-                    intent.putExtra(MPS_MESSAGE, mMediaPlayer.getCurrentPosition());
-                    broadcastManager.sendBroadcast(intent);
-                } catch (Exception ignored) {}
-            }
-        }
+        Intent update = new Intent(MPS_RESULT).putExtra(MPS_MESSAGE, getCurrentPosition());
+        LocalBroadcastManager.getInstance(this).sendBroadcast(update);
     }
+    private void broadcast(String action) { LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(action)); }
+    private void fail() { stop(); broadcast(MPS_ERROR); }
 }
