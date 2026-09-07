@@ -1,6 +1,6 @@
 # Release gates — do not publish on source review alone
 
-These are release sign-off checks, not a list of unimplemented features. Record evidence for the final commit before marking a gate complete.
+These are release sign-off checks, not a list of unimplemented features. Record evidence for the final commit before marking a gate complete. See [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) for the current toolchain and production configuration.
 
 ## Implemented safeguards to verify
 
@@ -11,12 +11,14 @@ These are release sign-off checks, not a list of unimplemented features. Record 
 - Exactly-once fullscreen completion after resume, with pending navigation cancelled on destruction.
 - Off-main history/MediaStore loading, content-URI playback and corrected search/filter identity.
 - Read-only recording sharing with a narrow provider allowlist; unrelated private/cache/external files are excluded.
-- Additional JVM and Android recording/filter/sharing tests, debug/release builds and an API 24/34 CI matrix.
+- Additional JVM and Android recording/filter/sharing tests, debug/release builds and an API 24/34/36 CI matrix, including 200% text on API 36.
+- Production configuration gates and core-tool safe-area/accessibility checks.
 
 ## Automated and release builds
 
 - [ ] Build, JVM tests and Android lint pass on the final commit, for both debug and release where configured.
-- [ ] API 24 and API 34 instrumentation checks pass on the final commit.
+- [ ] API 24, 34 and 36 instrumentation checks pass on the final commit, including 200% font scale on API 36.
+- [ ] Inspect the native screenshots uploaded with device-test reports; automated reachability tests do not replace visual review.
 - [ ] Signed release build is installable; run device tests against the actual release artifact.
 
 ## Real-device audio matrix
@@ -36,6 +38,7 @@ These are release sign-off checks, not a list of unimplemented features. Record 
 - [ ] Confirm legacy public-folder files stay playable when accessible; sharing them should explain the Files-app alternative, not broaden provider access.
 - [ ] Test large audio libraries, empty libraries, missing files, search and rapid navigation while loading.
 - [ ] Test TalkBack, hold-to-record's double-tap fallback, large text, small screens and localization.
+- [ ] Verify gesture/three-button navigation, cutouts, the keyboard, RTL and tablet/window resizing with the API 36 target.
 
 ## Privacy, security and store sign-off
 
@@ -43,7 +46,7 @@ These are release sign-off checks, not a list of unimplemented features. Record 
 - [ ] Confirm no SDK/ad requests occur before consent permits initialization/requests, including mediation adapters. Verify banner/native cleanup and fullscreen dismissal before/after owner resume. Automated tests do not validate live ads or network behavior.
 - [ ] Verify narrow FileProvider roots and grant revocation with another app, including traversal, unrelated files and unsupported/legacy paths.
 - [ ] Verify privacy-policy URL/content, Data Safety declarations, ad IDs and consent-console settings.
-- [ ] Check dependencies/security reports and current Play target-SDK requirements. This pass retains targetSdk 34; no claim of current store-submission compliance is made.
+- [ ] Check dependencies/security reports, packaged native libraries for 16 KB page-size compatibility and current Play requirements. The app targets API 36; this alone is not store-submission certification.
 - [ ] Confirm application ID, provider authority, versioning and signing. Identity was deliberately preserved; changing it can break upgrades to an existing installation.
 - [ ] Complete visual/device QA and an accessibility/localization audit beyond the changed controls.
 

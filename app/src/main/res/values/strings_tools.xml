@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tool_back">Back</string>
+    <string name="tool_saved">Saved recordings</string>
+    <string name="tool_start_recording">Start recording</string>
+    <string name="tool_stop_recording">Stop recording</string>
+    <string name="tool_play_last">Play last recording</string>
+    <string name="tool_play_queue">Play queued recordings</string>
+    <string name="tool_play">Play audio</string>
+    <string name="tool_pause">Pause playback</string>
+    <string name="tool_start">Start</string>
+    <string name="tool_stop">Stop</string>
+    <string name="tool_preparing">Preparing…</string>
+    <string name="tool_saving">Saving…</string>
+    <string name="tool_saved_message">Recording saved</string>
+    <string name="tool_too_short">Recording too short or cancelled before starting; no file saved.</string>
+    <string name="tool_hold_too_short">Recording too short or cancelled before starting. Hold for at least half a second.</string>
+    <string name="tool_play_error">Could not play audio. Check the file or other audio apps.</string>
+    <string name="tool_record_error">Could not complete the recording. Check microphone access and available storage, then try again.</string>
+    <string name="tool_no_recording">No saved recording. Record first.</string>
+    <string name="tool_permission_record">Permission granted. Tap Start to record.</string>
+    <string name="tool_permission_hold">Permission granted. Hold the button to record.</string>
+    <string name="tool_permission_denied">Microphone access is required. You can allow it in app Settings.</string>
+    <string name="tool_record_help">Record, stop to save, then preview or share from Saved recordings. Leaving this screen stops and saves a valid recording.</string>
+    <string name="tool_hold_help">Hold to record; release to save. With a screen reader or keyboard, activate the button once to start and again to stop.</string>
+    <string name="tool_hold_idle">Hold to record</string>
+    <string name="tool_hold_active">Recording · release to save</string>
+    <string name="tool_hold_accessibility">Hold to record. Screen reader users can double-tap to start or stop.</string>
+    <string name="tool_foreground_note">Audio is foreground-only. Keep this screen open during use.</string>
+    <string name="tool_live_help">Audio follows the system media output. Connect your headphones or speaker before starting. Start at low volume; headphones are safer.</string>
+    <string name="tool_timer_initial" translatable="false">00:00:00</string>
+    <string name="tool_player_title">Audio player</string>
+    <string name="tool_unknown_artist">Unknown artist</string>
+    <string name="tool_next">Next track</string>
+    <string name="tool_previous">Previous track</string>
+    <string name="tool_position">Playback position</string>
+    <string name="tool_change_audio">Choose another recording</string>
+    <string name="tool_no_selected">No audio selected</string>
+    <string name="tool_no_more">No more tracks</string>
+    <string name="tool_service_unavailable">Playback service unavailable</string>
+    <string name="tool_settings_title">Settings</string>
+    <string name="tool_privacy_title">Privacy</string>
+    <string name="tool_privacy_policy">View privacy policy</string>
+    <string name="tool_privacy_choices">Ad privacy choices</string>
+    <string name="tool_privacy_description">Privacy policy and ad privacy choices</string>
+    <string name="tool_privacy_missing">Privacy policy is not configured. Please contact the developer.</string>
+    <string name="tool_no_browser">No browser available to open the privacy policy.</string>
+    <string name="tool_privacy_help">Review the privacy policy or change available ad-consent choices.</string>
+    <string name="tool_share_app">Share app</string>
+    <string name="tool_rate_app">Rate app</string>
+    <string name="tool_saved_help">Recordings are stored in this app and are normally deleted on uninstall. Share important recordings before uninstalling.</string>
+    <string name="tool_elapsed">Elapsed: %1$s</string>
+    <string name="tool_duration">Duration: %1$s</string>
+</resources>

@@ -43,7 +43,7 @@ public class MusicActivity extends AppCompatActivity {
         @Override public void onReceive(Context context, Intent intent) {
             if (MediaPlaybackService.MPS_ERROR.equals(intent.getAction())) {
                 autoplay = false;
-                Toast.makeText(MusicActivity.this, "Unable to play audio. Check the file and whether another app is using audio.", Toast.LENGTH_LONG).show();
+                Toast.makeText(MusicActivity.this, R.string.tool_play_error, Toast.LENGTH_LONG).show();
             }
             refresh();
         }
@@ -58,13 +58,10 @@ public class MusicActivity extends AppCompatActivity {
         duration = findViewById(R.id.textViewDuration);
         elapsed = findViewById(R.id.textViewElapsedTime);
         seek = findViewById(R.id.seekBar);
-        ((ImageView) findViewById(R.id.albumArt)).setImageResource(R.drawable.music);
-        ((TextView) findViewById(R.id.textViewArtist)).setText("Unknown Artist");
-        if (findViewById(R.id.fab) != null) findViewById(R.id.fab).setOnClickListener(v -> finish());
-        findViewById(R.id.iv_back).setContentDescription("Back");
+        ((ImageView) findViewById(R.id.albumArt)).setImageResource(R.drawable.tool_play);
+        ((TextView) findViewById(R.id.textViewArtist)).setText(R.string.tool_unknown_artist);
+        findViewById(R.id.fab).setOnClickListener(v -> finish());
         findViewById(R.id.iv_back).setOnClickListener(v -> finish());
-        findViewById(R.id.imageButtonNext).setContentDescription("Next track");
-        findViewById(R.id.imageButtonPre).setContentDescription("Previous track");
         findViewById(R.id.imageButtonNext).setOnClickListener(v -> adjacent(1));
         findViewById(R.id.imageButtonPre).setOnClickListener(v -> adjacent(-1));
         String selected = state == null ? getIntent().getStringExtra("SONG_URI") : state.getString("track");
@@ -73,18 +70,18 @@ public class MusicActivity extends AppCompatActivity {
             if (track.getScheme() == null) track = Uri.fromFile(new File(selected));
         }
         if (state != null) { position = state.getInt("position"); autoplay = state.getBoolean("autoplay", false); }
-        if (track == null) { Toast.makeText(this, "No audio selected", Toast.LENGTH_SHORT).show(); finish(); return; }
+        else autoplay = getIntent().getBooleanExtra("AUTOPLAY", true);
+        if (track == null) { Toast.makeText(this, R.string.tool_no_selected, Toast.LENGTH_SHORT).show(); finish(); return; }
         String name = getIntent().getStringExtra("SONG_NAME");
         title.setText(name == null ? track.getLastPathSegment() : name);
         loadMetadata(track);
         loadPlaylist();
-        play.setContentDescription(autoplay ? "Pause playback" : "Play audio");
+        play.setContentDescription(getString(autoplay ? R.string.tool_pause : R.string.tool_play));
         play.setOnClickListener(v -> {
             if (service == null) return;
             if (service.wantsPlayback()) service.pause(); else service.play();
             refresh();
         });
-        seek.setContentDescription("Playback position");
         seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar bar, int value, boolean user) {}
             @Override public void onStartTrackingTouch(SeekBar bar) {}
@@ -101,7 +98,7 @@ public class MusicActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     if (!isDestroyed() && selected.equals(track)) {
                         if (name != null && !name.isEmpty()) title.setText(name);
-                        ((TextView) findViewById(R.id.textViewArtist)).setText(artist == null ? "Unknown Artist" : artist);
+                        ((TextView) findViewById(R.id.textViewArtist)).setText(artist == null ? getString(R.string.tool_unknown_artist) : artist);
                     }
                 });
             } catch (RuntimeException ignored) {
@@ -128,13 +125,13 @@ public class MusicActivity extends AppCompatActivity {
         for (int i = 0; i < playlist.length; i++) if (Uri.fromFile(playlist[i]).equals(track)) current = i;
         int next = current + direction;
         if (current < 0 || next < 0 || next >= playlist.length) {
-            Toast.makeText(this, "No more tracks", Toast.LENGTH_SHORT).show(); return;
+            Toast.makeText(this, R.string.tool_no_more, Toast.LENGTH_SHORT).show(); return;
         }
         track = Uri.fromFile(playlist[next]);
         position = 0;
         autoplay = true;
         title.setText(playlist[next].getName());
-        ((TextView) findViewById(R.id.textViewArtist)).setText("Unknown Artist");
+        ((TextView) findViewById(R.id.textViewArtist)).setText(R.string.tool_unknown_artist);
         loadMetadata(track);
         seek.setProgress(0);
         if (service != null) service.init(track, 0, true);
@@ -148,7 +145,7 @@ public class MusicActivity extends AppCompatActivity {
         LocalBroadcastManager.getInstance(this).registerReceiver(updates, filter);
         receiversRegistered = true;
         binding = bindService(new Intent(this, MediaPlaybackService.class), connection, BIND_AUTO_CREATE);
-        if (!binding) Toast.makeText(this, "Playback service unavailable", Toast.LENGTH_LONG).show();
+        if (!binding) Toast.makeText(this, R.string.tool_service_unavailable, Toast.LENGTH_LONG).show();
     }
     private void snapshot() {
         if (service != null) { position = service.getCurrentPosition(); autoplay = service.wantsPlayback(); }
@@ -159,10 +156,10 @@ public class MusicActivity extends AppCompatActivity {
         seek.setMax(service.getDuration());
         seek.setEnabled(service.getDuration() > 0);
         seek.setProgress(position);
-        elapsed.setText(formatTime(position));
-        duration.setText(formatTime(service.getDuration()));
-        play.setImageResource(autoplay ? R.drawable.pause : R.drawable.play);
-        play.setContentDescription(autoplay ? "Pause playback" : "Play audio");
+        elapsed.setText(getString(R.string.tool_elapsed, formatTime(position)));
+        duration.setText(getString(R.string.tool_duration, formatTime(service.getDuration())));
+        play.setImageResource(autoplay ? R.drawable.tool_pause : R.drawable.tool_play);
+        play.setContentDescription(getString(autoplay ? R.string.tool_pause : R.string.tool_play));
     }
     private static String formatTime(int millis) {
         long seconds = Math.max(0, millis) / 1000;

@@ -12,7 +12,7 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -21,8 +21,20 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
+      - name: Verify core accessibility source contract
+        run: python3 tools/check_quality_contract.py
       - name: Audit file-sharing consumers
         run: git grep -n -E 'FileProvider|getUriForFile|FLAG_GRANT_(READ|WRITE)_URI_PERMISSION|ACTION_IMAGE_CAPTURE' -- '*.java' '*.kt' '*Manifest.xml' > fileprovider-audit.txt || test "$?" = 1
+      - name: Verify production release rejects missing configuration
+        run: |
+          if bash ./gradlew --no-daemon :app:verifyProductionRelease -PproductionRelease=false > production-gate.log 2>&1; then
+            echo 'Production gate unexpectedly accepted a demo configuration'; exit 1
+          fi
+          grep -q 'Production release blocked' production-gate.log
+          if bash ./gradlew --no-daemon :app:verifyProductionRelease -PproductionRelease=true >> production-gate.log 2>&1; then
+            echo 'Production gate unexpectedly accepted missing settings'; exit 1
+          fi
+          grep -q 'Configure a non-test LIVE_MIC_ADMOB_APP_ID' production-gate.log
       - name: App and ads unit tests, lint and debug/release builds
         run: |
           set -o pipefail
@@ -38,6 +50,7 @@ jobs:
             ads/build/reports/
             ads/build/test-results/
             build.log
+            production-gate.log
             fileprovider-audit.txt
           if-no-files-found: ignore
       - name: Upload installable debug APK
@@ -48,11 +61,19 @@ jobs:
           if-no-files-found: error
   device-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
-        api: [24, 34]
+        include:
+          - api: 24
+            font: '1.0'
+          - api: 34
+            font: '1.0'
+          - api: 36
+            font: '1.0'
+          - api: 36
+            font: '2.0'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -70,13 +91,14 @@ jobs:
           api-level: ${{ matrix.api }}
           arch: x86_64
           disable-animations: true
-          script: bash -o pipefail -c 'bash ./gradlew --no-daemon :app:connectedDebugAndroidTest 2>&1 | tee device-test.log'
+          script: bash tools/run_device_checks.sh '${{ matrix.font }}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: android-device-test-reports-api-${{ matrix.api }}
+          name: android-device-reports-api-${{ matrix.api }}-font-${{ matrix.font }}
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
+            app/build/quality-screenshots/
             device-test.log
           if-no-files-found: ignore
