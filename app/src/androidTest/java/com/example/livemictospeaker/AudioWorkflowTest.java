@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Before;
 import org.junit.Rule;
@@ -87,21 +88,38 @@ public class AudioWorkflowTest {
             });
         }
     }
+    private static void awaitAdCompletion(ActivityScenario<MainActivity> scenario, AtomicInteger calls) {
+        long deadline = SystemClock.elapsedRealtime() + 5_000;
+        AtomicBoolean delivered = new AtomicBoolean();
+        do {
+            // Observe the callback on the UI thread after lifecycle delivery, not on the test thread.
+            scenario.onActivity(activity -> {
+                int count = calls.get();
+                assertTrue("Ad completion must never be delivered twice", count <= 1);
+                delivered.set(count == 1);
+            });
+            if (delivered.get()) return;
+            SystemClock.sleep(20);
+        } while (SystemClock.elapsedRealtime() < deadline);
+        fail("Ad completion was not delivered after the screen resumed");
+    }
     @Test public void completedAdFlowWaitsForResumedScreen() {
-        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        AtomicInteger calls = new AtomicInteger();
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED);
             scenario.onActivity(activity -> demo.ads.GoogleAds.getInstance().showCounterInterstitialAd(activity, calls::incrementAndGet));
             assertEquals(0, calls.get());
             scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED);
-            assertEquals(1, calls.get());
-            scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED);
-            scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED);
-            assertEquals(1, calls.get());
+            awaitAdCompletion(scenario, calls);
+            for (int i = 0; i < 3; i++) {
+                scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED);
+                scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED);
+                scenario.onActivity(activity -> assertEquals(1, calls.get()));
+            }
         }
     }
     @Test public void destroyedScreenDoesNotReceivePendingAdCompletion() {
-        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        AtomicInteger calls = new AtomicInteger();
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED);
             scenario.onActivity(activity -> demo.ads.GoogleAds.getInstance().showCounterInterstitialAd(activity, calls::incrementAndGet));
