@@ -9,7 +9,8 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.lifecycle.Observer;
+import com.example.livemictospeaker.audio.PlaybackState;
 import com.example.livemictospeaker.R;
 import com.example.livemictospeaker.Service.MediaPlaybackService;
 import com.example.livemictospeaker.Utils.EUGeneralClass;
@@ -23,9 +24,10 @@ import demo.ads.GoogleAds;
 /** Playback deliberately stops in the background, and restores its prior state on return. */
 public class MusicActivity extends AppCompatActivity {
     private MediaPlaybackService service;
-    private boolean binding, autoplay = true, receiversRegistered;
+    private boolean binding, autoplay = true;
     private Uri track;
     private int position;
+    private long lastErrorSequence = -1;
     private ImageView play;
     private TextView title, duration, elapsed;
     private SeekBar seek;
@@ -35,18 +37,23 @@ public class MusicActivity extends AppCompatActivity {
         @Override public void onServiceConnected(ComponentName name, IBinder binder) {
             if (!binding) return;
             service = ((MediaPlaybackService.IDBinder) binder).getService();
+            lastErrorSequence = -1;
             if (track != null) service.init(track, position, autoplay);
+            service.getPlaybackState().observe(MusicActivity.this, updates);
         }
-        @Override public void onServiceDisconnected(ComponentName name) { service = null; }
+        @Override public void onServiceDisconnected(ComponentName name) {
+            if (service != null) service.getPlaybackState().removeObserver(updates);
+            service = null;
+        }
     };
-    private final BroadcastReceiver updates = new BroadcastReceiver() {
-        @Override public void onReceive(Context context, Intent intent) {
-            if (MediaPlaybackService.MPS_ERROR.equals(intent.getAction())) {
-                autoplay = false;
-                Toast.makeText(MusicActivity.this, R.string.tool_play_error, Toast.LENGTH_LONG).show();
-            }
-            refresh();
+    private final Observer<PlaybackState> updates = state -> {
+        if (service == null || state == null) return;
+        if (state.getStatus() == PlaybackState.Status.ERROR && state.getErrorSequence() != lastErrorSequence) {
+            lastErrorSequence = state.getErrorSequence();
+            autoplay = false;
+            Toast.makeText(MusicActivity.this, R.string.tool_play_error, Toast.LENGTH_LONG).show();
         }
+        refresh();
     };
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -138,12 +145,6 @@ public class MusicActivity extends AppCompatActivity {
     }
     @Override protected void onStart() {
         super.onStart();
-        IntentFilter filter = new IntentFilter(MediaPlaybackService.MPS_RESULT);
-        filter.addAction(MediaPlaybackService.MPS_PREPARE_COMPLETED);
-        filter.addAction(MediaPlaybackService.MPS_COMPLETED);
-        filter.addAction(MediaPlaybackService.MPS_ERROR);
-        LocalBroadcastManager.getInstance(this).registerReceiver(updates, filter);
-        receiversRegistered = true;
         binding = bindService(new Intent(this, MediaPlaybackService.class), connection, BIND_AUTO_CREATE);
         if (!binding) Toast.makeText(this, R.string.tool_service_unavailable, Toast.LENGTH_LONG).show();
     }
@@ -167,9 +168,14 @@ public class MusicActivity extends AppCompatActivity {
     }
     @Override protected void onStop() {
         snapshot();
+        if (service != null) {
+            service.getPlaybackState().removeObserver(updates);
+            // Stop sound now, rather than waiting for asynchronous service unbinding.
+            // snapshot() above preserves the user's prior playback choice for return.
+            service.pause();
+        }
         if (binding) { unbindService(connection); binding = false; }
         service = null;
-        if (receiversRegistered) { LocalBroadcastManager.getInstance(this).unregisterReceiver(updates); receiversRegistered = false; }
         super.onStop();
     }
     @Override protected void onSaveInstanceState(Bundle state) {
