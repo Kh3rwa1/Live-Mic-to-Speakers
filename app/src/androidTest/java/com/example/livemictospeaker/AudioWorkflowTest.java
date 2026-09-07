@@ -87,13 +87,17 @@ public class AudioWorkflowTest {
             });
         }
     }
-    @Test public void completedAdFlowWaitsForResumedScreen() {
+    @Test public void completedAdFlowWaitsForResumedScreen() throws Exception {
         java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        CountDownLatch delivered = new CountDownLatch(1);
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED);
-            scenario.onActivity(activity -> demo.ads.GoogleAds.getInstance().showCounterInterstitialAd(activity, calls::incrementAndGet));
+            scenario.onActivity(activity -> demo.ads.GoogleAds.getInstance().showCounterInterstitialAd(activity, () -> {
+                calls.incrementAndGet(); delivered.countDown();
+            }));
             assertEquals(0, calls.get());
             scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED);
+            assertTrue("Completed ad flow was not delivered after resume", delivered.await(5, TimeUnit.SECONDS));
             assertEquals(1, calls.get());
             scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED);
             scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED);

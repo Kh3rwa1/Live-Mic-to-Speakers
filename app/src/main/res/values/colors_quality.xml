@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="quality_canvas">#FFFFFF</color>
+    <color name="quality_surface">#F9F8F7</color>
+    <color name="quality_text">#2C2C2B</color>
+    <color name="quality_secondary">#615E59</color>
+    <color name="quality_accent">#1E6AB2</color>
+    <color name="quality_border">#7D7A75</color>
+</resources>

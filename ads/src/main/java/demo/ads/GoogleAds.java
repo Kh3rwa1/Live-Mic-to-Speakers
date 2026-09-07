@@ -148,7 +148,7 @@ public final class GoogleAds {
     private void prefetchInterstitial(Context app) {
         if (!AdsHandler.isAdsOn() || loadingInterstitial || interstitial != null || !validId(AdsHandler.interstitialId)) return;
         loadingInterstitial = true; long ticket = epoch;
-        InterstitialAd.load(app, AdsHandler.interstitialId, new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {
+        InterstitialAd.load(app, AdsHandler.interstitialstitialId, new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {
             @Override public void onAdLoaded(InterstitialAd value) {
                 if (ticket != epoch) return;
                 loadingInterstitial = false;
@@ -175,7 +175,7 @@ public final class GoogleAds {
         if (!completion.canShow() || !AdsHandler.isAdsOn() || interstitial == null
                 || SystemClock.elapsedRealtime() - lastShown < 60_000) {
             if (usable(activity)) prefetchInterstitial(activity.getApplicationContext());
-            completion.finish(); return; // Network requests never block navigation.
+            completion.finish(); return;
         }
         InterstitialAd ready = interstitial; interstitial = null; lastShown = SystemClock.elapsedRealtime();
         ready.setFullScreenContentCallback(completion);
@@ -219,13 +219,15 @@ public final class GoogleAds {
             delivery.finish(canShow());
         }
         @Override public void onResume(LifecycleOwner owner) {
-            if (canShow()) delivery.onResume();
+            // ON_RESUME is the lifecycle event authorizing delivery. A second state-snapshot
+            // gate here can miss the only resume event while dispatch is still in progress.
+            Activity activity = host.get();
+            if (activity == owner && usable(activity)) delivery.onResume();
         }
         @Override public void onAdDismissedFullScreenContent() { finish(); }
         @Override public void onAdFailedToShowFullScreenContent(AdError error) { finish(); }
         @Override public void onDestroy(LifecycleOwner owner) { delivery.cancel(); owner.getLifecycle().removeObserver(this); }
     }
-    // Compatibility: obsolete network-loading dialogs are intentionally no longer shown.
     @Deprecated public void showLoading(Activity activity, boolean cancelable) { }
     @Deprecated public void hideLoading() { }
     private static void optionalText(View view, String text) {
