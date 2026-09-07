@@ -148,7 +148,7 @@ public final class GoogleAds {
     private void prefetchInterstitial(Context app) {
         if (!AdsHandler.isAdsOn() || loadingInterstitial || interstitial != null || !validId(AdsHandler.interstitialId)) return;
         loadingInterstitial = true; long ticket = epoch;
-        InterstitialAd.load(app, AdsHandler.interstitialstitialId, new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {
+        InterstitialAd.load(app, AdsHandler.interstitialId, new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {
             @Override public void onAdLoaded(InterstitialAd value) {
                 if (ticket != epoch) return;
                 loadingInterstitial = false;
