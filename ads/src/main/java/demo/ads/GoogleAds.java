@@ -195,29 +195,35 @@ public final class GoogleAds {
     }
     private static final class Completion extends FullScreenContentCallback implements DefaultLifecycleObserver {
         final WeakReference<Activity> host;
-        CustomAdsListener listener;
-        boolean finished;
+        final DeferredCompletion delivery;
         Completion(Activity activity, CustomAdsListener listener) {
-            host = new WeakReference<>(activity); this.listener = listener;
+            host = new WeakReference<>(activity);
+            delivery = new DeferredCompletion(() -> {
+                Activity current = host.get();
+                detach(current);
+                if (usable(current) && listener != null) listener.onFinish();
+            });
             if (usable(activity)) ((LifecycleOwner) activity).getLifecycle().addObserver(this);
         }
         boolean canShow() {
             Activity activity = host.get();
-            return !finished && usable(activity)
+            return !delivery.isClosed() && usable(activity)
                     && ((LifecycleOwner) activity).getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED);
         }
+        private void detach(Activity activity) {
+            if (activity instanceof LifecycleOwner) ((LifecycleOwner) activity).getLifecycle().removeObserver(this);
+        }
         void finish() {
-            if (finished) return;
-            finished = true;
             Activity activity = host.get();
-            CustomAdsListener callback = listener; listener = null;
-            if (usable(activity)) ((LifecycleOwner) activity).getLifecycle().removeObserver(this);
-            if (usable(activity) && callback != null
-                    && ((LifecycleOwner) activity).getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) callback.onFinish();
+            if (!usable(activity)) { delivery.cancel(); detach(activity); return; }
+            delivery.finish(canShow());
+        }
+        @Override public void onResume(LifecycleOwner owner) {
+            if (canShow()) delivery.onResume();
         }
         @Override public void onAdDismissedFullScreenContent() { finish(); }
         @Override public void onAdFailedToShowFullScreenContent(AdError error) { finish(); }
-        @Override public void onDestroy(LifecycleOwner owner) { listener = null; finish(); owner.getLifecycle().removeObserver(this); }
+        @Override public void onDestroy(LifecycleOwner owner) { delivery.cancel(); owner.getLifecycle().removeObserver(this); }
     }
     // Compatibility: obsolete network-loading dialogs are intentionally no longer shown.
     @Deprecated public void showLoading(Activity activity, boolean cancelable) { }
