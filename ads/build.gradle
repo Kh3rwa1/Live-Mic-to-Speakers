@@ -3,7 +3,6 @@ apply plugin: 'com.android.library'
 android {
     namespace 'demo.ads'
     compileSdk 34
-
     defaultConfig {
         minSdk 21
         targetSdk 34
@@ -26,7 +25,6 @@ dependencies {
     implementation libs.material
     implementation libs.constraintlayout
     testImplementation libs.junit
-
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
     implementation 'androidx.lifecycle:lifecycle-process:2.6.2'
@@ -34,5 +32,5 @@ dependencies {
     annotationProcessor libs.compiler
     implementation libs.play.services.ads
     implementation 'com.google.ads.mediation:facebook:6.18.0.0'
-
+    implementation 'com.google.android.ump:user-messaging-platform:2.2.0'
 }

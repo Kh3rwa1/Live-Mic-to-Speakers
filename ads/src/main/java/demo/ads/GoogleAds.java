@@ -1,508 +1,254 @@
 package demo.ads;
 
-
 import android.app.Activity;
-import android.app.Dialog;
 import android.content.Context;
-import android.graphics.drawable.ColorDrawable;
+import android.content.ContextWrapper;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.util.Log;
+import android.os.SystemClock;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.Window;
-import android.widget.Button;
-import android.widget.FrameLayout;
+import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.RatingBar;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import androidx.annotation.NonNull;
-
-import com.google.android.gms.ads.AdError;
-import com.google.android.gms.ads.AdListener;
-import com.google.android.gms.ads.AdLoader;
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdSize;
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.ads.FullScreenContentCallback;
-import com.google.android.gms.ads.LoadAdError;
-import com.google.android.gms.ads.OnUserEarnedRewardListener;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleOwner;
+import com.google.android.gms.ads.*;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
-import com.google.android.gms.ads.nativead.MediaView;
 import com.google.android.gms.ads.nativead.NativeAd;
 import com.google.android.gms.ads.nativead.NativeAdView;
-import com.google.android.gms.ads.rewarded.RewardItem;
 import com.google.android.gms.ads.rewarded.RewardedAd;
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
+import java.lang.ref.WeakReference;
 
-public class GoogleAds {
-
-    private static final String TAG = "Google Ads => ";
-    private static GoogleAds instance;
-    private NativeAd nativeAd00;
-    private CustomAdsListener listener;
-    private Dialog dialog;
-
+/** Placement-owned native/banner resources; per-show callbacks; no global Activity or Dialog. */
+public final class GoogleAds {
+    private static final GoogleAds INSTANCE = new GoogleAds();
+    private InterstitialAd interstitial;
+    private RewardedAd rewarded;
+    private boolean loadingInterstitial, loadingRewarded;
+    private long interstitialAt, rewardedAt, lastShown = -60_000, epoch;
     private GoogleAds() {
-
+        AdConsent.observe(() -> {
+            if (!AdsHandler.isAdsOn()) {
+                epoch++; interstitial = null; rewarded = null;
+                loadingInterstitial = false; loadingRewarded = false;
+            }
+        });
     }
-
+    public static GoogleAds getInstance() { return INSTANCE; }
     public static boolean checkConnection(Context context) {
-        final ConnectivityManager connMgr = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        NetworkInfo activeNetworkInfo = connMgr.getActiveNetworkInfo();
-
-        if (activeNetworkInfo != null) {
-
-
-           
-            if (activeNetworkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
-               
-                return true;
-            } else return activeNetworkInfo.getType() == ConnectivityManager.TYPE_MOBILE;
-        }
-        return false;
+        try {
+            ConnectivityManager manager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo network = manager == null ? null : manager.getActiveNetworkInfo();
+            return network != null && network.isConnected();
+        } catch (RuntimeException error) { return false; }
     }
-
-    public static GoogleAds getInstance() {
-        if (instance == null) {
-            synchronized (GoogleAds.class) {
-                if (instance == null)
-                    instance = new GoogleAds();
+    private static boolean validId(String id) { return id != null && !id.trim().isEmpty() && !"0".equals(id); }
+    private static Activity activity(Context context) {
+        while (context instanceof ContextWrapper) {
+            if (context instanceof Activity) return (Activity) context;
+            Context next = ((ContextWrapper) context).getBaseContext();
+            if (next == context) break;
+            context = next;
+        }
+        return null;
+    }
+    private static boolean usable(Activity activity) {
+        return activity != null && !activity.isFinishing() && !activity.isDestroyed()
+                && activity instanceof LifecycleOwner;
+    }
+    public boolean admobBanner(Context context, View view) { return bind(context, view, 0); }
+    public boolean admobBanner90(Context context, View view) { return bind(context, view, 0); }
+    public boolean addNativeView(Context context, View view) { return bind(context, view, R.layout.small_ad_unified); }
+    public boolean addBigNativeView(Context context, View view) { return bind(context, view, R.layout.big_ad_unified); }
+    private boolean bind(Context context, View view, int layout) {
+        Activity host = activity(context);
+        if (!(view instanceof ViewGroup) || !usable(host)) { if (view != null) view.setVisibility(View.GONE); return false; }
+        Object old = view.getTag(R.id.managed_ad_placement);
+        if (old instanceof Placement) ((Placement) old).close();
+        Placement placement = new Placement(host, (ViewGroup) view, layout);
+        view.setTag(R.id.managed_ad_placement, placement);
+        placement.owner.getLifecycle().addObserver(placement);
+        AdConsent.observe(placement);
+        placement.run();
+        return true;
+    }
+    private final class Placement implements DefaultLifecycleObserver, Runnable {
+        Activity host;
+        LifecycleOwner owner;
+        ViewGroup container;
+        final int layout;
+        AdView banner;
+        NativeAd nativeAd;
+        boolean closed, loading;
+        long generation;
+        Placement(Activity host, ViewGroup container, int layout) {
+            this.host = host; this.owner = (LifecycleOwner) host; this.container = container; this.layout = layout;
+            container.setVisibility(View.GONE);
+        }
+        private boolean active() {
+            return !closed && usable(host) && owner.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)
+                    && AdsHandler.isAdsOn();
+        }
+        @Override public void run() {
+            if (closed) return;
+            if (!AdsHandler.isAdsOn()) { clear(); return; }
+            if (!active() || loading || banner != null || nativeAd != null || !checkConnection(host)) return;
+            String id = layout == 0 ? AdsHandler.bannerId : AdsHandler.nativeId;
+            if (!validId(id)) return;
+            loading = true;
+            long ticket = ++generation;
+            if (layout == 0) {
+                AdView view = new AdView(host);
+                banner = view;
+                view.setAdSize(AdSize.BANNER); view.setAdUnitId(id);
+                container.removeAllViews(); container.addView(view);
+                view.setAdListener(new AdListener() {
+                    @Override public void onAdLoaded() {
+                        if (ticket != generation || closed) return;
+                        loading = false;
+                        if (active()) container.setVisibility(View.VISIBLE); else clear();
+                    }
+                    @Override public void onAdFailedToLoad(LoadAdError error) { if (ticket == generation) clear(); }
+                });
+                view.loadAd(new AdRequest.Builder().build());
+            } else {
+                new AdLoader.Builder(host.getApplicationContext(), id).forNativeAd(loaded -> {
+                    if (ticket != generation || !active()) { loaded.destroy(); if (ticket == generation) loading = false; return; }
+                    loading = false; nativeAd = loaded;
+                    NativeAdView view = (NativeAdView) LayoutInflater.from(host).inflate(layout, container, false);
+                    populate(loaded, view);
+                    container.removeAllViews(); container.addView(view); container.setVisibility(View.VISIBLE);
+                }).withAdListener(new AdListener() {
+                    @Override public void onAdFailedToLoad(LoadAdError error) { if (ticket == generation) clear(); }
+                }).build().loadAd(new AdRequest.Builder().build());
             }
+            prefetchInterstitial(host.getApplicationContext());
         }
-       
-        return instance;
+        private void clear() {
+            generation++; loading = false;
+            if (banner != null) { banner.destroy(); banner = null; }
+            if (nativeAd != null) { nativeAd.destroy(); nativeAd = null; }
+            container.removeAllViews(); container.setVisibility(View.GONE);
+        }
+        @Override public void onStart(LifecycleOwner ignored) { if (banner != null) banner.resume(); run(); }
+        @Override public void onStop(LifecycleOwner ignored) { if (banner != null) banner.pause(); }
+        @Override public void onDestroy(LifecycleOwner ignored) { close(); }
+        void close() {
+            if (closed) return;
+            closed = true; clear(); AdConsent.removeObserver(this); owner.getLifecycle().removeObserver(this);
+            if (container.getTag(R.id.managed_ad_placement) == this) container.setTag(R.id.managed_ad_placement, null);
+            host = null; owner = null; container = null;
+        }
     }
-
-    public boolean admobBanner(final Context context, final View customView) {
-        boolean returnStatement = false;
-
-        if (checkConnection(context) && AdsHandler.isAdsOn()) {
-            returnStatement = true;
-
-            AdView mAdView = new AdView(context);
-            mAdView.setAdSize(AdSize.BANNER);
-            mAdView.setAdUnitId(AdsHandler.bannerId);
-            AdRequest adre = new AdRequest.Builder().build();
-            mAdView.loadAd(adre);
-
-            if (customView instanceof LinearLayout) {
-                LinearLayout layout = (LinearLayout) customView;
-                layout.removeAllViews();
-                layout.addView(mAdView);
-            } else if (customView instanceof RelativeLayout) {
-                RelativeLayout layout = (RelativeLayout) customView;
-                layout.removeAllViews();
-                layout.addView(mAdView);
-            } else if (customView instanceof FrameLayout) {
-                FrameLayout layout = (FrameLayout) customView;
-                layout.removeAllViews();
-                layout.addView(mAdView);
+    private void prefetchInterstitial(Context app) {
+        if (!AdsHandler.isAdsOn() || loadingInterstitial || interstitial != null || !validId(AdsHandler.interstitialId)) return;
+        loadingInterstitial = true; long ticket = epoch;
+        InterstitialAd.load(app, AdsHandler.interstitialId, new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {
+            @Override public void onAdLoaded(InterstitialAd value) {
+                if (ticket != epoch) return;
+                loadingInterstitial = false;
+                if (AdsHandler.isAdsOn()) { interstitial = value; interstitialAt = SystemClock.elapsedRealtime(); }
             }
-
-
-            mAdView.setAdListener(new AdListener() {
-                @Override
-                public void onAdLoaded() {
-                   
-                    super.onAdLoaded();
-                    customView.setVisibility(View.VISIBLE);
-                }
-
-                @Override
-                public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                    super.onAdFailedToLoad(loadAdError);
-                    customView.setVisibility(View.GONE);
-                }
-            });
-        }
-
-        return returnStatement;
+            @Override public void onAdFailedToLoad(LoadAdError error) { if (ticket == epoch) loadingInterstitial = false; }
+        });
     }
-
-    public boolean admobBanner90(final Context context, final View customView) {
-
-        boolean returnStatement = false;
-
-        if (checkConnection(context) && AdsHandler.isAdsOn()) {
-
-            returnStatement = true;
-
-            AdView mAdView = new AdView(context);
-            mAdView.setAdSize(AdSize.SMART_BANNER);
-            mAdView.setAdUnitId(AdsHandler.bannerId);
-            AdRequest adre = new AdRequest.Builder().build();
-            mAdView.loadAd(adre);
-            if (customView instanceof LinearLayout) {
-                LinearLayout layout = (LinearLayout) customView;
-                layout.removeAllViews();
-                layout.addView(mAdView);
-            } else if (customView instanceof RelativeLayout) {
-                RelativeLayout layout = (RelativeLayout) customView;
-                layout.removeAllViews();
-                layout.addView(mAdView);
-            } else if (customView instanceof FrameLayout) {
-                FrameLayout layout = (FrameLayout) customView;
-                layout.removeAllViews();
-                layout.addView(mAdView);
+    private void prefetchRewarded(Context app) {
+        if (!AdsHandler.isAdsOn() || loadingRewarded || rewarded != null || !validId(AdsHandler.rewardedId)) return;
+        loadingRewarded = true; long ticket = epoch;
+        RewardedAd.load(app, AdsHandler.rewardedId, new AdRequest.Builder().build(), new RewardedAdLoadCallback() {
+            @Override public void onAdLoaded(RewardedAd value) {
+                if (ticket != epoch) return;
+                loadingRewarded = false;
+                if (AdsHandler.isAdsOn()) { rewarded = value; rewardedAt = SystemClock.elapsedRealtime(); }
             }
-
-            mAdView.setAdListener(new AdListener() {
-
-                @Override
-                public void onAdLoaded() {
-                   
-                    customView.setVisibility(View.VISIBLE);
-                    super.onAdLoaded();
-                }
-
-                @Override
-                public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                    super.onAdFailedToLoad(loadAdError);
-                    customView.setVisibility(View.GONE);
-                }
-            });
-        }
-        return returnStatement;
+            @Override public void onAdFailedToLoad(LoadAdError error) { if (ticket == epoch) loadingRewarded = false; }
+        });
     }
-
-
-    public void showCounterInterstitialAd(Activity activity, CustomAdsListener customAdsListener) {
-        this.listener = customAdsListener;
-        if (AdsHandler.sharedPreferences == null) {
-            AdsHandler.getInstance(activity);
+    public void showCounterInterstitialAd(Activity activity, CustomAdsListener listener) {
+        Completion completion = new Completion(activity, listener);
+        if (interstitial != null && SystemClock.elapsedRealtime() - interstitialAt >= 3_600_000) interstitial = null;
+        if (!completion.canShow() || !AdsHandler.isAdsOn() || interstitial == null
+                || SystemClock.elapsedRealtime() - lastShown < 60_000) {
+            if (usable(activity)) prefetchInterstitial(activity.getApplicationContext());
+            completion.finish(); return; // Network requests never block navigation.
         }
-
-        if (checkConnection(activity) && AdsHandler.isAdsOn()) {
-
-            showLoading(activity, false);
-
-            AdRequest adRequest = new AdRequest.Builder().build();
-
-            InterstitialAd.load(activity, AdsHandler.interstitialId, adRequest, new InterstitialAdLoadCallback() {
-                @Override
-                public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
-                    interstitialAd.setFullScreenContentCallback(new FullScreenContentCallback() {
-                        @Override
-                        public void onAdDismissedFullScreenContent() {
-                            listener.onFinish();
-                        }
-
-                        @Override
-                        public void onAdFailedToShowFullScreenContent(AdError adError) {
-                            listener.onFinish();
-                        }
-
-                        @Override
-                        public void onAdShowedFullScreenContent() {
-
-                        }
-                    });
-                    hideLoading();
-                    interstitialAd.show(activity);
-                }
-
-                @Override
-                public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                    Toast.makeText(activity, loadAdError.getMessage(), Toast.LENGTH_SHORT).show();
-                    hideLoading();
-                    listener.onFinish();
-                }
-            });
-        } else {
-            listener.onFinish();
-        }
-
+        InterstitialAd ready = interstitial; interstitial = null; lastShown = SystemClock.elapsedRealtime();
+        ready.setFullScreenContentCallback(completion);
+        try { ready.show(activity); } catch (RuntimeException error) { completion.finish(); }
     }
-
-    public void showRewardedAd(Activity activity, CustomAdsListener customAdsListener) {
-
-        this.listener = customAdsListener;
-        if (AdsHandler.sharedPreferences == null) {
-            AdsHandler.getInstance(activity);
+    /** onFinish means the flow ended, never that a reward was earned. */
+    public void showRewardedAd(Activity activity, CustomAdsListener listener) {
+        Completion completion = new Completion(activity, listener);
+        if (rewarded != null && SystemClock.elapsedRealtime() - rewardedAt >= 3_600_000) rewarded = null;
+        if (!completion.canShow() || !AdsHandler.isAdsOn() || rewarded == null) {
+            if (usable(activity)) prefetchRewarded(activity.getApplicationContext());
+            completion.finish(); return;
         }
-
-        if (checkConnection(activity) && AdsHandler.isAdsOn()) {
-
-            showLoading(activity, false);
-
-            AdRequest adRequest = new AdRequest.Builder().build();
-
-            RewardedAd.load(activity, AdsHandler.rewardedId,
-                    adRequest, new RewardedAdLoadCallback() {
-                        @Override
-                        public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-
-                            hideLoading();
-                            if (listener != null) {
-                                listener.onFinish();
-                            }
-
-
-                        }
-
-                        @Override
-                        public void onAdLoaded(@NonNull RewardedAd rewardedAd) {
-
-                            rewardedAd.setFullScreenContentCallback(new FullScreenContentCallback() {
-                                @Override
-                                public void onAdShowedFullScreenContent() {
-
-                                }
-
-                                @Override
-                                public void onAdFailedToShowFullScreenContent(AdError adError) {
-                                    hideLoading();
-                                    if (listener != null) {
-                                        listener.onFinish();
-                                    }
-                                }
-
-                                @Override
-                                public void onAdDismissedFullScreenContent() {
-                                    hideLoading();
-                                    if (listener != null) {
-                                        listener.onFinish();
-                                    }
-                                }
-
-
-                            });
-
-                            rewardedAd.show(activity, new OnUserEarnedRewardListener() {
-                                @Override
-                                public void onUserEarnedReward(@NonNull RewardItem rewardItem) {
-                                    hideLoading();
-
-
-
-                                }
-                            });
-
-                            hideLoading();
-                        }
-                    });
-        }
-
+        RewardedAd ready = rewarded; rewarded = null;
+        ready.setFullScreenContentCallback(completion);
+        try { ready.show(activity, reward -> { }); } catch (RuntimeException error) { completion.finish(); }
     }
-
-    public boolean addNativeView(Context mContext, View customView) {
-
-        boolean returnStatement = false;
-
-        if (checkConnection(mContext) && AdsHandler.isAdsOn()) {
-
-            returnStatement = true;
-
-            AdLoader.Builder builder = new AdLoader.Builder(mContext, AdsHandler.nativeId);
-
-            builder.forNativeAd(
-                    new NativeAd.OnNativeAdLoadedListener() {
-
-                        @Override
-                        public void onNativeAdLoaded(NativeAd nativeAd) {
-                            if (nativeAd00 != null) {
-                                nativeAd00.destroy();
-                            }
-                            nativeAd00 = nativeAd;
-                            LayoutInflater inflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                            NativeAdView mAdView =
-                                    (NativeAdView) inflater.inflate(R.layout.small_ad_unified, null);
-                            populateNativeAdView(nativeAd, mAdView);
-                            if (customView instanceof LinearLayout) {
-                                LinearLayout layout = (LinearLayout) customView;
-                                layout.removeAllViews();
-                                layout.addView(mAdView);
-                            } else if (customView instanceof RelativeLayout) {
-                                RelativeLayout layout = (RelativeLayout) customView;
-                                layout.removeAllViews();
-                                layout.addView(mAdView);
-                            } else if (customView instanceof FrameLayout) {
-                                FrameLayout layout = (FrameLayout) customView;
-                                layout.removeAllViews();
-                                layout.addView(mAdView);
-                            }
-                        }
-                    });
-
-
-            AdLoader adLoader =
-                    builder
-                            .withAdListener(
-                                    new AdListener() {
-                                        @Override
-                                        public void onAdFailedToLoad(LoadAdError loadAdError) {
-
-                                        }
-                                    })
-                            .build();
-
-            adLoader.loadAd(new AdRequest.Builder().build());
-
+    private static final class Completion extends FullScreenContentCallback implements DefaultLifecycleObserver {
+        final WeakReference<Activity> host;
+        CustomAdsListener listener;
+        boolean finished;
+        Completion(Activity activity, CustomAdsListener listener) {
+            host = new WeakReference<>(activity); this.listener = listener;
+            if (usable(activity)) ((LifecycleOwner) activity).getLifecycle().addObserver(this);
         }
-
-        return returnStatement;
+        boolean canShow() {
+            Activity activity = host.get();
+            return !finished && usable(activity)
+                    && ((LifecycleOwner) activity).getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED);
+        }
+        void finish() {
+            if (finished) return;
+            finished = true;
+            Activity activity = host.get();
+            CustomAdsListener callback = listener; listener = null;
+            if (usable(activity)) ((LifecycleOwner) activity).getLifecycle().removeObserver(this);
+            if (usable(activity) && callback != null
+                    && ((LifecycleOwner) activity).getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) callback.onFinish();
+        }
+        @Override public void onAdDismissedFullScreenContent() { finish(); }
+        @Override public void onAdFailedToShowFullScreenContent(AdError error) { finish(); }
+        @Override public void onDestroy(LifecycleOwner owner) { listener = null; finish(); owner.getLifecycle().removeObserver(this); }
     }
-
-    public boolean addBigNativeView(Context mContext, View customView) {
-
-        boolean returnStatement = false;
-
-        if (checkConnection(mContext) && AdsHandler.isAdsOn()) {
-
-            returnStatement = true;
-
-            AdLoader.Builder builder = new AdLoader.Builder(mContext, AdsHandler.nativeId);
-
-            builder.forNativeAd(
-                    new NativeAd.OnNativeAdLoadedListener() {
-
-                        @Override
-                        public void onNativeAdLoaded(NativeAd nativeAd) {
-                            if (nativeAd00 != null) {
-                                nativeAd00.destroy();
-                            }
-                            nativeAd00 = nativeAd;
-                            LayoutInflater inflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                            NativeAdView mAdView =
-                                    (NativeAdView) inflater.inflate(R.layout.big_ad_unified, null);
-                            populateNativeAdView(nativeAd, mAdView);
-                            if (customView instanceof LinearLayout) {
-                                LinearLayout layout = (LinearLayout) customView;
-                                layout.removeAllViews();
-                                layout.addView(mAdView);
-                            } else if (customView instanceof RelativeLayout) {
-                                RelativeLayout layout = (RelativeLayout) customView;
-                                layout.removeAllViews();
-                                layout.addView(mAdView);
-                            } else if (customView instanceof FrameLayout) {
-                                FrameLayout layout = (FrameLayout) customView;
-                                layout.removeAllViews();
-                                layout.addView(mAdView);
-                            }
-                        }
-                    });
-
-
-            AdLoader adLoader =
-                    builder
-                            .withAdListener(
-                                    new AdListener() {
-                                        @Override
-                                        public void onAdFailedToLoad(LoadAdError loadAdError) {
-
-                                        }
-                                    })
-                            .build();
-
-            adLoader.loadAd(new AdRequest.Builder().build());
-
-        }
-
-        return returnStatement;
+    // Compatibility: obsolete network-loading dialogs are intentionally no longer shown.
+    @Deprecated public void showLoading(Activity activity, boolean cancelable) { }
+    @Deprecated public void hideLoading() { }
+    private static void optionalText(View view, String text) {
+        if (view == null) return;
+        view.setVisibility(text == null || text.isEmpty() ? View.GONE : View.VISIBLE);
+        if (view instanceof TextView) ((TextView) view).setText(text);
     }
-
-    private void populateNativeAdView(NativeAd nativeAd, NativeAdView adView) {
-       
-        adView.setMediaView(adView.findViewById(R.id.ad_media));
-       
-        adView.setHeadlineView(adView.findViewById(R.id.ad_headline));
-        adView.setBodyView(adView.findViewById(R.id.ad_body));
-        adView.setCallToActionView(adView.findViewById(R.id.ad_call_to_action));
-        adView.setIconView(adView.findViewById(R.id.ad_app_icon));
-        adView.setPriceView(adView.findViewById(R.id.ad_price));
-        adView.setStarRatingView(adView.findViewById(R.id.ad_stars));
-        adView.setStoreView(adView.findViewById(R.id.ad_store));
-        adView.setAdvertiserView(adView.findViewById(R.id.ad_advertiser));
-
-       
-        ((TextView) adView.getHeadlineView()).setText(nativeAd.getHeadline());
-        adView.getMediaView().setMediaContent(nativeAd.getMediaContent());
-
-       
-       
-        if (nativeAd.getBody() == null) {
-            adView.getBodyView().setVisibility(View.INVISIBLE);
-        } else {
-            adView.getBodyView().setVisibility(View.VISIBLE);
-            ((TextView) adView.getBodyView()).setText(nativeAd.getBody());
+    private static void populate(NativeAd ad, NativeAdView view) {
+        view.setMediaView(view.findViewById(R.id.ad_media));
+        view.setHeadlineView(view.findViewById(R.id.ad_headline));
+        view.setBodyView(view.findViewById(R.id.ad_body));
+        view.setCallToActionView(view.findViewById(R.id.ad_call_to_action));
+        view.setIconView(view.findViewById(R.id.ad_app_icon));
+        view.setPriceView(view.findViewById(R.id.ad_price));
+        view.setStarRatingView(view.findViewById(R.id.ad_stars));
+        view.setStoreView(view.findViewById(R.id.ad_store));
+        view.setAdvertiserView(view.findViewById(R.id.ad_advertiser));
+        optionalText(view.getHeadlineView(), ad.getHeadline()); optionalText(view.getBodyView(), ad.getBody());
+        optionalText(view.getCallToActionView(), ad.getCallToAction()); optionalText(view.getPriceView(), ad.getPrice());
+        optionalText(view.getStoreView(), ad.getStore()); optionalText(view.getAdvertiserView(), ad.getAdvertiser());
+        if (view.getMediaView() != null) view.getMediaView().setMediaContent(ad.getMediaContent());
+        if (view.getIconView() != null) {
+            view.getIconView().setVisibility(ad.getIcon() == null ? View.GONE : View.VISIBLE);
+            if (ad.getIcon() != null) ((ImageView) view.getIconView()).setImageDrawable(ad.getIcon().getDrawable());
         }
-
-        if (nativeAd.getCallToAction() == null) {
-            adView.getCallToActionView().setVisibility(View.INVISIBLE);
-        } else {
-            adView.getCallToActionView().setVisibility(View.VISIBLE);
-            ((Button) adView.getCallToActionView()).setText(nativeAd.getCallToAction());
+        if (view.getStarRatingView() != null) {
+            view.getStarRatingView().setVisibility(ad.getStarRating() == null ? View.GONE : View.VISIBLE);
+            if (ad.getStarRating() != null) ((RatingBar) view.getStarRatingView()).setRating(ad.getStarRating().floatValue());
         }
-
-        if (nativeAd.getIcon() == null) {
-            adView.getIconView().setVisibility(View.GONE);
-        } else {
-            ((ImageView) adView.getIconView()).setImageDrawable(
-                    nativeAd.getIcon().getDrawable());
-            adView.getIconView().setVisibility(View.VISIBLE);
-        }
-
-        if (nativeAd.getPrice() == null) {
-            adView.getPriceView().setVisibility(View.INVISIBLE);
-        } else {
-            adView.getPriceView().setVisibility(View.VISIBLE);
-            ((TextView) adView.getPriceView()).setText(nativeAd.getPrice());
-        }
-
-        if (nativeAd.getStore() == null) {
-            adView.getStoreView().setVisibility(View.INVISIBLE);
-        } else {
-            adView.getStoreView().setVisibility(View.VISIBLE);
-            ((TextView) adView.getStoreView()).setText(nativeAd.getStore());
-        }
-
-        if (nativeAd.getStarRating() == null) {
-            adView.getStarRatingView().setVisibility(View.INVISIBLE);
-        } else {
-            ((RatingBar) adView.getStarRatingView())
-                    .setRating(nativeAd.getStarRating().floatValue());
-            adView.getStarRatingView().setVisibility(View.VISIBLE);
-        }
-
-        if (nativeAd.getAdvertiser() == null) {
-            adView.getAdvertiserView().setVisibility(View.INVISIBLE);
-        } else {
-            ((TextView) adView.getAdvertiserView()).setText(nativeAd.getAdvertiser());
-            adView.getAdvertiserView().setVisibility(View.VISIBLE);
-        }
-
-       
-       
-        adView.setNativeAd(nativeAd);
-
+        view.setNativeAd(ad);
     }
-
-
-    public void showLoading(Activity activity, boolean cancelable) {
-
-        dialog = new Dialog(activity);
-        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setContentView(R.layout.loading_dialog);
-        dialog.setCancelable(cancelable);
-
-        if (!dialog.isShowing() && !activity.isFinishing()) {
-            dialog.show();
-        }
-    }
-
-    public void hideLoading() {
-        if (dialog != null && dialog.isShowing()) {
-            dialog.cancel();
-        }
-    }
-
 }
-
