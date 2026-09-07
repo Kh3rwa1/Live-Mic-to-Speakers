@@ -21,24 +21,33 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
+      - name: Verify CI helper regressions
+        run: python3 -m unittest discover -s tools/tests -v
       - name: Verify core accessibility source contract
         run: python3 tools/check_quality_contract.py
       - name: Audit file-sharing consumers
         run: git grep -n -E 'FileProvider|getUriForFile|FLAG_GRANT_(READ|WRITE)_URI_PERMISSION|ACTION_IMAGE_CAPTURE' -- '*.java' '*.kt' '*Manifest.xml' > fileprovider-audit.txt || test "$?" = 1
       - name: Verify production release rejects missing configuration
         run: |
-          if bash ./gradlew --no-daemon :app:verifyProductionRelease -PproductionRelease=false > production-gate.log 2>&1; then
+          if bash ./gradlew --no-daemon :app:verifyProductionRelease -PproductionRelease=false > production-demo-gate.log 2>&1; then
             echo 'Production gate unexpectedly accepted a demo configuration'; exit 1
           fi
-          grep -q 'Production release blocked' production-gate.log
-          if bash ./gradlew --no-daemon :app:verifyProductionRelease -PproductionRelease=true >> production-gate.log 2>&1; then
+          grep -q 'Production release blocked' production-demo-gate.log
+          if bash ./gradlew --no-daemon :app:verifyProductionRelease -PproductionRelease=true > production-missing-gate.log 2>&1; then
             echo 'Production gate unexpectedly accepted missing settings'; exit 1
           fi
-          grep -q 'Configure a non-test LIVE_MIC_ADMOB_APP_ID' production-gate.log
+          grep -q 'Configure a non-test LIVE_MIC_ADMOB_APP_ID' production-missing-gate.log
       - name: App and ads unit tests, lint and debug/release builds
         run: |
           set -o pipefail
           bash ./gradlew --no-daemon --continue :app:testDebugUnitTest :app:testReleaseUnitTest :ads:testDebugUnitTest :ads:testReleaseUnitTest :app:lintDebug :app:lintRelease :ads:lintDebug :app:assembleDebug :app:assembleRelease 2>&1 | tee build.log
+      - name: Verify release native-library alignment
+        run: |
+          set -euo pipefail
+          python3 tools/check_native_alignment.py app/build/outputs/apk/release/*.apk --report app/build/reports/native-alignment.json
+          zipalign=$(find "$ANDROID_HOME/build-tools" -name zipalign -type f | sort -V | tail -n 1)
+          test -n "$zipalign"
+          for apk in app/build/outputs/apk/release/*.apk; do "$zipalign" -c -P 16 -v 4 "$apk"; done > native-zip-alignment.log
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -50,8 +59,9 @@ jobs:
             ads/build/reports/
             ads/build/test-results/
             build.log
-            production-gate.log
+            production-*-gate.log
             fileprovider-audit.txt
+            native-zip-alignment.log
           if-no-files-found: ignore
       - name: Upload installable debug APK
         uses: actions/upload-artifact@v4
