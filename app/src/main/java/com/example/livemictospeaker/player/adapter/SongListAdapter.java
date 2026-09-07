@@ -5,10 +5,12 @@ import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.livemictospeaker.R;
 import com.example.livemictospeaker.activity.MusicActivity;
+import com.example.livemictospeaker.player.RecordingShare;
 import com.example.livemictospeaker.player.SongListModel;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +28,7 @@ public class SongListAdapter extends RecyclerView.Adapter<SongListAdapter.AlbumV
         SongListModel audio = songListModelList.get(position);
         holder.name.setText(audio.getDisplayName()); holder.duration.setText(audio.getDuration());
         holder.itemView.findViewById(R.id.play).setContentDescription("Play " + audio.getDisplayName());
+        holder.itemView.setContentDescription(audio.getDisplayName() + ". Long press for sharing options.");
     }
     public final class AlbumViewHolder extends RecyclerView.ViewHolder {
         final TextView name, duration;
@@ -37,6 +40,17 @@ public class SongListAdapter extends RecyclerView.Adapter<SongListAdapter.AlbumV
                 SongListModel audio = songListModelList.get(position);
                 context.startActivity(new Intent(context, MusicActivity.class).putExtra("SONG_URI", audio.getData())
                         .putExtra("SONG_INDEX", position).putExtra("SONG_NAME", audio.getDisplayName()));
+            });
+            view.setOnLongClickListener(v -> {
+                PopupMenu menu = new PopupMenu(v.getContext(), v);
+                menu.getMenu().add("Share recording");
+                menu.setOnMenuItemClickListener(item -> {
+                    int position = getBindingAdapterPosition();
+                    if (position != RecyclerView.NO_POSITION && position < songListModelList.size())
+                        RecordingShare.share(context, songListModelList.get(position).getData());
+                    return true;
+                });
+                menu.show(); return true;
             });
         }
     }
