@@ -19,7 +19,8 @@ GitHub Actions builds debug/release, runs lint and JVM regression checks, and ru
 - Recorder preparation, finalization and cleanup use a serialized worker. Releasing a hold during preparation cancels the pending start. A queued save can finish after the screen closes without updating a destroyed Activity.
 - Recording previews and the local-library preview share audio-focus and headphone-disconnect handling. Preview preparation is asynchronous.
 - Microphone capture and playback are foreground-screen features, not background services. Saved-track playback retains its existing track/position/playing-intent restoration behavior.
-- New recordings are AAC in MPEG-4 (`.m4a`). Existing MP3/M4A/WAV/AAC history remains readable. Cancelled, failed, empty and sub-500ms recordings are discarded.
+- New recordings stay under a `.pending` name until successful finalization, then become AAC in MPEG-4 (`.m4a`). History refreshes after publication, so unfinished files are not listed as saved. Existing MP3/M4A/WAV/AAC history remains readable.
+- Cancelled, empty, sub-500ms and recorder-finalization failures are discarded. If publishing a completed recording fails, its `.pending` file is retained for recovery rather than overwriting an existing recording.
 - Recordings remain in their existing app-specific folders. They are normally removed on uninstall; export anything important before uninstalling.
 - Saved-history metadata scans and MediaStore queries run off the UI thread. Library playback uses MediaStore content URIs. Search matches the user's query and keeps playback identity stable while filtering.
 
@@ -41,6 +42,6 @@ The provider exposes only the app's `Recording` and `HPRecording` folders (exter
 
 Start at low speaker volume and keep the microphone away from speakers; headphones are safer. Acoustic feedback can become very loud. The input meter is a relative PCM indicator, not a calibrated sound-pressure meter.
 
-JVM checks cover session ownership, cancellation, finalization, restart serialization, failure cleanup, consent readiness, deferred ad completion, search logic and audio MIME mapping. Android tests additionally exercise readable M4A recording, filtered playback identity, recording-provider boundaries, read-only sharing and measurement-deferral metadata, alongside navigation/recreation smoke tests. They do not validate regional consent, mediation network traffic or live ad rendering.
+JVM checks cover session ownership, cancellation, finalization, restart serialization, failure cleanup, finalized-file publication, consent readiness, deferred ad completion, search logic and audio MIME mapping. Android tests additionally exercise readable M4A recording, unpublished in-progress recordings, filtered playback identity, recording-provider boundaries, read-only sharing, measurement-deferral metadata and ad-flow resume/destruction with ads disabled, alongside navigation/recreation smoke tests. They do not validate regional consent, mediation network traffic or live ad rendering.
 
 See [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) for device, privacy, sharing, accessibility and release sign-off. Source changes and emulator checks cannot establish real-device latency, Bluetooth quality or production readiness.

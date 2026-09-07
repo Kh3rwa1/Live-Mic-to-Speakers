@@ -2,6 +2,8 @@ package com.example.livemictospeaker.audio;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.content.pm.PackageManager;
 import android.media.MediaRecorder;
 import android.os.Build;
@@ -16,6 +18,8 @@ import java.util.function.BooleanSupplier;
 
 /** Foreground-only AAC recorder. Only the recording worker touches platform resources. */
 public final class RecordingSession implements AutoCloseable {
+    public static final String ACTION_SAVED = "com.example.livemictospeaker.RECORDING_SAVED";
+    private Context app;
     private MediaRecorder recorder;
     private File file;
     private long startedAt;
@@ -40,7 +44,8 @@ public final class RecordingSession implements AutoCloseable {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
             throw new IOException("Microphone permission required");
         if (!directory.isDirectory() && !directory.mkdirs()) throw new IOException("Cannot create recordings folder");
-        file = File.createTempFile("Rec_", ".m4a", directory);
+        app = context.getApplicationContext();
+        file = File.createTempFile("Rec_", ".pending", directory);
         try {
             recorder = Build.VERSION.SDK_INT >= 31 ? new MediaRecorder(context) : new MediaRecorder();
             recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
@@ -75,7 +80,9 @@ public final class RecordingSession implements AutoCloseable {
                 throw new IOException("Recording could not be finalized; incomplete file removed.", failure);
             return null;
         }
-        return result;
+        File published = RecordingFiles.publish(result);
+        LocalBroadcastManager.getInstance(app).sendBroadcast(new Intent(ACTION_SAVED));
+        return published;
     }
     private static void discard(File file) {
         if (file != null && file.exists() && !file.delete()) android.util.Log.w("RecordingSession", "Could not remove incomplete recording");
