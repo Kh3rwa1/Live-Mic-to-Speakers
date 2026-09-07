@@ -1,236 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/backgroundcolor">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
-
-        <RelativeLayout
-            android:id="@+id/layoutContent"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_above="@+id/nativeLay"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:weightSum="1">
-
-                <RelativeLayout
-                    android:id="@+id/rl_top"
-                    android:background="#19FFFFFF"
-
-                    android:layout_width="match_parent"
-                    android:layout_height="@dimen/_60sdp">
-
-                    <ImageView
-                        android:id="@+id/iv_back"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:layout_marginStart="16dp"
-                        android:padding="8dp"
-                        android:src="@drawable/ic_back" />
-
-                    <TextView
-                        android:id="@+id/tv_tittle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:fontFamily="@font/poppins_bold"
-                        android:gravity="center"
-                        android:text="Music Player"
-                        android:textColor="@color/white"
-                        android:textSize="@dimen/_18sdp" />
-                </RelativeLayout>
-
-                <ScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_gravity="center">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:paddingLeft="10dp"
-                        android:paddingTop="10dp"
-                        android:paddingRight="10dp"
-                        android:paddingBottom="10dp">
-
-                        <ImageView
-                            android:id="@+id/albumArt"
-                            android:layout_width="@dimen/_140sdp"
-                            android:layout_height="@dimen/_140sdp"
-                            android:layout_gravity="center_horizontal"
-                            android:padding="20dp"
-                            android:src="@drawable/ic_music"
-                            app:tint="@color/yellow" />
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="60dp"
-                            android:layout_marginTop="5dp"
-                            android:gravity="center"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/textViewTitle"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center_horizontal"
-                                android:fontFamily="@font/poppins_semibold"
-                                android:text="-"
-                                android:textAlignment="center"
-                                android:textAppearance="?android:attr/textAppearanceMedium"
-                                android:textColor="@color/white" />
-
-                            <TextView
-                                android:id="@+id/textViewArtist"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center_horizontal"
-                                android:fontFamily="@font/poppins_regular"
-                                android:text="-"
-                                android:textAppearance="?android:attr/textAppearanceSmall"
-                                android:textColor="@color/white" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="20dp"
-                            android:layout_marginTop="10dp"
-                            android:layout_marginBottom="7dp"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <TextView
-                                android:id="@+id/textViewElapsedTime"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center_horizontal"
-                                android:fontFamily="@font/poppins_regular"
-                                android:text="0:00"
-                                android:textAppearance="?android:attr/textAppearanceSmall"
-                                android:textColor="@color/white" />
-
-                            <androidx.appcompat.widget.AppCompatSeekBar
-                                android:id="@+id/seekBar"
-                                android:layout_width="0dp"
-                                android:thumbTint="@color/white"
-                                android:progressBackgroundTint="#C3FFFFFF"
-                                android:progressTint="@android:color/white"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center_horizontal"
-                                android:layout_weight="0.8" />
-
-                            <TextView
-                                android:id="@+id/textViewDuration"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center_horizontal"
-                                android:fontFamily="@font/poppins_regular"
-                                android:textAppearance="?android:attr/textAppearanceSmall"
-                                android:textColor="@color/white" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="70dp"
-                            android:layout_gravity="center_horizontal"
-                            android:layout_marginTop="5dp"
-                            android:gravity="center_horizontal"
-                            android:orientation="horizontal">
-
-                            <ImageView
-                                android:id="@+id/imageButtonPre"
-                                android:layout_width="30dp"
-                                android:layout_height="30dp"
-                                android:layout_gravity="center_vertical"
-                                android:background="@null"
-                                android:src="@drawable/ic_previous_icon" />
-
-                            <LinearLayout
-                                android:layout_width="@dimen/_50sdp"
-                                android:layout_height="@dimen/_50sdp"
-                                android:layout_gravity="center"
-                                android:layout_marginLeft="15dp"
-                                android:layout_marginRight="15dp"
-                                android:gravity="center"
-                                android:orientation="vertical">
-
-                                <ImageView
-                                    android:id="@+id/imageButtonPlayPause"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_gravity="center"
-                                    android:layout_margin="@dimen/_10sdp"
-                                    android:src="@drawable/play" />
-                            </LinearLayout>
-
-                            <ImageView
-                                android:id="@+id/imageButtonNext"
-                                android:layout_width="30dp"
-                                android:layout_height="30dp"
-                                android:layout_gravity="center_vertical"
-                                android:background="@null"
-                                android:src="@drawable/ic_next_icon" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="50dp"
-                            android:layout_marginTop="20dp"
-                            android:gravity="center">
-
-                            <androidx.cardview.widget.CardView
-                                android:layout_width="130dp"
-                                android:layout_height="35dp"
-                                android:layout_marginRight="15dp"
-                                app:cardBackgroundColor="@color/yellow"
-                                app:cardCornerRadius="7dp"
-                                app:cardElevation="3dp">
-
-                                <RelativeLayout
-                                    android:id="@+id/fab"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent">
-
-                                    <TextView
-                                        android:id="@+id/tv_chmusic"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:layout_centerVertical="true"
-                                        android:fontFamily="@font/poppins_semibold"
-                                        android:paddingLeft="10dp"
-                                        android:text="Change Music"
-                                        android:textColor="@color/white"
-                                        android:textSize="14sp" />
-                                </RelativeLayout>
-                            </androidx.cardview.widget.CardView>
-                        </LinearLayout>
-                    </LinearLayout>
-                </ScrollView>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/nativeLay"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:layout_marginTop="5dp"
-                android:gravity="center_horizontal"
-                android:minHeight="70dp"
-
-                android:orientation="vertical" />
-        </RelativeLayout>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@color/quality_canvas">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:minHeight="64dp" android:orientation="horizontal" android:gravity="center_vertical" android:padding="8dp">
+        <ImageButton android:id="@+id/iv_back" style="@style/ToolControl" android:layout_width="48dp" android:layout_height="48dp"
+            android:padding="12dp" android:src="@drawable/tool_back" android:contentDescription="@string/tool_back"/>
     </LinearLayout>
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+    <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:fillViewport="true">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="24dp">
+            <TextView android:id="@+id/tv_tittle" style="@style/ToolTitle" android:text="@string/tool_player_title"/>
+            <ImageView android:id="@+id/albumArt" android:layout_width="64dp" android:layout_height="64dp" android:layout_gravity="center_horizontal"
+                android:layout_marginTop="24dp" android:src="@drawable/tool_play" android:importantForAccessibility="no"/>
+            <TextView android:id="@+id/textViewTitle" style="@style/ToolTitle" android:layout_marginTop="24dp" android:gravity="center"/>
+            <TextView android:id="@+id/textViewArtist" style="@style/ToolBody" android:gravity="center" android:text="@string/tool_unknown_artist"/>
+            <SeekBar android:id="@+id/seekBar" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:minHeight="48dp" android:layout_marginTop="24dp" android:thumbTint="@color/quality_accent" android:progressTint="@color/quality_accent"
+                android:contentDescription="@string/tool_position"/>
+            <TextView android:id="@+id/textViewElapsedTime" style="@style/ToolBody" android:text="@string/tool_timer_initial"/>
+            <TextView android:id="@+id/textViewDuration" style="@style/ToolBody" android:text="@string/tool_timer_initial"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:gravity="center" android:orientation="horizontal">
+                <ImageButton android:id="@+id/imageButtonPre" style="@style/ToolControl" android:layout_margin="8dp" android:src="@drawable/tool_previous" android:contentDescription="@string/tool_previous"/>
+                <ImageButton android:id="@+id/imageButtonPlayPause" style="@style/ToolControl" android:layout_margin="8dp" android:src="@drawable/tool_play" android:contentDescription="@string/tool_play"/>
+                <ImageButton android:id="@+id/imageButtonNext" style="@style/ToolControl" android:layout_margin="8dp" android:src="@drawable/tool_next" android:contentDescription="@string/tool_next"/>
+            </LinearLayout>
+            <Button android:id="@+id/fab" style="@style/ToolTextButton" android:text="@string/tool_change_audio"/>
+            <TextView style="@style/ToolBody" android:text="@string/tool_foreground_note"/>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+    <LinearLayout android:id="@+id/nativeLay" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:gravity="center_horizontal"/>
+</LinearLayout>
