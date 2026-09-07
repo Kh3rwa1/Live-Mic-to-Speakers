@@ -7,9 +7,11 @@ These are release sign-off checks, not a list of unimplemented features. Record 
 - Serialized live-audio sessions and asynchronous recorder preparation/finalization.
 - Cancellation while preparing, invalid-recording cleanup and stale-UI callback suppression.
 - Shared focus-aware/noisy-route-aware previews and background pause/stop behavior.
-- UMP-gated SDK initialization/ad requests, screen-owned ad cleanup and privacy-options access.
+- UMP-gated SDK initialization/ad requests, measurement deferral, screen-owned ad cleanup and privacy-options access.
+- Exactly-once fullscreen completion after resume, with pending navigation cancelled on destruction.
 - Off-main history/MediaStore loading, content-URI playback and corrected search/filter identity.
-- Additional JVM tests, Android recording/filter tests, debug/release builds and an API 24/34 CI matrix.
+- Read-only recording sharing with a narrow provider allowlist; unrelated private/cache/external files are excluded.
+- Additional JVM and Android recording/filter/sharing tests, debug/release builds and an API 24/34 CI matrix.
 
 ## Automated and release builds
 
@@ -30,15 +32,16 @@ These are release sign-off checks, not a list of unimplemented features. Record 
 - [ ] Test calls, focus loss/ducking, headphone unplug, screen lock, Home, Back and process recreation across every player/recorder.
 - [ ] Verify saved-track and preview pause/resume behavior, position, and filter changes while a track plays.
 - [ ] Test short/cancelled recordings, storage-full and finalization failures; no corrupt file shown as saved.
-- [ ] Validate M4A files in another player and confirm share/export MIME types and paths.
+- [ ] Validate M4A files in another player. Long-press to share; verify target apps can read but not modify the source, with no raw file URI exposure. Include older/misnamed recordings and unavailable sharing apps.
+- [ ] Confirm legacy public-folder files stay playable when accessible; sharing them should explain the Files-app alternative, not broaden provider access.
 - [ ] Test large audio libraries, empty libraries, missing files, search and rapid navigation while loading.
 - [ ] Test TalkBack, hold-to-record's double-tap fallback, large text, small screens and localization.
 
 ## Privacy, security and store sign-off
 
 - [ ] Configure AdMob UMP messages and test fresh install, prior consent, denial, offline/error, privacy-options changes, Activity recreation and applicable regions with designated test devices.
-- [ ] Confirm no SDK/ad requests occur before the consent gate opens, including mediation adapters. Verify banner/native cleanup and fullscreen callbacks on real devices. CI disables ads.
-- [ ] Review the still-broad external FileProvider path and all external-library sharing flows together before restricting paths; this pass intentionally does not break existing sharing by blindly narrowing them.
+- [ ] Confirm no SDK/ad requests occur before consent permits initialization/requests, including mediation adapters. Verify banner/native cleanup and fullscreen dismissal before/after owner resume. Automated tests do not validate live ads or network behavior.
+- [ ] Verify narrow FileProvider roots and grant revocation with another app, including traversal, unrelated files and unsupported/legacy paths.
 - [ ] Verify privacy-policy URL/content, Data Safety declarations, ad IDs and consent-console settings.
 - [ ] Check dependencies/security reports and current Play target-SDK requirements. This pass retains targetSdk 34; no claim of current store-submission compliance is made.
 - [ ] Confirm application ID, provider authority, versioning and signing. Identity was deliberately preserved; changing it can break upgrades to an existing installation.

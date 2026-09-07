@@ -42,12 +42,13 @@ public class SongListAdapter extends RecyclerView.Adapter<SongListAdapter.AlbumV
                         .putExtra("SONG_INDEX", position).putExtra("SONG_NAME", audio.getDisplayName()));
             });
             view.setOnLongClickListener(v -> {
+                int position = getBindingAdapterPosition();
+                if (position == RecyclerView.NO_POSITION || position >= songListModelList.size()) return false;
+                String selectedPath = songListModelList.get(position).getData();
                 PopupMenu menu = new PopupMenu(v.getContext(), v);
                 menu.getMenu().add("Share recording");
                 menu.setOnMenuItemClickListener(item -> {
-                    int position = getBindingAdapterPosition();
-                    if (position != RecyclerView.NO_POSITION && position < songListModelList.size())
-                        RecordingShare.share(context, songListModelList.get(position).getData());
+                    RecordingShare.share(context, selectedPath);
                     return true;
                 });
                 menu.show(); return true;
