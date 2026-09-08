@@ -57,7 +57,7 @@ public class ActiveToolLayoutTest {
         for (int i = 0; i < layout.getLineCount(); i++) {
             assertEquals("Essential text was ellipsized", 0, layout.getEllipsisCount(i));
             // getLineWidth includes trailing wrap whitespace, which can extend beyond the row.
-            // getLineMax measures the visible line extent, including any leading margins.
+            // getLineMax excludes soft-wrap whitespace while retaining leading margins.
             float visibleWidth = layout.getLineMax(i);
             assertTrue("Visible text extends beyond its row: line " + i + ", " + visibleWidth
                     + " > " + width + ", text=" + text.getText(), visibleWidth <= width + 1);
@@ -77,11 +77,12 @@ public class ActiveToolLayoutTest {
         }
         assertTrue("Layout check accepted real " + reason, rejected);
     }
-    @Test public void boundsCheckIgnoresTrailingWhitespaceButRejectsRealClipping() {
+    @Test public void boundsCheckIgnoresWrapWhitespaceButRejectsRealClipping() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
             TextView text = new TextView(ApplicationProvider.getApplicationContext());
             text.setTextSize(20); text.setPadding(0, 0, 0, 0);
-            text.setText("OK                         ");
+            // A following word forces a soft wrap; terminal whitespace is a different layout case.
+            text.setText("OK                         OK");
             measure(text, (int) Math.ceil(text.getPaint().measureText("OK")) + 1, 1024);
             textFits(text);
             text.setSingleLine(true); text.setEllipsize(null);
