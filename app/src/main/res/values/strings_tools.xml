@@ -51,4 +51,5 @@
     <string name="tool_saved_help">Recordings are stored in this app and are normally deleted on uninstall. Share important recordings before uninstalling.</string>
     <string name="tool_elapsed">Elapsed: %1$s</string>
     <string name="tool_duration">Duration: %1$s</string>
+    <string name="tool_mic_active">Microphone active</string>
 </resources>

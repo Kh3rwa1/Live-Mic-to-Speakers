@@ -10,4 +10,12 @@
     <color name="colors">#243595</color>
 
     <color name="colorPrimary">#000000</color>
+    <color name="ad_card_bg">#FFFFFF</color>
+    <color name="ad_peach">#FA9580</color>
+    <color name="ad_peach_pressed">#E87A65</color>
+    <color name="ad_text">#21232E</color>
+    <color name="ad_secondary">#7E8299</color>
+    <color name="ad_badge_bg">#FFEBE6</color>
+    <color name="ad_badge_text">#D95338</color>
+    <color name="ad_border">#EAE6F0</color>
 </resources>

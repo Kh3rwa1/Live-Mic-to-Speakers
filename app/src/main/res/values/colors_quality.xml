@@ -1,9 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="quality_canvas">#FFFFFF</color>
-    <color name="quality_surface">#F9F8F7</color>
-    <color name="quality_text">#2C2C2B</color>
-    <color name="quality_secondary">#615E59</color>
-    <color name="quality_accent">#1E6AB2</color>
-    <color name="quality_border">#7D7A75</color>
+    <color name="quality_canvas">#F9F6F3</color>
+    <color name="quality_surface">#F0FFFFFF</color>
+    <color name="quality_text">#21232E</color>
+    <color name="quality_secondary">#5C5E6E</color>
+    <color name="quality_accent">#FCBBAB</color>
+    <color name="quality_border">#E0DCD8</color>
+
+    <!-- 3D Pastel Claymorphic Theme Colors -->
+    <color name="pastel_mint">#C0E6DE</color>
+    <color name="pastel_mint_pressed">#A9D8CE</color>
+    <color name="pastel_peach">#FCBBAB</color>
+    <color name="pastel_peach_pressed">#F8A693</color>
+    <color name="pastel_lavender">#CAC0FD</color>
+    <color name="pastel_lavender_pressed">#B8ACF5</color>
+    <color name="pastel_yellow">#FCE6AC</color>
+    <color name="pastel_yellow_pressed">#F8D78E</color>
+
+    <color name="pastel_frosted_bar">#4DF7F5F2</color>
+    <color name="pastel_circle_btn">#E6FFFFFF</color>
+    <color name="pastel_circle_btn_pressed">#D9F0ED</color>
+    <color name="pastel_shadow_tint">#1A000000</color>
 </resources>

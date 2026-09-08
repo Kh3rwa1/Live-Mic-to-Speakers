@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="quality_home_title">Your audio tools</string>
+    <string name="quality_home_title">Live Mic to Speaker</string>
     <string name="quality_home_subtitle">Monitor, record, and play. Choose a tool to begin.</string>
     <string name="quality_settings">Settings and privacy choices</string>
     <string name="quality_live_title">Live microphone</string>
-    <string name="quality_live_body">Hear your microphone through the selected audio output.</string>
+    <string name="quality_live_body">Real-time voice amplification.</string>
     <string name="quality_hold_title">Hold to speak</string>
-    <string name="quality_hold_body">Record short announcements and play them in sequence.</string>
+    <string name="quality_hold_body">Push-to-talk functionality.</string>
     <string name="quality_record_title">Record audio</string>
-    <string name="quality_record_body">Capture a recording, then preview or share it.</string>
+    <string name="quality_record_body">Capture sound and save clips.</string>
     <string name="quality_music_title">Audio library</string>
-    <string name="quality_music_body">Find and play audio stored on your device.</string>
-    <string name="quality_safety_note">Start at low volume. Headphones are safer. Audio stops when you leave its screen.</string>
+    <string name="quality_music_body">Access your saved recordings.</string>
+    <string name="quality_safety_note">Start at low volume. Headphones are safer.</string>
     <string name="quality_feature_permission">This feature needs permission. You can allow it in app Settings.</string>
     <string name="quality_back">Back</string>
     <string name="quality_start">Start</string>

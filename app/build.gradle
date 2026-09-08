@@ -3,14 +3,14 @@ plugins {
 }
 
 android {
-    namespace 'com.example.livemictospeaker'
+    namespace 'com.word.way'
     compileSdk 37
     defaultConfig {
-        applicationId "com.example.livemictospeaker"
+        applicationId "com.word.way"
         minSdk 24
         targetSdk 37
-        versionCode 1
-        versionName "1.0"
+        versionCode 4
+        versionName "1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -24,6 +24,11 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
     buildFeatures { viewBinding true }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
 }
 
 apply from: rootProject.file('gradle/production-release.gradle')

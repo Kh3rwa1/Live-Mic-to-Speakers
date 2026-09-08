@@ -35,7 +35,7 @@ public final class AdConsent {
     private static boolean resumed(Activity activity) {
         return activity != null && !activity.isFinishing() && !activity.isDestroyed()
                 && activity instanceof LifecycleOwner
-                && ((LifecycleOwner) activity).getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED);
+                && ((LifecycleOwner) activity).getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED);
     }
     public static void request(Activity activity) {
         if (!resumed(activity) || !AdsHandler.isEnabledByUser()) return;

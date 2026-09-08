@@ -19,3 +19,5 @@ local.properties
 *.jks
 *.keystore
 google-services.json
+__pycache__/
+*.pyc

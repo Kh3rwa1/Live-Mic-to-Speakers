@@ -1,19 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:background="@color/quality_canvas">
+    android:orientation="vertical" android:background="@drawable/bg_pastel_mesh">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:minHeight="64dp" android:orientation="horizontal" android:gravity="center_vertical" android:padding="8dp">
-        <ImageButton android:id="@+id/iv_back" style="@style/ToolControl" android:layout_width="48dp" android:layout_height="48dp"
-            android:padding="12dp" android:src="@drawable/tool_back" android:contentDescription="@string/tool_back"/>
+        android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="24dp" android:paddingTop="20dp" android:paddingEnd="24dp" android:paddingBottom="4dp">
+        <ImageButton android:id="@+id/iv_back" style="@style/ToolControlCircleBack"
+            android:src="@drawable/tool_back" app:tint="@color/quality_text" android:contentDescription="@string/tool_back"/>
     </LinearLayout>
     <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="0dp"
         android:layout_weight="1" android:fillViewport="true">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="vertical" android:padding="24dp">
             <TextView android:id="@+id/tv_tittle" style="@style/ToolTitle" android:text="@string/tool_player_title"/>
-            <ImageView android:id="@+id/albumArt" android:layout_width="64dp" android:layout_height="64dp" android:layout_gravity="center_horizontal"
-                android:layout_marginTop="24dp" android:src="@drawable/tool_play" android:importantForAccessibility="no"/>
+            <com.airbnb.lottie.LottieAnimationView
+                android:id="@+id/lottie_player_equalizer"
+                android:layout_width="120dp"
+                android:layout_height="80dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="24dp"
+                app:lottie_fileName="lottie_equalizer.json"
+                app:lottie_loop="true"
+                app:lottie_autoPlay="true" />
             <TextView android:id="@+id/textViewTitle" style="@style/ToolTitle" android:layout_marginTop="24dp" android:gravity="center"/>
             <TextView android:id="@+id/textViewArtist" style="@style/ToolBody" android:gravity="center" android:text="@string/tool_unknown_artist"/>
             <SeekBar android:id="@+id/seekBar" android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -22,9 +30,9 @@
             <TextView android:id="@+id/textViewElapsedTime" style="@style/ToolBody" android:text="@string/tool_timer_initial"/>
             <TextView android:id="@+id/textViewDuration" style="@style/ToolBody" android:text="@string/tool_timer_initial"/>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:gravity="center" android:orientation="horizontal">
-                <ImageButton android:id="@+id/imageButtonPre" style="@style/ToolControl" android:layout_margin="8dp" android:src="@drawable/tool_previous" android:contentDescription="@string/tool_previous"/>
-                <ImageButton android:id="@+id/imageButtonPlayPause" style="@style/ToolControl" android:layout_margin="8dp" android:src="@drawable/tool_play" android:contentDescription="@string/tool_play"/>
-                <ImageButton android:id="@+id/imageButtonNext" style="@style/ToolControl" android:layout_margin="8dp" android:src="@drawable/tool_next" android:contentDescription="@string/tool_next"/>
+                <ImageButton android:id="@+id/imageButtonPre" style="@style/ToolControlMint" android:layout_margin="10dp" android:src="@drawable/tool_previous" app:tint="@color/quality_text" android:contentDescription="@string/tool_previous"/>
+                <ImageButton android:id="@+id/imageButtonPlayPause" style="@style/ToolControlPeach" android:layout_margin="10dp" android:src="@drawable/tool_play" app:tint="@color/quality_text" android:contentDescription="@string/tool_play"/>
+                <ImageButton android:id="@+id/imageButtonNext" style="@style/ToolControlLavender" android:layout_margin="10dp" android:src="@drawable/tool_next" app:tint="@color/quality_text" android:contentDescription="@string/tool_next"/>
             </LinearLayout>
             <Button android:id="@+id/fab" style="@style/ToolTextButton" android:text="@string/tool_change_audio"/>
             <TextView style="@style/ToolBody" android:text="@string/tool_foreground_note"/>

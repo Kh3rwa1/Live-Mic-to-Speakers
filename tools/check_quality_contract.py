@@ -35,7 +35,7 @@ strings = ET.parse(root / 'app/src/main/res/values/strings_tools.xml')
 keys = [e.get('name') for e in strings.getroot()]
 if len(keys) != len(set(keys)):
     problems.append('Duplicate tool string resources')
-source = root / 'app/src/main/java/com/example/livemictospeaker/activity'
+source = root / 'app/src/main/java/com/word/way/activity'
 for name in ['RecordAudioActivity', 'HoldToSpeakActivity', 'LiveMicrophoneActivity', 'Setting_Activity', 'MusicActivity']:
     text = (source / (name + '.java')).read_text()
     if re.search(r'\.set(?:Text|ContentDescription)\("', text):

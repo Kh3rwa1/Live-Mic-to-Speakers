@@ -1,0 +1,36 @@
+package com.word.way.activity;
+
+import static demo.ads.AppUtil.rateApp;
+import static demo.ads.AppUtil.shareApp;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.widget.Toast;
+import androidx.appcompat.app.AppCompatActivity;
+import com.word.way.R;
+import com.word.way.Utils.EUGeneralClass;
+import demo.ads.AdConsent;
+import demo.ads.GoogleAds;
+
+public class Setting_Activity extends AppCompatActivity {
+    @Override public void onCreate(Bundle state) {
+        super.onCreate(state);
+        setContentView(R.layout.activity_setting_new);
+        EUGeneralClass.BottomNavigationColor(this);
+        GoogleAds.getInstance().addNativeView(this, findViewById(R.id.nativeLay));
+        findViewById(R.id.iv_back).setOnClickListener(v -> finish());
+        findViewById(R.id.rl_share_app).setOnClickListener(v -> shareApp(this));
+        findViewById(R.id.rl_rate).setOnClickListener(v -> rateApp(this));
+        findViewById(R.id.tool_privacy_choices).setOnClickListener(v -> AdConsent.showPrivacyOptions(this));
+        findViewById(R.id.rl_privacy_policy).setOnClickListener(v -> openPolicy());
+    }
+    private void openPolicy() {
+        Uri uri = Uri.parse(getString(R.string.privacy_policys));
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null) {
+            Toast.makeText(this, R.string.tool_privacy_missing, Toast.LENGTH_LONG).show(); return;
+        }
+        try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); }
+        catch (ActivityNotFoundException error) { Toast.makeText(this, R.string.tool_no_browser, Toast.LENGTH_LONG).show(); }
+    }
+}

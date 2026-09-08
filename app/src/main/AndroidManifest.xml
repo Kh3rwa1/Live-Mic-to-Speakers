@@ -49,19 +49,18 @@
     <application
         android:name=".Adsapps"
         android:allowBackup="false"
-        android:extractNativeLibs="false"
-        android:icon="@drawable/app_icon"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/app_icon"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.DecMictospeaker">
 
         <!-- Only SplashActivity is exported as the application launcher -->
         <activity
-            android:name="com.example.livemictospeaker.activity.SplashActivity"
+            android:name="com.word.way.activity.SplashActivity"
             android:exported="true"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -78,7 +77,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.example.livemictospeaker.provider"
+            android:authorities="com.word.way.provider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
@@ -88,80 +87,80 @@
 
         <!-- Internal activities locked down with exported="false" and clean softInputMode -->
         <activity
-            android:name="com.example.livemictospeaker.activity.StartActivity"
+            android:name="com.word.way.activity.StartActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name="com.example.livemictospeaker.activity.MainActivity"
+            android:name="com.word.way.activity.MainActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name="com.example.livemictospeaker.activity.LiveMicrophoneActivity"
+            android:name="com.word.way.activity.LiveMicrophoneActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name="com.example.livemictospeaker.activity.HoldToSpeakActivity"
+            android:name="com.word.way.activity.HoldToSpeakActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name="com.example.livemictospeaker.activity.RecordAudioActivity"
+            android:name="com.word.way.activity.RecordAudioActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name="com.example.livemictospeaker.activity.MySavedHoldtoSpeakActivity"
+            android:name="com.word.way.activity.MySavedHoldtoSpeakActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name="com.example.livemictospeaker.activity.MySavedAnnounceActivity"
+            android:name="com.word.way.activity.MySavedAnnounceActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name="com.example.livemictospeaker.player.activity.MusicListActivity"
+            android:name="com.word.way.player.activity.MusicListActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name="com.example.livemictospeaker.activity.MusicActivity"
+            android:name="com.word.way.activity.MusicActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name="com.example.livemictospeaker.activity.Setting_Activity"
+            android:name="com.word.way.activity.Setting_Activity"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize" />
 
         <service
-            android:name="com.example.livemictospeaker.Service.MediaPlaybackService"
+            android:name="com.word.way.Service.MediaPlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 

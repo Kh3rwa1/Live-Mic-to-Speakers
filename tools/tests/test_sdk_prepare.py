@@ -12,7 +12,7 @@ class SdkPreparationTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='android sdk test ')
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.sdk = self.root / 'sdk'
         self.latest = self.sdk / 'cmdline-tools' / 'latest'
         self.latest.mkdir(parents=True)
