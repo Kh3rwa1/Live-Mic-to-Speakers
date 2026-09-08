@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:layout_marginTop="24dp" android:padding="16dp"
+    android:background="@drawable/studio_card" android:orientation="vertical">
+    <TextView style="@style/StudioBody" android:layout_marginTop="0dp" android:text="@string/studio_level_title"/>
+    <TextView android:id="@+id/studio_level_value" style="@style/StudioBody"
+        android:accessibilityLiveRegion="none" android:textColor="@color/studio_ink"/>
+    <ProgressBar android:id="@+id/studio_input_level" style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent" android:layout_height="16dp" android:layout_marginTop="8dp"
+        android:max="100" android:progress="0" android:indeterminate="false"
+        android:progressTint="@color/studio_blue" android:progressBackgroundTint="@color/studio_line"
+        android:importantForAccessibility="no"/>
+    <TextView style="@style/StudioBody" android:text="@string/studio_level_help" android:textSize="14sp"/>
+</LinearLayout>

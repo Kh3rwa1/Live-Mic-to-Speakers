@@ -5,9 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.widget.Toast;
 import android.view.View;
-import android.view.MotionEvent;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
@@ -15,11 +13,12 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import com.word.way.R;
 import com.word.way.Utils.EUGeneralClass;
+import com.word.way.Utils.ToolUi;
 import com.word.way.player.activity.MusicListActivity;
 import demo.ads.AdConsent;
 import demo.ads.GoogleAds;
 
-/** Direct landing screen: one tap to a tool, with consent and settings still reachable. */
+/** Direct, accessible landing screen. Permission grants never start microphone capture. */
 public class MainActivity extends AppCompatActivity implements AdConsent.HomeScreen {
     private Class<?> pendingScreen;
     private final ActivityResultLauncher<String> permission = registerForActivityResult(
@@ -27,7 +26,7 @@ public class MainActivity extends AppCompatActivity implements AdConsent.HomeScr
                 Class<?> screen = pendingScreen;
                 pendingScreen = null;
                 if (granted && screen != null && !isFinishing() && !isDestroyed()) startActivity(new Intent(this, screen));
-                else if (!granted) Toast.makeText(this, R.string.quality_feature_permission, Toast.LENGTH_LONG).show();
+                else if (!granted) ToolUi.permissionDenied(this);
             });
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -40,29 +39,16 @@ public class MainActivity extends AppCompatActivity implements AdConsent.HomeScr
                 if (candidate.getName().equals(state.getString("pendingScreen"))) pendingScreen = candidate;
         }
         GoogleAds.getInstance().addNativeView(this, findViewById(R.id.nativeLay));
-        View settings = findViewById(R.id.tv_settings);
-        if (settings != null) settings.setOnClickListener(v -> startActivity(new Intent(this, Setting_Activity.class)));
-        attachCardInteractions(findViewById(R.id.cv_live_microphone), this::onLiveMicrophoneClick);
-        attachCardInteractions(findViewById(R.id.cv_hold_to_speak), this::onHoldToSpeakClick);
-        attachCardInteractions(findViewById(R.id.cv_record_audio), this::onRecordAudioClick);
-        attachCardInteractions(findViewById(R.id.cv_music_list), this::onMusicListClick);
+        findViewById(R.id.tv_settings).setOnClickListener(v -> startActivity(new Intent(this, Setting_Activity.class)));
+        attach(findViewById(R.id.cv_live_microphone), this::onLiveMicrophoneClick, R.string.quality_live_title, R.string.studio_live_description);
+        attach(findViewById(R.id.cv_hold_to_speak), this::onHoldToSpeakClick, R.string.quality_hold_title, R.string.studio_hold_description);
+        attach(findViewById(R.id.cv_record_audio), this::onRecordAudioClick, R.string.quality_record_title, R.string.studio_record_description);
+        attach(findViewById(R.id.cv_music_list), this::onMusicListClick, R.string.quality_music_title, R.string.studio_library_description);
     }
-    @android.annotation.SuppressLint("ClickableViewAccessibility")
-    private void attachCardInteractions(View view, Runnable onClick) {
-        if (view == null) return;
-        view.setOnClickListener(v -> onClick.run());
-        view.setOnTouchListener((v, event) -> {
-            switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    v.animate().scaleX(0.96f).scaleY(0.96f).setDuration(120).start();
-                    break;
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
-                    break;
-            }
-            return false;
-        });
+    private void attach(View view, Runnable action, int title, int description) {
+        ToolUi.button(view);
+        view.setContentDescription(getString(R.string.studio_tool_summary, getString(title), getString(description)));
+        view.setOnClickListener(v -> action.run());
     }
     @Override protected void onPostResume() { super.onPostResume(); AdConsent.request(this); }
     @Override protected void onSaveInstanceState(Bundle state) {

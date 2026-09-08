@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="studio_canvas">#F8FAFC</color>
+    <color name="studio_ink">#1E293B</color>
+    <color name="studio_muted">#475569</color>
+    <color name="studio_blue">#205FA5</color>
+    <color name="studio_soft">#E8F0FB</color>
+    <color name="studio_line">#CBD5E1</color>
+    <string name="studio_tool_summary">%1$s. %2$s</string>
+    <string name="studio_ready">Ready. The microphone is off.</string>
+    <string name="studio_level_title">Input level</string>
+    <string name="studio_level_value">%1$d%%</string>
+    <string name="studio_level_help">Measured from microphone input. This is not a calibrated sound-level meter.</string>
+    <string name="studio_output_route">Output: %1$s</string>
+    <string name="studio_output_idle">Output: system media route. Connect your device before starting.</string>
+    <string name="studio_no_saved">No clip yet. Record something to enable preview.</string>
+    <string name="studio_saved_file">Last saved: %1$s</string>
+    <string name="studio_cancelled">Recording cancelled. No clip was saved.</string>
+    <string name="studio_hold_gesture">Slide outside the record button to cancel. Nothing plays automatically.</string>
+    <string name="studio_permission_title">Permission needed</string>
+    <string name="studio_permission_help">This tool needs access to your microphone or audio files. Open app settings, choose Permissions, and allow the access you want to use. Returning here will not start recording automatically.</string>
+    <string name="studio_open_settings">Open app settings</string>
+    <string name="studio_settings_unavailable">Open this app in your device settings to review permissions.</string>
+    <string name="studio_live_description">Hear your microphone through the selected audio output.</string>
+    <string name="studio_hold_description">Hold to record a clip. Release to save, then play when ready.</string>
+    <string name="studio_record_description">Record longer audio and save it for playback or sharing.</string>
+    <string name="studio_library_description">Browse audio files on your device.</string>
+    <string name="studio_elapsed_title">Elapsed time</string>
+    <string name="studio_storage_note">Saved recordings stay in this app. Share important clips before uninstalling.</string>
+    <plurals name="studio_queue_count">
+        <item quantity="one">%1$d clip waiting to play</item>
+        <item quantity="other">%1$d clips waiting to play</item>
+    </plurals>
+    <style name="StudioTitle" parent="ToolTitle">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textColor">@color/studio_ink</item>
+        <item name="android:textSize">26sp</item>
+    </style>
+    <style name="StudioBody" parent="ToolBody">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/studio_muted</item>
+        <item name="android:lineSpacingExtra">3dp</item>
+    </style>
+    <style name="StudioAction">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">64dp</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:background">@drawable/studio_action_background</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:descendantFocusability">blocksDescendants</item>
+        <item name="android:importantForAccessibility">yes</item>
+    </style>
+    <style name="StudioActionText">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginStart">12dp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/studio_blue</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+</resources>

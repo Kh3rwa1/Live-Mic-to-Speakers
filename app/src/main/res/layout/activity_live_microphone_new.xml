@@ -1,153 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@drawable/bg_pastel_mesh">
-
-    <!-- Top Navigation Bar -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingStart="24dp"
-        android:paddingTop="12dp"
-        android:paddingEnd="24dp"
-        android:paddingBottom="12dp">
-
-        <ImageButton
-            android:id="@+id/iv_back"
-            style="@style/ToolControlCircleBack"
-            android:src="@drawable/tool_back"
-            app:tint="@color/quality_text"
-            android:contentDescription="@string/tool_back" />
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@color/studio_canvas">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingTop="8dp" android:paddingBottom="8dp">
+    <ImageButton android:id="@+id/iv_back" style="@style/ToolControlCircleBack" android:elevation="0dp"
+        android:src="@drawable/tool_back" app:tint="@color/studio_ink" android:contentDescription="@string/tool_back"/>
+</LinearLayout>
+    <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+            android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingBottom="32dp">
+            <TextView android:id="@+id/tv_tittle" style="@style/StudioTitle" android:text="@string/quality_live_title"/>
+    <TextView style="@style/StudioBody" android:text="@string/tool_live_help"/>
+    
+    <LinearLayout android:id="@+id/iv_start_stop_new" style="@style/StudioAction"
+        android:contentDescription="@string/quality_start_microphone">
+        <ImageView android:id="@+id/studio_action_icon"
+            android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/tool_mic"
+            app:tint="@color/studio_blue" android:importantForAccessibility="no"/>
+        <TextView android:id="@+id/tv_start_stop_new" style="@style/StudioActionText" android:text="@string/quality_mic_off"/>
     </LinearLayout>
-
-    <androidx.core.widget.NestedScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:fillViewport="true">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp"
-            android:paddingBottom="24dp">
-
-            <TextView
-                android:id="@+id/tv_tittle"
-                style="@style/ToolTitle"
-                android:text="@string/quality_live_title" />
-
-            <TextView
-                style="@style/ToolBody"
-                android:text="@string/tool_live_help" />
-
-            <!-- Hero 3D Pastel Microphone with Lottie Pulse -->
-            <!-- Hero 3D Pastel Microphone with Lottie Pulse -->
-            <FrameLayout
-                android:id="@+id/layout_mic_hero"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="4dp"
-                android:clickable="true"
-                android:focusable="true">
-
-                <com.airbnb.lottie.LottieAnimationView
-                    android:id="@+id/lottie_mic_pulse"
-                    android:layout_width="260dp"
-                    android:layout_height="260dp"
-                    android:layout_gravity="center"
-                    app:lottie_fileName="lottie_pulse_mic.json"
-                    app:lottie_loop="true"
-                    app:lottie_autoPlay="false"
-                    android:visibility="invisible" />
-
-                <ImageView
-                    android:id="@+id/iv_mic"
-                    android:layout_width="160dp"
-                    android:layout_height="180dp"
-                    android:layout_gravity="center"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:contentDescription="@string/quality_start_microphone"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/hero_mic_3d" />
-            </FrameLayout>
-
-            <!-- Lottie Live Soundwave Visualizer -->
-            <com.airbnb.lottie.LottieAnimationView
-                android:id="@+id/lottie_soundwave"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginStart="24dp"
-                android:layout_marginEnd="24dp"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="6dp"
-                app:lottie_fileName="lottie_wave_live.json"
-                app:lottie_loop="true"
-                app:lottie_autoPlay="false"
-                android:visibility="gone" />
-
-            <!-- Peach Pill Action Button -->
-            <LinearLayout
-                android:id="@+id/btn_live_pill"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="24dp"
-                android:background="@drawable/btn_pill_peach"
-                android:elevation="6dp"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp">
-
-                <ImageButton
-                    android:id="@+id/iv_start_stop_new"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/quality_start_microphone"
-                    android:padding="12dp"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/tool_mic"
-                    app:tint="@color/quality_text"
-                    android:clickable="true"
-                    android:focusable="true" />
-
-                <TextView
-                    android:id="@+id/tv_start_stop_new"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:fontFamily="@font/poppins_bold"
-                    android:text="@string/quality_mic_off"
-                    android:textColor="@color/quality_text"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <TextView
-                style="@style/ToolBody"
-                android:gravity="center"
-                android:text="@string/tool_foreground_note"
-                android:textColor="@color/quality_secondary"
-                android:textSize="14sp" />
+    <TextView android:id="@+id/studio_feedback" style="@style/StudioBody" android:layout_marginTop="16dp"
+        android:accessibilityLiveRegion="polite" android:text="@string/studio_ready"/>
+    <include layout="@layout/studio_input_meter"/><TextView android:id="@+id/studio_output_route" style="@style/StudioBody"
+            android:layout_marginTop="16dp" android:text="@string/studio_output_idle"/><TextView style="@style/StudioBody" android:layout_marginTop="24dp" android:text="@string/tool_foreground_note" android:textSize="14sp"/>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-
-    <LinearLayout
-        android:id="@+id/nativeLay"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:orientation="vertical" />
+    <LinearLayout android:id="@+id/nativeLay" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center_horizontal" android:orientation="vertical"/>
 </LinearLayout>
