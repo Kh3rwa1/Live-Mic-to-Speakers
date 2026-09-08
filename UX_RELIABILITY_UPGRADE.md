@@ -10,11 +10,11 @@ This is a focused improvement, not a measured 10/10 certification or permission 
 - Persistent readiness, permission, save and failure feedback. No idle screen claims that the microphone is active. Empty previews are disabled; saved-file and queue state are visible.
 - Hold-to-record supports slide-out cancellation and keyboard/screen-reader start/stop. Queued saved clips survive activity recreation; saved files remain in their existing folders.
 - Session-scoped recorder error callbacks and amplitude-read failure cleanup. Platform callbacks never release recorder resources themselves. Stale errors cannot stop a newer session, and queued saves still finish after the screen is destroyed.
-- CI diagnostic excerpts retain recent failures rather than being filled by early SDK warnings. Existing check coverage, reporter isolation and permissions are unchanged.
+- CI prints bounded Android JUnit failure details and retains recent failures in diagnostic excerpts instead of early SDK warnings. Existing check coverage, reporter isolation and permissions are unchanged.
 
 ## Local verification
 
-On the authored sources, the offline Java compiler compiled the production controller and level conversion with Java 8 compatibility. Eight new runtime scenarios passed 50 repetitions, including 2,500 serialized restart cycles. An additional 100 queued start-failure checks protect recovery messages from being overwritten by idle-state callbacks. Four Python UI/source contracts passed, including normal-text contrast checks, alongside four CI-reporter regressions. Eight XML files parsed and 12 Java files passed syntax parsing.
+On the authored sources, the offline Java compiler compiled the production controller and level conversion with Java 8 compatibility. Eight new runtime scenarios passed 50 repetitions, including 2,500 serialized restart cycles. An additional 100 queued start-failure checks protect recovery messages from being overwritten by idle-state callbacks. Four Python UI/source contracts passed, including normal-text contrast checks, alongside eight CI-reporting regressions. Eight XML files parsed and 12 Java files passed syntax parsing.
 
 This sandbox cannot download the Android SDK. These results are not Android compilation, instrumentation, native screenshot review or physical-device audio tests. The added JUnit and instrumentation tests participate in the repository's existing CI matrix. Read the final PR head's checks, not an earlier commit's results.
 
