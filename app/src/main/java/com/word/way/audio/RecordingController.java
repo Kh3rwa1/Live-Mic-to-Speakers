@@ -78,8 +78,9 @@ public final class RecordingController<T> implements AutoCloseable {
                 report = generation == ticket && state == State.STARTING;
                 if (report) { wanted = false; state = State.IDLE; }
             }
-            if (report) dispatch(() -> listener.onError(error));
             changed();
+            // Publish the error last so an idle-state render cannot overwrite recovery guidance.
+            if (report) dispatch(() -> listener.onError(error));
         }
     }
     private void sample(long ticket) {

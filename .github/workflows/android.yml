@@ -173,8 +173,9 @@ jobs:
                     for (let j = Math.max(0, i - 1); j < Math.min(lines.length, i + 7); j++) selected.add(j);
                   }
                 });
-                excerpt = [...selected].sort((a, b) => a - b).map(i => lines[i]).join('\n').slice(0, 6500);
-                excerpt = excerpt.replace(/(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]+/g, '[redacted]').replace(/```/g, "'''");
+                // Keep recent failures rather than letting SDK setup warnings consume the excerpt.
+                excerpt = [...selected].sort((a, b) => a - b).map(i => lines[i]).join('\n');
+                excerpt = excerpt.replace(/(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]+/g, '[redacted]').replace(/```/g, "'''").slice(-10000);
               } catch (error) {
                 excerpt = 'Log retrieval unavailable; inspect the linked job and uploaded reports.';
               }

@@ -3,6 +3,7 @@ package com.word.way.audio;
 import org.junit.Test;
 
 public class RecordingRuntimeTest {
+    @Test public void startFailureFeedbackRemainsVisible() throws Exception { StartFailureFeedbackChecks.check(); }
     @Test public void levelBounds() { RecordingRuntimeChecks.levelBounds(); }
     @Test public void runtimeFailureDeliveredOnce() throws Exception { RecordingRuntimeChecks.runtimeFailureDeliveredOnce(); }
     @Test public void staleFailureCannotStopRestart() throws Exception { RecordingRuntimeChecks.staleFailureCannotStopRestart(); }
