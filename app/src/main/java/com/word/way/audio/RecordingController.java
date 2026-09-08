@@ -1,17 +1,21 @@
 package com.word.way.audio;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
-/** A single worker owns preparation, finalization and release. UI calls never wait. */
+/** One worker owns recorder calls, including level reads and failure cleanup. */
 public final class RecordingController<T> implements AutoCloseable {
     public enum State { IDLE, STARTING, RECORDING, STOPPING, CLOSED }
     public interface Recorder<T> extends AutoCloseable {
         void start(BooleanSupplier stillWanted) throws Exception;
         T stop(boolean keep) throws Exception;
+        default void setErrorListener(Consumer<Exception> listener) { }
+        default int readAmplitude() throws Exception { return 0; }
         @Override void close();
     }
     public interface Factory<T> { Recorder<T> create() throws Exception; }
@@ -19,49 +23,86 @@ public final class RecordingController<T> implements AutoCloseable {
         void onStateChanged();
         void onFinished(T result, boolean requestedKeep);
         void onError(Exception error);
+        default void onLevel(int percent) { }
     }
     private final Factory<T> factory;
     private final Executor callbacks;
     private final Listener<T> listener;
-    private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "RecordingWorker"); t.setDaemon(true); return t;
+    private final ScheduledExecutorService worker = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread thread = new Thread(r, "RecordingWorker");
+        thread.setDaemon(true);
+        return thread;
     });
     private volatile State state = State.IDLE;
     private volatile boolean wanted;
+    private volatile long generation;
     private Recorder<T> recorder; // Worker thread only.
+    private ScheduledFuture<?> meter; // Worker thread only.
 
     public RecordingController(Factory<T> factory, Executor callbacks, Listener<T> listener) {
-        this.factory = factory; this.callbacks = callbacks; this.listener = listener;
+        this.factory = factory;
+        this.callbacks = callbacks;
+        this.listener = listener;
     }
     public State getState() { return state; }
     public boolean isActive() { return state == State.STARTING || state == State.RECORDING; }
+    private boolean isWanted(long ticket) { return wanted && generation == ticket && state != State.CLOSED; }
+
     public synchronized boolean start() {
         if (state != State.IDLE) return false;
+        final long ticket = ++generation;
         wanted = true;
         state = State.STARTING;
         changed();
-        worker.execute(() -> {
-            try {
-                if (!wanted) return;
-                recorder = factory.create();
-                if (!wanted) { release(); return; }
-                recorder.start(() -> wanted);
-                synchronized (this) {
-                    if (state == State.STARTING) state = State.RECORDING;
-                }
-                changed();
-            } catch (Exception error) {
-                release();
-                boolean report;
-                synchronized (this) {
-                    report = state == State.STARTING;
-                    if (report) { wanted = false; state = State.IDLE; }
-                }
-                if (report) dispatch(() -> listener.onError(error));
-                changed();
-            }
-        });
+        worker.execute(() -> prepare(ticket));
         return true;
+    }
+    private void prepare(long ticket) {
+        try {
+            if (!isWanted(ticket)) return;
+            recorder = factory.create();
+            if (!isWanted(ticket)) { release(); return; }
+            recorder.setErrorListener(error -> fail(ticket, error));
+            recorder.start(() -> isWanted(ticket));
+            synchronized (this) {
+                if (state == State.STARTING && generation == ticket) state = State.RECORDING;
+            }
+            if (state == State.RECORDING && generation == ticket) {
+                meter = worker.scheduleWithFixedDelay(() -> sample(ticket), 0, 100, TimeUnit.MILLISECONDS);
+            }
+            changed();
+        } catch (Exception error) {
+            release();
+            boolean report;
+            synchronized (this) {
+                report = generation == ticket && state == State.STARTING;
+                if (report) { wanted = false; state = State.IDLE; }
+            }
+            changed();
+            // Publish the error last so an idle-state render cannot overwrite recovery guidance.
+            if (report) dispatch(() -> listener.onError(error));
+        }
+    }
+    private void sample(long ticket) {
+        if (state != State.RECORDING || generation != ticket || recorder == null) return;
+        try {
+            final int percent = AudioLevels.percent(recorder.readAmplitude());
+            dispatch(() -> {
+                if (state == State.RECORDING && generation == ticket) listener.onLevel(percent);
+            });
+        } catch (Exception error) { fail(ticket, error); }
+    }
+    /** A platform callback only requests cleanup; it never touches recorder resources. */
+    private synchronized void fail(long ticket, Exception error) {
+        if (generation != ticket || !isActive()) return;
+        wanted = false;
+        state = State.STOPPING;
+        changed();
+        worker.execute(() -> {
+            release();
+            synchronized (this) { if (state != State.CLOSED) state = State.IDLE; }
+            dispatch(() -> { listener.onStateChanged(); listener.onError(error); });
+        });
     }
     public synchronized boolean stop(boolean keep) {
         if (!isActive()) return false;
@@ -86,6 +127,7 @@ public final class RecordingController<T> implements AutoCloseable {
         return true;
     }
     private void release() {
+        if (meter != null) { meter.cancel(false); meter = null; }
         if (recorder != null) {
             try { recorder.close(); } catch (RuntimeException ignored) { }
             recorder = null;
@@ -99,7 +141,8 @@ public final class RecordingController<T> implements AutoCloseable {
         if (state == State.CLOSED) return;
         wanted = false;
         state = State.CLOSED;
-        // An already queued stop(keep=true) still finalizes the file, without touching a dead UI.
+        generation++;
+        // An already queued save still finalizes, but cannot update a destroyed screen.
         worker.execute(this::release);
         worker.shutdown();
     }

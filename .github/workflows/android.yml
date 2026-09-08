@@ -129,6 +129,9 @@ jobs:
             test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = '${{ matrix.api }}' || { echo 'Error: emulator API differs from requested matrix'; exit 1; }
             if [ '${{ matrix.api }}' = '37' ]; then test "$(adb shell getconf PAGESIZE | tr -d '\r')" = '16384' || { echo 'Error: Android 17 image is not running with 16 KiB pages'; exit 1; }; fi
             bash tools/run_device_checks.sh '${{ matrix.font }}'
+      - name: Print failing Android test details
+        if: always()
+        run: python3 tools/summarize_android_failures.py app/build/outputs/androidTest-results
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -173,8 +176,9 @@ jobs:
                     for (let j = Math.max(0, i - 1); j < Math.min(lines.length, i + 7); j++) selected.add(j);
                   }
                 });
-                excerpt = [...selected].sort((a, b) => a - b).map(i => lines[i]).join('\n').slice(0, 6500);
-                excerpt = excerpt.replace(/(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]+/g, '[redacted]').replace(/```/g, "'''");
+                // Keep recent failures rather than letting SDK setup warnings consume the excerpt.
+                excerpt = [...selected].sort((a, b) => a - b).map(i => lines[i]).join('\n');
+                excerpt = excerpt.replace(/(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]+/g, '[redacted]').replace(/```/g, "'''").slice(-10000);
               } catch (error) {
                 excerpt = 'Log retrieval unavailable; inspect the linked job and uploaded reports.';
               }
