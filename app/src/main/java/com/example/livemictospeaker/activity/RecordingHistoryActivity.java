@@ -1,12 +1,7 @@
 package com.example.livemictospeaker.activity;
 
 import android.media.MediaMetadataRetriever;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import com.example.livemictospeaker.audio.RecordingSession;
+import com.example.livemictospeaker.audio.RecordingChanges;
 import android.os.Bundle;
 import android.os.Environment;
 import androidx.appcompat.app.AppCompatActivity;
@@ -37,9 +32,7 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity {
     private SongListAdapter adapter;
     private List<SongListModel> rows = new ArrayList<>();
     private String query = "";
-    private final BroadcastReceiver saved = new BroadcastReceiver() {
-        @Override public void onReceive(Context context, Intent intent) { reload(); }
-    };
+    private boolean resumed;
     protected abstract File recordingsDirectory();
     protected abstract String legacyFolder();
     @Override public void onCreate(Bundle state) {
@@ -60,6 +53,7 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity {
                 public boolean onQueryTextChange(String value) { filter(value); return true; }
             });
         }
+        RecordingChanges.revisions().observe(this, revision -> { if (resumed) reload(); });
     }
     public static String convertMillieToHMmSs(long millis) {
         long seconds = Math.max(0, millis) / 1000;
@@ -107,15 +101,13 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity {
         for (SongListModel row : rows) if (AudioSearch.matches(row.getTitle(), query) || AudioSearch.matches(row.getDisplayName(), query)) filtered.add(row);
         if (adapter != null) adapter.filterList(filtered);
     }
-    @Override protected void onStart() {
-        super.onStart();
-        LocalBroadcastManager.getInstance(this).registerReceiver(saved, new IntentFilter(RecordingSession.ACTION_SAVED));
+    @Override protected void onResume() { super.onResume(); resumed = true; reload(); }
+    @Override protected void onPause() {
+        resumed = false;
+        generation++;
+        if (pending != null) pending.cancel(true);
+        super.onPause();
     }
-    @Override protected void onStop() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(saved);
-        super.onStop();
-    }
-    @Override protected void onResume() { super.onResume(); reload(); }
     private void reload() {
         int ticket = ++generation;
         if (pending != null) pending.cancel(true);

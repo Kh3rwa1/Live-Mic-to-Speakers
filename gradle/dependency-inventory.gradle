@@ -1,0 +1,34 @@
+import groovy.json.JsonOutput
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.UnresolvedDependencyResult
+
+// Report what Gradle actually selected, not just the requested version catalog entries.
+def inventoryOutput = layout.buildDirectory.file('reports/runtime-dependencies.json')
+def runtimeConfigurations = ['debugRuntimeClasspath', 'releaseRuntimeClasspath']
+tasks.register('writeDependencyInventory') {
+    group = 'verification'
+    description = 'Write resolved debug/release runtime dependencies for policy verification.'
+    notCompatibleWithConfigurationCache('Resolves runtime configurations during verification.')
+    outputs.file(inventoryOutput)
+    outputs.upToDateWhen { false }
+    doLast {
+        def modules = []
+        runtimeConfigurations.each { configurationName ->
+            def resolution = configurations.getByName(configurationName).incoming.resolutionResult
+            def unresolved = resolution.allDependencies.findAll { it instanceof UnresolvedDependencyResult }
+            if (!unresolved.empty) throw new GradleException('Unresolved runtime dependencies in ' + configurationName + ': ' + unresolved.collect { it.requested.displayName }.join(', '))
+            resolution.allComponents.each { component ->
+                if (component.id instanceof ModuleComponentIdentifier) {
+                    modules << [configuration: configurationName, group: component.id.group,
+                                name: component.id.module, version: component.id.version]
+                }
+            }
+        }
+        modules.sort { a, b -> (a.configuration + ':' + a.group + ':' + a.name) <=> (b.configuration + ':' + b.group + ':' + b.name) }
+        def target = inventoryOutput.get().asFile
+        target.parentFile.mkdirs()
+        target.text = JsonOutput.prettyPrint(JsonOutput.toJson([schemaVersion: 1,
+                configurations: runtimeConfigurations, modules: modules])) + '\n'
+        logger.lifecycle('Resolved runtime dependency inventory written: ' + target.name)
+    }
+}

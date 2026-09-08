@@ -1,3 +1,22 @@
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
+
+abstract class GenerateProductionAdResources extends DefaultTask {
+    @Input abstract MapProperty<String, String> getAdValues()
+    @OutputDirectory abstract DirectoryProperty getOutputDirectory()
+    @TaskAction void generate() {
+        def folder = new File(outputDirectory.get().asFile, 'values')
+        if (!folder.isDirectory() && !folder.mkdirs()) throw new GradleException('Cannot create production resource directory.')
+        new File(folder, 'ads.xml').text = '<resources>\n' + adValues.get().collect { resource, value ->
+            // Verification restricts the alphabet to XML-safe ad identifiers.
+            '    <string name="' + resource + '" translatable="false">' + value + '</string>'
+        }.join('\n') + '\n</resources>\n'
+    }
+}
+
 // Opt-in production configuration. Never commit signing secrets or invent ad IDs.
 // Ordinary assembleRelease stays an unsigned demo build for CI; bundleRelease is gated.
 def production = providers.gradleProperty('productionRelease').getOrElse('false').toBoolean()
@@ -54,22 +73,15 @@ if (production) {
         }
         android.buildTypes.release.signingConfig = android.signingConfigs.production
     }
-    // A release source-set overlay overrides demo strings without changing debug resources.
-    def generated = layout.buildDirectory.dir('generated/productionAds/res')
-    def generateAds = tasks.register('generateProductionAdResources') {
+    // Register generated resources through AGP's variant API, not the static SourceSet API.
+    def generateAds = tasks.register('generateProductionAdResources', GenerateProductionAdResources) {
         dependsOn verify
-        inputs.properties(ads)
-        outputs.dir(generated)
-        doLast {
-            def folder = new File(generated.get().asFile, 'values')
-            folder.mkdirs()
-            new File(folder, 'ads.xml').text = '<resources>\n' + ads.collect { resource, value ->
-                // Verification restricts the alphabet to XML-safe ad identifiers.
-                '    <string name="' + resource + '" translatable="false">' + value + '</string>'
-            }.join('\n') + '\n</resources>\n'
-        }
+        adValues.set(ads)
+        outputDirectory.set(layout.buildDirectory.dir('generated/productionAds/res'))
     }
-    android.sourceSets.release.res.srcDir(generated)
+    androidComponents.onVariants(androidComponents.selector().withBuildType('release')) { variant ->
+        variant.sources.res.addGeneratedSourceDirectory(generateAds, { task -> task.outputDirectory })
+    }
     tasks.configureEach { task ->
         if (task.name == 'preReleaseBuild') task.dependsOn(generateAds)
     }

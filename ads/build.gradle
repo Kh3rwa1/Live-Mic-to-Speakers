@@ -1,11 +1,12 @@
-apply plugin: 'com.android.library'
+plugins {
+    alias(libs.plugins.android.library)
+}
 
 android {
     namespace 'demo.ads'
-    compileSdk 36
+    compileSdk 37
     defaultConfig {
-        minSdk 21
-        targetSdk 36
+        minSdk 24
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -27,10 +28,16 @@ dependencies {
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
-    implementation 'androidx.lifecycle:lifecycle-process:2.6.2'
+    implementation libs.lifecycle.process
     implementation libs.glide
     annotationProcessor libs.compiler
     implementation libs.play.services.ads
-    implementation 'com.google.ads.mediation:facebook:6.18.0.0'
-    implementation 'com.google.android.ump:user-messaging-platform:2.2.0'
+    implementation libs.facebook.mediation
+    implementation libs.ump
+
+    constraints {
+        implementation(libs.viewpager2) {
+            because 'Use the stable ViewPager2 release instead of the transitive 1.1.0-beta02 request.'
+        }
+    }
 }
