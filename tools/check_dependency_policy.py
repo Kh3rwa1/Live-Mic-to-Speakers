@@ -70,7 +70,8 @@ def main():
     try:
         count = validate(json.loads(args.inventory.read_text()))
     except (OSError, ValueError, TypeError) as error:
-        parser.exit(1, 'Runtime dependency policy failed:\n' + str(error) + '\n')
+        details = 'Runtime dependency policy failed:\n' + str(error)
+        parser.exit(1, ''.join('Error: ' + line + '\n' for line in details.splitlines()))
     print(f'Runtime dependency policy passed: {count} module entries across debug and release.')
 
 
