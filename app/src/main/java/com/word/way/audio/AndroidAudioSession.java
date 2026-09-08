@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.function.BooleanSupplier;
+import static com.word.way.audio.LiveAudioFailure.Reason.*;
 
 /** All audio resources belong to one worker invocation, never to an Activity. */
 public final class AndroidAudioSession implements AudioSessionRunner.Session {
@@ -63,8 +64,8 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
         checkWanted(stillWanted);
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) throw new SecurityException("Microphone permission required");
-        if (manager == null) throw new IOException("Audio service unavailable");
+                != PackageManager.PERMISSION_GRANTED) throw new LiveAudioFailure(PERMISSION, "Microphone permission required");
+        if (manager == null) throw new LiveAudioFailure(SERVICE_UNAVAILABLE, "Audio service unavailable");
         AudioAttributes attributes = new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build();
         if (Build.VERSION.SDK_INT >= 26) {
@@ -76,7 +77,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
             hasFocus = manager.requestAudioFocus(focusListener, AudioManager.STREAM_MUSIC,
                     AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
         }
-        if (!hasFocus) throw new IOException("Another app is using audio. Try again when it finishes.");
+        if (!hasFocus) throw new LiveAudioFailure(FOCUS_UNAVAILABLE, "Audio focus request denied");
         routeGuard = AudioRouteGuard.open(context, this::interrupt);
         Exception failure = null;
         for (int rate : new int[]{48000, 44100, 16000, 8000}) {
@@ -97,12 +98,16 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
                 output.addOnRoutingChangedListener(routing, new Handler(Looper.getMainLooper()));
                 buffer = new short[(bytes + 1) / 2];
                 break;
+            } catch (SecurityException error) {
+                releaseDevices();
+                throw new LiveAudioFailure(PERMISSION, "Microphone access changed during preparation", error);
             } catch (Exception error) {
                 failure = error;
                 releaseDevices();
             }
         }
-        if (buffer == null) throw new IOException("No supported microphone/output configuration", failure);
+        if (buffer == null) throw new LiveAudioFailure(UNSUPPORTED_CONFIGURATION,
+                "No supported microphone/output configuration", failure);
         try {
             if (AcousticEchoCanceler.isAvailable()) {
                 aec = AcousticEchoCanceler.create(input.getAudioSessionId());
@@ -113,19 +118,22 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
                 if (ns != null) ns.setEnabled(true);
             }
         } catch (RuntimeException ignored) { /* Optional hardware processing. */ }
-        // A stop/navigation/route change during device preparation must not start late capture.
+        // Keep cancellation checks on both sides of platform start calls.
         checkWanted(stillWanted);
-        input.startRecording();
+        try { input.startRecording(); }
+        catch (SecurityException error) { throw new LiveAudioFailure(PERMISSION, "Microphone access denied", error); }
+        catch (RuntimeException error) { throw new LiveAudioFailure(MICROPHONE_UNAVAILABLE, "Microphone could not start", error); }
         checkWanted(stillWanted);
-        output.play();
+        try { output.play(); }
+        catch (RuntimeException error) { throw new LiveAudioFailure(OUTPUT_FAILED, "Audio output could not start", error); }
         if (input.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING)
-            throw new IOException("Microphone could not start");
+            throw new LiveAudioFailure(MICROPHONE_UNAVAILABLE, "Microphone could not start");
     }
     @Override public int pump() throws IOException {
         if (!signal.isActive()) return 0;
         if (pending == 0) {
             int read = input.read(buffer, 0, buffer.length, AudioRecord.READ_NON_BLOCKING);
-            if (read < 0) throw new IOException("Microphone read failed (" + read + ")");
+            if (read < 0) throw new LiveAudioFailure(READ_FAILED, "Microphone read failed (" + read + ")");
             if (read == 0) return 0;
             pending = read;
             offset = 0;
@@ -136,12 +144,12 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
                 for (int i = 0; i < read; i++) peak = Math.max(peak, Math.abs((int) buffer[i]));
                 AudioDeviceInfo device = output.getRoutedDevice();
                 meter.update(Math.min(100, peak * 100 / 32768),
-                        device == null ? "System audio output" : device.getProductName().toString());
+                        device == null ? context.getString(com.word.way.R.string.library_system_output) : device.getProductName().toString());
             }
         }
         if (!signal.isActive()) return 0;
         int written = output.write(buffer, offset, pending, AudioTrack.WRITE_NON_BLOCKING);
-        if (written < 0) throw new IOException("Audio output failed (" + written + ")");
+        if (written < 0) throw new LiveAudioFailure(OUTPUT_FAILED, "Audio output failed (" + written + ")");
         offset += written;
         pending -= written;
         return written;

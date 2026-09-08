@@ -1,154 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@android:color/transparent"
-    android:orientation="vertical">
-
-    <RelativeLayout
-        android:layout_above="@+id/nativeLay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
-
-
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/list"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginTop="8dp"
-                android:layout_weight="1"
-                android:clipToPadding="false"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:paddingBottom="16dp"
-                android:scrollbars="vertical"
-                android:visibility="visible" />
-
-            <TextView
-                android:id="@+id/no_audio"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:fontFamily="@font/poppins_regular"
-                android:gravity="center"
-                android:text="@string/no_audio_files_present_in_your_device"
-                android:textColor="@color/quality_secondary"
-                android:textSize="16sp"
-                android:visibility="gone" />
-        </RelativeLayout>
-
-        <LinearLayout
-            android:id="@+id/mediaPlayerLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/white"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/_1sdp"
-                android:background="@color/white" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/white"
-                android:orientation="horizontal"
-                android:padding="@dimen/_5sdp">
-
-                <RelativeLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_marginEnd="8dp"
-                    android:padding="@dimen/_2sdp">
-
-                    <androidx.appcompat.widget.AppCompatImageView
-                        android:id="@+id/play_pause"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:layout_centerInParent="true"
-                        android:padding="@dimen/_2sdp"
-                        android:src="@drawable/small_play" />
-                </RelativeLayout>
-
-                <LinearLayout
-                    android:id="@+id/layoutControls"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/title"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:fontFamily="@font/poppins_regular"
-                        android:maxLines="1"
-                        android:textColor="@color/black" />
-
-                    <RelativeLayout
-                        android:id="@+id/layout_progress"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/_5sdp"
-                        android:orientation="horizontal">
-
-                        <androidx.appcompat.widget.AppCompatSeekBar
-                            android:id="@+id/player_seekbar"
-                            style="@style/MySeekBar"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_centerVertical="true"
-                            android:thumbOffset="-0.5dp" />
-                    </RelativeLayout>
-
-                    <RelativeLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/_5sdp"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:id="@+id/current_time"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_alignParentStart="true"
-                            android:layout_centerVertical="true"
-                            android:fontFamily="@font/poppins_regular"
-                            android:textColor="@color/black" />
-
-                        <TextView
-                            android:id="@+id/total_time"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_alignParentEnd="true"
-                            android:layout_centerVertical="true"
-                            android:fontFamily="@font/poppins_regular"
-                            android:textColor="@color/black" />
-                    </RelativeLayout>
-                </LinearLayout>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+    <androidx.appcompat.widget.SearchView android:id="@+id/search" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:minHeight="48dp" android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp" android:contentDescription="@string/library_search_audio" app:queryHint="@string/library_search_audio"/>
+    <TextView android:id="@+id/library_summary" style="@style/LibraryMetadata" android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp" android:layout_marginBottom="8dp"/>
+    <FrameLayout android:id="@+id/library_list_pane" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/list" android:layout_width="match_parent"
+            android:layout_height="match_parent" android:clipToPadding="false" android:paddingBottom="16dp"/>
+        <androidx.core.widget.NestedScrollView android:id="@+id/library_state_panel" android:layout_width="match_parent"
+            android:layout_height="match_parent" android:fillViewport="true">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:gravity="center" android:padding="24dp">
+                <TextView android:id="@+id/no_audio" style="@style/StudioBody" android:text="@string/library_loading"
+                    android:gravity="center" android:accessibilityLiveRegion="polite"/>
+                <Button android:id="@+id/library_permissions" style="@style/LibraryButton" android:layout_marginTop="16dp"
+                    android:text="@string/library_permission_action" android:visibility="gone"/>
+                <Button android:id="@+id/library_retry" style="@style/LibraryButton" android:layout_marginTop="16dp"
+                    android:text="@string/library_retry" android:visibility="gone"/>
+                <Button android:id="@+id/library_clear" style="@style/LibraryButton" android:layout_marginTop="16dp"
+                    android:text="@string/library_clear_search" android:visibility="gone"/>
             </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </FrameLayout>
+    <!-- Independent weighted panes prevent a long preview title from covering library rows. -->
+    <androidx.core.widget.NestedScrollView android:id="@+id/mediaPlayerLayout" android:layout_width="match_parent"
+        android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true" android:visibility="gone"
+        android:background="@android:color/white">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="16dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/title" style="@style/LibraryTitle" android:layout_width="0dp"
+                    android:layout_weight="1" android:layout_marginEnd="16dp"/>
+                <ImageButton android:id="@+id/play_pause" style="@style/ToolControl"
+                    android:background="@drawable/library_button_background" android:src="@drawable/tool_play"
+                    app:tint="@color/studio_blue" android:contentDescription="@string/library_play_preview"/>
+            </LinearLayout>
+            <androidx.appcompat.widget.AppCompatSeekBar android:id="@+id/player_seekbar" android:layout_width="match_parent"
+                android:layout_height="48dp" android:contentDescription="@string/library_preview_position"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <TextView android:id="@+id/current_time" style="@style/LibraryMetadata" android:layout_width="0dp" android:layout_weight="1"/>
+                <TextView android:id="@+id/total_time" style="@style/LibraryMetadata" android:layout_width="0dp"
+                    android:layout_weight="1" android:gravity="end"/>
+            </LinearLayout>
+            <TextView android:id="@+id/library_preview_feedback" style="@style/StudioBody"
+                android:text="@string/library_preview_help" android:accessibilityLiveRegion="polite"/>
         </LinearLayout>
-
-    </RelativeLayout>
-
-    <LinearLayout
-        android:id="@+id/nativeLay"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_marginTop="5dp"
-        android:gravity="center_horizontal"
-
-        android:orientation="vertical" />
-</RelativeLayout>
-
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>
