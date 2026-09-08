@@ -25,6 +25,22 @@ class DependencyDiagnosticsTest(unittest.TestCase):
         self.assertIn('removed legacy dependency returned: io.reactivex.rxjava2:rxjava', result.stderr)
         self.assertIn('releaseRuntimeClasspath: missing required SDK:', result.stderr)
 
+    def test_success_reports_exact_retained_vendor_previews(self):
+        from test_dependency_policy import ads_preview_inventory
+        with tempfile.TemporaryDirectory() as folder:
+            inventory = Path(folder) / 'inventory.json'
+            inventory.write_text(json.dumps(ads_preview_inventory()))
+            result = subprocess.run([sys.executable, str(SCRIPT), str(inventory)],
+                                    text=True, capture_output=True, timeout=10)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn('Runtime dependency policy passed:', result.stdout)
+        notices = [line for line in result.stdout.splitlines()
+                   if line.startswith('Reviewed vendor preview retained: ')]
+        self.assertEqual([
+            'Reviewed vendor preview retained: androidx.privacysandbox.ads:ads-adservices-java:1.0.0-beta05',
+            'Reviewed vendor preview retained: androidx.privacysandbox.ads:ads-adservices:1.0.0-beta05',
+        ], notices)
+
 
 if __name__ == '__main__':
     unittest.main()

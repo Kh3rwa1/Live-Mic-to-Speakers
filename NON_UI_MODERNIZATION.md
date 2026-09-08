@@ -25,9 +25,18 @@ This engineering pass deliberately defers visual design. It does not change layo
 - Instrumentation covers worker-thread recording publication, stopped/destroyed owners, actual service preparation without autoplay, error delivery and resource release.
 - Installed-manifest checks protect API 37 targeting, API 24 minimum support, disabled backups, application identity and private app components/provider.
 - CI retains API 24/34/36 coverage and adds API 37, including 200% font scale on APIs 36 and 37. Existing keyboard/inset assertions and seven fresh screenshot requirements are not weakened.
-- `writeDependencyInventory` records resolved debug/release runtime modules. The policy fails on removed legacy dependencies, preview/dynamic versions, missing required SDKs or unsupported ads/consent baselines. This is not a full vulnerability scanner.
+- `writeDependencyInventory` records resolved debug/release runtime modules. The policy fails on removed legacy dependencies, unreviewed previews, dynamic versions, missing required SDKs or unsupported ads/consent baselines. The exact vendor-preview exception below is reported explicitly. This is not a full vulnerability scanner.
 - CI actions are pinned to resolved commits. Checkouts do not persist credentials. Gradle uses basic GitHub caching, not a new commercial caching service or a published Build Scan.
 - Dependabot is configured for weekly Gradle and action update PRs, with ads/mediation/consent grouped. There is no automatic merge. Updates still require compatibility review and passing CI.
+
+## Reviewed transitive dependency policy
+
+The [failure on commit 0bdb769](https://github.com/Kh3rwa1/Live-Mic-to-Speakers/pull/7#issuecomment-5577179845) identified three preview modules in each runtime configuration. They require two different remedies:
+
+- `androidx.viewpager2:viewpager2` has a [stable 1.1.0 release](https://developer.android.com/jetpack/androidx/releases/viewpager2#1.1.0). A version-catalog constraint in the ads module upgrades the transitive `1.1.0-beta02` request for that module and its app consumers. The beta remains rejected by policy.
+- The existing ads dependency set resolves `androidx.privacysandbox.ads:ads-adservices:1.0.0-beta05` and `androidx.privacysandbox.ads:ads-adservices-java:1.0.0-beta05`. The [AndroidX release page](https://developer.android.com/jetpack/androidx/releases/privacysandbox-ads) lists beta releases and no stable release. Retain this already-resolved pair rather than remove runtime classes, invent a stable version or force a different preview API onto the ads SDK.
+- The exception accepts only those two exact coordinates and versions, together in the same configuration, with `com.google.android.gms:play-services-ads:25.4.0`. A missing sibling, mixed versions, SDK changes, unreviewed previews and dynamic versions fail. This is not a group-wide or beta-wide exemption. CI prints each retained preview explicitly.
+- Re-review or remove the exception when updating the ads SDK or adopting a verified stable replacement. Regression tests cover both runtime configurations, version drift, incomplete pairs, SDK drift, unrelated previews and the stable ViewPager2 remedy. The normal build, lint, unit, device, production-rejection and native-alignment checks remain mandatory. This exception is not live-ads or privacy certification.
 
 ## Verify the exact revision
 

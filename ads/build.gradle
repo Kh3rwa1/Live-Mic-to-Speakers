@@ -34,4 +34,10 @@ dependencies {
     implementation libs.play.services.ads
     implementation libs.facebook.mediation
     implementation libs.ump
+
+    constraints {
+        implementation(libs.viewpager2) {
+            because 'Use the stable ViewPager2 release instead of the transitive 1.1.0-beta02 request.'
+        }
+    }
 }

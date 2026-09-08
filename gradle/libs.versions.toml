@@ -7,6 +7,7 @@ constraintlayout = "2.2.2"
 lifecycle = "2.11.0"
 navigation = "2.10.0"
 recyclerview = "1.4.0"
+viewpager2 = "1.1.0"
 glide = "5.0.9"
 lottie = "6.7.1"
 playServicesAds = "25.4.0"
@@ -38,6 +39,7 @@ lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.r
 navigation-fragment = { module = "androidx.navigation:navigation-fragment", version.ref = "navigation" }
 navigation-ui = { module = "androidx.navigation:navigation-ui", version.ref = "navigation" }
 recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
+viewpager2 = { module = "androidx.viewpager2:viewpager2", version.ref = "viewpager2" }
 lottie = { module = "com.airbnb.android:lottie", version.ref = "lottie" }
 play-services-ads = { module = "com.google.android.gms:play-services-ads", version.ref = "playServicesAds" }
 facebook-mediation = { module = "com.google.ads.mediation:facebook", version.ref = "facebookMediation" }

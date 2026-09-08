@@ -14,6 +14,15 @@ MINIMUM = {
 }
 PREVIEW = re.compile(r'(?:^|[.\-])(alpha|beta|rc\d*|snapshot|dev|eap)(?:[.\-\d]|$)', re.I)
 
+# The current stable ads SDK resolves this beta-only AndroidX pair. Do not
+# exclude its runtime classes or accept the whole group. Keep this exception
+# tied to the exact reviewed versions and SDK; see NON_UI_MODERNIZATION.md.
+REVIEWED_PREVIEWS = {
+    'androidx.privacysandbox.ads:ads-adservices': '1.0.0-beta05',
+    'androidx.privacysandbox.ads:ads-adservices-java': '1.0.0-beta05',
+}
+REVIEWED_ADS_SDK = ('com.google.android.gms:play-services-ads', '25.4.0')
+
 
 def numeric_version(value):
     if not re.fullmatch(r'\d+(?:\.\d+){1,3}', value):
@@ -46,7 +55,8 @@ def validate(data):
         seen[configuration][coordinate] = version
         if entry['group'] in BANNED_GROUPS:
             errors.append(configuration + ': removed legacy dependency returned: ' + coordinate)
-        if PREVIEW.search(version) or re.search(r'[+\[\]()]|latest', version, re.I):
+        unreviewed_preview = PREVIEW.search(version) and REVIEWED_PREVIEWS.get(coordinate) != version
+        if unreviewed_preview or re.search(r'[+\[\]()]|latest', version, re.I):
             errors.append(configuration + ': unstable/dynamic version: ' + coordinate + ':' + version)
         if coordinate in MINIMUM:
             try:
@@ -55,6 +65,14 @@ def validate(data):
             except ValueError as error:
                 errors.append(configuration + ': ' + str(error))
     for configuration, selected in seen.items():
+        if any(PREVIEW.search(selected.get(coordinate, '')) for coordinate in REVIEWED_PREVIEWS):
+            sdk, reviewed_version = REVIEWED_ADS_SDK
+            if selected.get(sdk) != reviewed_version:
+                errors.append(configuration + ': Privacy Sandbox preview exception requires reviewed ads SDK: '
+                              + sdk + ':' + reviewed_version)
+            if any(selected.get(coordinate) != version for coordinate, version in REVIEWED_PREVIEWS.items()):
+                errors.append(configuration + ': both modules of the reviewed Privacy Sandbox pair '
+                              'must resolve together at their exact reviewed versions')
         for required in MINIMUM:
             if required not in selected:
                 errors.append(configuration + ': missing required SDK: ' + required)
@@ -68,11 +86,17 @@ def main():
     parser.add_argument('inventory', type=Path)
     args = parser.parse_args()
     try:
-        count = validate(json.loads(args.inventory.read_text()))
+        inventory = json.loads(args.inventory.read_text())
+        count = validate(inventory)
     except (OSError, ValueError, TypeError) as error:
         details = 'Runtime dependency policy failed:\n' + str(error)
         parser.exit(1, ''.join('Error: ' + line + '\n' for line in details.splitlines()))
     print(f'Runtime dependency policy passed: {count} module entries across debug and release.')
+    retained = {entry['group'] + ':' + entry['name'] + ':' + entry['version']
+                for entry in inventory['modules']
+                if REVIEWED_PREVIEWS.get(entry['group'] + ':' + entry['name']) == entry['version']}
+    for coordinate in sorted(retained):
+        print('Reviewed vendor preview retained: ' + coordinate)
 
 
 if __name__ == '__main__':
