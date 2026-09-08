@@ -1,8 +1,11 @@
 package com.word.way.activity;
 
+import android.app.Activity;
 import android.content.Context;
 import android.text.Layout;
+import android.text.TextUtils;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import androidx.test.core.app.ActivityScenario;
@@ -11,6 +14,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.word.way.R;
 import demo.ads.AdsHandler;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -23,22 +29,78 @@ public class ActiveToolLayoutTest {
         Context app = ApplicationProvider.getApplicationContext();
         AdsHandler.getInstance(app); AdsHandler.setAdsOn(false);
     }
+    private static <T extends Activity> void renderAndWait(ActivityScenario<T> screen, Consumer<T> change)
+            throws InterruptedException {
+        CountDownLatch laidOut = new CountDownLatch(1);
+        screen.onActivity(activity -> {
+            View root = activity.findViewById(android.R.id.content);
+            root.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+                @Override public boolean onPreDraw() {
+                    root.getViewTreeObserver().removeOnPreDrawListener(this);
+                    laidOut.countDown();
+                    return true;
+                }
+            });
+            change.accept(activity);
+            root.requestLayout(); root.invalidate();
+        });
+        assertTrue("Layout did not reach a measured frame", laidOut.await(5, TimeUnit.SECONDS));
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+    }
     private static void textFits(TextView text) {
         Layout layout = text.getLayout();
-        assertNotNull(layout);
+        assertNotNull("Text has not been laid out", layout);
         int width = text.getWidth() - text.getCompoundPaddingLeft() - text.getCompoundPaddingRight();
         int height = text.getHeight() - text.getCompoundPaddingTop() - text.getCompoundPaddingBottom();
-        assertTrue("Text is vertically clipped", layout.getHeight() <= height + 1);
+        assertTrue("Text is vertically clipped: " + layout.getHeight() + " > " + height,
+                layout.getHeight() <= height + 1);
         for (int i = 0; i < layout.getLineCount(); i++) {
             assertEquals("Essential text was ellipsized", 0, layout.getEllipsisCount(i));
-            assertTrue("Text extends beyond its row", layout.getLineWidth(i) <= width + 1);
+            // getLineWidth includes trailing wrap whitespace, which can extend beyond the row.
+            // getLineMax measures the visible line extent, including any leading margins.
+            float visibleWidth = layout.getLineMax(i);
+            assertTrue("Visible text extends beyond its row: line " + i + ", " + visibleWidth
+                    + " > " + width + ", text=" + text.getText(), visibleWidth <= width + 1);
         }
     }
-    @Test public void longRouteDoesNotReplaceActionOrClipText() {
+    private static void measure(TextView text, int width, int height) {
+        text.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
+        text.layout(0, 0, width, height);
+    }
+    private static void rejects(TextView text, String reason) {
+        boolean rejected = false;
+        try { textFits(text); }
+        catch (AssertionError error) {
+            assertTrue("Unexpected assertion: " + error.getMessage(), error.getMessage().contains(reason));
+            rejected = true;
+        }
+        assertTrue("Layout check accepted real " + reason, rejected);
+    }
+    @Test public void boundsCheckIgnoresTrailingWhitespaceButRejectsRealClipping() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            TextView text = new TextView(ApplicationProvider.getApplicationContext());
+            text.setTextSize(20); text.setPadding(0, 0, 0, 0);
+            text.setText("OK                         ");
+            measure(text, (int) Math.ceil(text.getPaint().measureText("OK")) + 1, 1024);
+            textFits(text);
+            text.setSingleLine(true); text.setEllipsize(null);
+            text.setText("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW");
+            measure(text, 80, 1024);
+            rejects(text, "Visible text extends");
+            text.setEllipsize(TextUtils.TruncateAt.END);
+            measure(text, 80, 1024);
+            rejects(text, "ellipsized");
+            text.setEllipsize(null); text.setSingleLine(false);
+            text.setText("One\nTwo\nThree");
+            measure(text, 300, 1);
+            rejects(text, "vertically clipped");
+        });
+    }
+    @Test public void longRouteDoesNotReplaceActionOrClipText() throws Exception {
         try (ActivityScenario<LiveMicrophoneActivity> screen = ActivityScenario.launch(LiveMicrophoneActivity.class)) {
-            screen.onActivity(activity -> activity.renderMeter(75,
+            renderAndWait(screen, activity -> activity.renderMeter(75,
                     "USB audio interface with a long device name / Bluetooth receiver for the meeting room"));
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
             screen.onActivity(activity -> {
                 TextView action = activity.findViewById(R.id.tv_start_stop_new);
                 assertEquals(activity.getString(R.string.quality_mic_off), action.getText().toString());
@@ -53,9 +115,9 @@ public class ActiveToolLayoutTest {
                     ((ProgressBar) activity.findViewById(R.id.studio_input_level)).getProgress()));
         }
     }
-    @Test public void emptyRecordAndHoldScreensDoNotOfferBrokenPreview() {
+    @Test public void emptyRecordAndHoldScreensDoNotOfferBrokenPreview() throws Exception {
         try (ActivityScenario<RecordAudioActivity> screen = ActivityScenario.launch(RecordAudioActivity.class)) {
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            renderAndWait(screen, activity -> { });
             screen.onActivity(activity -> {
                 assertFalse(activity.findViewById(R.id.iv_play).isEnabled());
                 assertEquals(activity.getString(R.string.studio_ready),
@@ -65,7 +127,7 @@ public class ActiveToolLayoutTest {
             });
         }
         try (ActivityScenario<HoldToSpeakActivity> screen = ActivityScenario.launch(HoldToSpeakActivity.class)) {
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            renderAndWait(screen, activity -> { });
             screen.onActivity(activity -> {
                 assertFalse(activity.findViewById(R.id.iv_play).isEnabled());
                 textFits(activity.findViewById(R.id.tv_start_stop_new));
