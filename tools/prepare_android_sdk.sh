@@ -8,7 +8,13 @@ set -euo pipefail
 version=20.0
 current="$ANDROID_HOME/cmdline-tools/$version"
 latest="$ANDROID_HOME/cmdline-tools/latest"
-sdkmanager --install "cmdline-tools;$version"
+installer=$(command -v sdkmanager || true)
+if [ -z "$installer" ]; then installer="$latest/bin/sdkmanager"; fi
+if [ ! -x "$installer" ]; then
+  echo 'Error: SDK bootstrap manager is unavailable' >&2
+  exit 1
+fi
+"$installer" --install "cmdline-tools;$version"
 if [ ! -x "$current/bin/sdkmanager" ] || [ ! -x "$current/bin/avdmanager" ]; then
   echo "Error: command-line tools $version were not installed correctly" >&2
   exit 1

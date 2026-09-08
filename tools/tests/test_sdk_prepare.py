@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -71,6 +72,19 @@ chmod +x "$folder/bin/sdkmanager" "$folder/bin/avdmanager"
         self.assertNotEqual(0, result.returncode)
         self.assertIn('unexpected command-line tools revision', result.stderr)
         self.assertTrue((self.latest / 'original.txt').is_file())
+
+    def test_bootstraps_when_sdkmanager_is_not_on_path(self):
+        bootstrap = self.latest / 'bin' / 'sdkmanager'
+        bootstrap.parent.mkdir()
+        bootstrap.write_text((self.root / 'bin' / 'sdkmanager').read_text())
+        bootstrap.chmod(0o755)
+        utilities = self.root / 'utilities'
+        utilities.mkdir()
+        for name in ('bash', 'mkdir', 'chmod', 'grep', 'readlink', 'mktemp', 'mv', 'ln'):
+            (utilities / name).symlink_to(shutil.which(name))
+        result = self.run_prepare(PATH=str(utilities))
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertTrue(self.latest.is_symlink())
 
     def test_patch_revision_within_pinned_series_is_supported(self):
         result = self.run_prepare(TEST_REVISION='20.0.1')
