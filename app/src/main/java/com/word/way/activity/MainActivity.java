@@ -42,8 +42,6 @@ public class MainActivity extends AppCompatActivity implements AdConsent.HomeScr
         GoogleAds.getInstance().addNativeView(this, findViewById(R.id.nativeLay));
         View settings = findViewById(R.id.tv_settings);
         if (settings != null) settings.setOnClickListener(v -> startActivity(new Intent(this, Setting_Activity.class)));
-        View back = findViewById(R.id.iv_back);
-        if (back != null) back.setOnClickListener(v -> startActivity(new Intent(this, Setting_Activity.class)));
         attachCardInteractions(findViewById(R.id.cv_live_microphone), this::onLiveMicrophoneClick);
         attachCardInteractions(findViewById(R.id.cv_hold_to_speak), this::onHoldToSpeakClick);
         attachCardInteractions(findViewById(R.id.cv_record_audio), this::onRecordAudioClick);
