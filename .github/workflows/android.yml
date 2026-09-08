@@ -26,6 +26,8 @@ jobs:
         with:
           cache-provider: basic
           validate-wrappers: true
+      - name: Prepare SDK tools for Android 17 package names
+        run: bash tools/prepare_android_sdk.sh
       - name: Verify CI helper regressions
         run: python3 -m unittest discover -s tools/tests -v
       - name: Verify core accessibility source contract
@@ -107,6 +109,8 @@ jobs:
         with:
           cache-provider: basic
           validate-wrappers: true
+      - name: Prepare SDK tools for Android 17 package names
+        run: bash tools/prepare_android_sdk.sh
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -114,12 +118,17 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
-          api-level: ${{ matrix.api }}
-          target: ${{ matrix.api == 37 && 'google_apis' || 'default' }}
+          api-level: ${{ matrix.api == 37 && '37.0' || matrix.api }}
+          target: ${{ matrix.api == 37 && 'google_apis_ps16k' || 'default' }}
           ram-size: ${{ matrix.api == 37 && '4096M' || '' }}
           arch: x86_64
           disable-animations: true
-          script: bash tools/run_device_checks.sh '${{ matrix.font }}'
+          pre-emulator-launch-script: |
+            if [ '${{ matrix.api }}' = '37' ]; then grep -qx 'target=android-37.0' "$ANDROID_AVD_HOME/test.ini" || { echo 'Error: AVD target was not parsed as Android 37.0'; exit 1; }; fi
+          script: |
+            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = '${{ matrix.api }}' || { echo 'Error: emulator API differs from requested matrix'; exit 1; }
+            if [ '${{ matrix.api }}' = '37' ]; then test "$(adb shell getconf PAGESIZE | tr -d '\r')" = '16384' || { echo 'Error: Android 17 image is not running with 16 KiB pages'; exit 1; }; fi
+            bash tools/run_device_checks.sh '${{ matrix.font }}'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
