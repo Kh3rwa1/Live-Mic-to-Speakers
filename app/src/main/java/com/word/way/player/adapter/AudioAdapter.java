@@ -1,7 +1,7 @@
 package com.word.way.player.adapter;
 
 import android.content.Context;
-import android.net.Uri;
+import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,13 +9,14 @@ import android.widget.Filter;
 import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.recyclerview.widget.RecyclerView;
 import com.word.way.R;
+import com.word.way.Utils.ToolUi;
 import com.word.way.player.AudioSearch;
 import com.word.way.player.LocalAudio;
 import com.word.way.player.MediaPlayerUtils;
 import java.util.ArrayList;
-import java.util.List;
 
 /** Playback identity survives filtering. Clicks resolve their current binding position. */
 public final class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.ViewHolder> implements Filterable {
@@ -38,8 +39,7 @@ public final class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.ViewHo
             notifyDataSetChanged();
         }
     };
-    public AudioAdapter(Context context, ArrayList<LocalAudio> audio,
-            AudioActionListener listener) {
+    public AudioAdapter(Context context, ArrayList<LocalAudio> audio, AudioActionListener listener) {
         this.context = context; this.listener = listener;
         localAudioLists = new ArrayList<>(audio); visible = new ArrayList<>(audio);
     }
@@ -57,46 +57,45 @@ public final class AudioAdapter extends RecyclerView.Adapter<AudioAdapter.ViewHo
     @Override public ViewHolder onCreateViewHolder(ViewGroup parent, int type) {
         return new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.music_audio_layout_new, parent, false));
     }
-    @Override public void onBindViewHolder(ViewHolder holder, int position) { holder.bind(visible.get(position), position); }
+    @Override public void onBindViewHolder(ViewHolder holder, int position) { holder.bind(visible.get(position)); }
     public final class ViewHolder extends RecyclerView.ViewHolder {
         private final View cardRoot;
-        private final TextView title, duration, modified, location;
+        private final TextView title, duration, modified, previewLabel;
         private final ImageView play;
         ViewHolder(View view) {
             super(view);
             cardRoot = view.findViewById(R.id.card_root);
             title = view.findViewById(R.id.title); duration = view.findViewById(R.id.duration);
-            modified = view.findViewById(R.id.author); location = view.findViewById(R.id.location); play = view.findViewById(R.id.iv_play);
+            modified = view.findViewById(R.id.author); play = view.findViewById(R.id.iv_play);
+            previewLabel = view.findViewById(R.id.library_preview_label);
+            ToolUi.button(view.findViewById(R.id.playLayout));
             View.OnClickListener click = clicked -> {
                 int position = getBindingAdapterPosition();
                 if (position == RecyclerView.NO_POSITION || position >= visible.size()) return;
                 try { listener.onAudioAction(visible.get(position), position, clicked); }
-                catch (RuntimeException error) { android.util.Log.w("AudioAdapter", "Audio selection failed", error); }
+                catch (RuntimeException error) {
+                    Toast.makeText(context, R.string.library_action_error, Toast.LENGTH_LONG).show();
+                }
             };
             view.findViewById(R.id.playLayout).setOnClickListener(click);
             view.findViewById(R.id.select_song).setOnClickListener(click);
         }
-        void bind(LocalAudio audio, int position) {
-            int[] backgrounds = {
-                R.drawable.card_tile_mint,
-                R.drawable.card_tile_peach,
-                R.drawable.card_tile_lavender,
-                R.drawable.card_tile_yellow
-            };
-            if (cardRoot != null) {
-                cardRoot.setBackgroundResource(backgrounds[Math.abs(position) % backgrounds.length]);
-            }
-            title.setText((position + 1) + ". " + audio.getAudioTitle());
-            duration.setText(MediaPlayerUtils.INSTANCE.milliSecondsToTimer(Math.max(0, audio.getAudioDuration())));
-            try { modified.setText(MediaPlayerUtils.INSTANCE.getTimeAgo(audio.getDateModified(), context)); }
-            catch (RuntimeException ignored) { modified.setText(""); }
-            Uri uri = audio.getAudioUri() == null ? Uri.EMPTY : Uri.parse(audio.getAudioUri());
-            List<String> segments = uri.getPathSegments();
-            location.setText("content".equals(uri.getScheme()) ? "Audio library"
-                    : segments.size() > 1 ? segments.get(segments.size() - 2) : "Audio");
+        void bind(LocalAudio audio) {
+            cardRoot.setActivated(audio.isHighlight());
+            title.setText(audio.getAudioTitle());
+            duration.setText(context.getString(R.string.library_duration,
+                    MediaPlayerUtils.INSTANCE.milliSecondsToTimer(Math.max(0, audio.getAudioDuration()))));
+            try {
+                long modifiedAt = Math.multiplyExact(Long.parseLong(audio.getDateModified()), 1000L);
+                if (modifiedAt <= 0) throw new IllegalArgumentException("Unknown date");
+                modified.setText(DateUtils.getRelativeTimeSpanString(modifiedAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS));
+                modified.setVisibility(View.VISIBLE);
+            } catch (RuntimeException ignored) { modified.setText(null); modified.setVisibility(View.GONE); }
             play.setImageResource(audio.isPlay() ? R.drawable.tool_pause : R.drawable.tool_play);
-            itemView.findViewById(R.id.playLayout).setContentDescription((audio.isPlay() ? "Pause " : "Preview ") + audio.getAudioTitle());
-            itemView.findViewById(R.id.select_song).setContentDescription("Open " + audio.getAudioTitle());
+            previewLabel.setText(audio.isPlay() ? R.string.library_pause : R.string.library_preview);
+            itemView.findViewById(R.id.playLayout).setContentDescription(context.getString(
+                    audio.isPlay() ? R.string.library_pause_named : R.string.library_preview_named, audio.getAudioTitle()));
+            itemView.findViewById(R.id.select_song).setContentDescription(context.getString(R.string.library_open_named, audio.getAudioTitle()));
             title.setSelected(audio.isHighlight());
         }
     }

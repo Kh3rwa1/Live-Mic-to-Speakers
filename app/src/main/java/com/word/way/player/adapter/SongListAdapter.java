@@ -15,6 +15,7 @@ import com.word.way.player.SongListModel;
 import java.util.ArrayList;
 import java.util.List;
 
+/** Named, visible play/share actions; long-press sharing remains available for existing users. */
 public class SongListAdapter extends RecyclerView.Adapter<SongListAdapter.AlbumViewHolder> {
     public final Context context;
     public List<SongListModel> songListModelList;
@@ -26,46 +27,39 @@ public class SongListAdapter extends RecyclerView.Adapter<SongListAdapter.AlbumV
     }
     @Override public void onBindViewHolder(AlbumViewHolder holder, int position) {
         SongListModel audio = songListModelList.get(position);
-        int[] backgrounds = {
-            R.drawable.card_tile_mint,
-            R.drawable.card_tile_peach,
-            R.drawable.card_tile_lavender,
-            R.drawable.card_tile_yellow
-        };
-        if (holder.cardRoot != null) {
-            holder.cardRoot.setBackgroundResource(backgrounds[Math.abs(position) % backgrounds.length]);
-        }
-        holder.name.setText((position + 1) + ". " + audio.getDisplayName());
-        holder.duration.setText(audio.getDuration());
-        holder.itemView.findViewById(R.id.play).setContentDescription("Play " + audio.getDisplayName());
-        holder.itemView.setContentDescription(audio.getDisplayName() + ". Long press for sharing options.");
+        holder.name.setText(audio.getDisplayName());
+        holder.duration.setText(context.getString(R.string.library_duration, audio.getDuration()));
+        holder.itemView.findViewById(R.id.play).setContentDescription(context.getString(R.string.library_play_named, audio.getDisplayName()));
+        holder.itemView.findViewById(R.id.share_recording).setContentDescription(context.getString(R.string.library_share_named, audio.getDisplayName()));
     }
     public final class AlbumViewHolder extends RecyclerView.ViewHolder {
-        final View cardRoot;
         final TextView name, duration;
         AlbumViewHolder(View view) {
             super(view);
-            cardRoot = view.findViewById(R.id.card_root);
             name = view.findViewById(R.id.title); duration = view.findViewById(R.id.duration);
             view.findViewById(R.id.play).setOnClickListener(v -> {
-                int position = getBindingAdapterPosition();
-                if (position == RecyclerView.NO_POSITION || position >= songListModelList.size()) return;
-                SongListModel audio = songListModelList.get(position);
+                SongListModel audio = current();
+                if (audio == null) return;
                 context.startActivity(new Intent(context, MusicActivity.class).putExtra("SONG_URI", audio.getData())
-                        .putExtra("SONG_INDEX", position).putExtra("SONG_NAME", audio.getDisplayName()));
+                        .putExtra("SONG_INDEX", getBindingAdapterPosition()).putExtra("SONG_NAME", audio.getDisplayName()));
+            });
+            view.findViewById(R.id.share_recording).setOnClickListener(v -> {
+                SongListModel audio = current();
+                if (audio != null) RecordingShare.share(context, audio.getData());
             });
             view.setOnLongClickListener(v -> {
-                int position = getBindingAdapterPosition();
-                if (position == RecyclerView.NO_POSITION || position >= songListModelList.size()) return false;
-                String selectedPath = songListModelList.get(position).getData();
+                SongListModel audio = current();
+                if (audio == null) return false;
+                String selectedPath = audio.getData();
                 PopupMenu menu = new PopupMenu(v.getContext(), v);
-                menu.getMenu().add("Share recording");
-                menu.setOnMenuItemClickListener(item -> {
-                    RecordingShare.share(context, selectedPath);
-                    return true;
-                });
+                menu.getMenu().add(R.string.library_share_recording);
+                menu.setOnMenuItemClickListener(item -> { RecordingShare.share(context, selectedPath); return true; });
                 menu.show(); return true;
             });
+        }
+        private SongListModel current() {
+            int position = getBindingAdapterPosition();
+            return position == RecyclerView.NO_POSITION || position >= songListModelList.size() ? null : songListModelList.get(position);
         }
     }
 }

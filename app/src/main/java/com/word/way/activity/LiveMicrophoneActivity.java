@@ -17,6 +17,7 @@ import com.word.way.Utils.EUGeneralClass;
 import com.word.way.Utils.ToolUi;
 import com.word.way.audio.AndroidAudioSession;
 import com.word.way.audio.AudioSessionRunner;
+import com.word.way.audio.LiveAudioFailure;
 import demo.ads.GoogleAds;
 
 public class LiveMicrophoneActivity extends AppCompatActivity {
@@ -59,9 +60,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             }
             @Override public void onError(long generation, Exception error) {
                 runOnUiThread(() -> {
-                    if (runner.isCurrent(generation)) {
-                        stopMic(); feedback.setText(R.string.quality_mic_error);
-                    }
+                    if (runner.isCurrent(generation)) showAudioError(error);
                 });
             }
         });
@@ -87,6 +86,23 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             startDialog.show();
         });
         stopMic();
+    }
+    // Kept package-visible for deterministic UI tests; no microphone is started by this method.
+    void showAudioError(Exception error) {
+        stopMic();
+        int message;
+        switch (LiveAudioFailure.reasonOf(error)) {
+            case PERMISSION: message = R.string.live_error_permission; break;
+            case SERVICE_UNAVAILABLE: message = R.string.live_error_service; break;
+            case FOCUS_UNAVAILABLE: message = R.string.live_error_focus; break;
+            case UNSUPPORTED_CONFIGURATION: message = R.string.live_error_configuration; break;
+            case MICROPHONE_UNAVAILABLE: message = R.string.live_error_microphone; break;
+            case READ_FAILED: message = R.string.live_error_input; break;
+            case OUTPUT_FAILED: message = R.string.live_error_output; break;
+            case CANCELLED: message = R.string.live_error_cancelled; break;
+            default: message = R.string.quality_mic_error;
+        }
+        feedback.setText(message);
     }
     // Package-visible so instrumentation can exercise long routes without starting capture.
     void renderMeter(int peak, String route) {

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_title">Audio library</string>
+    <string name="library_history_title">Saved recordings</string>
+    <string name="library_search_audio">Search audio</string>
+    <string name="library_search_recordings">Search recordings</string>
+    <string name="library_loading">Loading audio…</string>
+    <string name="library_empty">No audio files found. Add audio to your device, then try again.</string>
+    <string name="library_history_empty">No saved recordings yet. Record a clip, then return here. Share important recordings before uninstalling this app.</string>
+    <string name="library_no_matches">No matches. Try another search or clear the current search.</string>
+    <string name="library_load_error">The audio library could not be loaded. Try again.</string>
+    <string name="library_history_error">Recordings could not be loaded. Check available storage, then try again.</string>
+    <string name="library_permission_error">Audio access is unavailable. Allow music and audio access in app settings, then try again.</string>
+    <string name="library_retry">Try again</string>
+    <string name="library_clear_search">Clear search</string>
+    <string name="library_permission_action">Review permissions</string>
+    <string name="library_unknown_artist">Unknown artist</string>
+    <string name="library_untitled">Untitled audio</string>
+    <string name="library_system_output">System audio output</string>
+    <string name="library_duration">Duration: %1$s</string>
+    <string name="library_play">Play</string>
+    <string name="library_share">Share</string>
+    <string name="library_preview">Preview</string>
+    <string name="library_pause">Pause</string>
+    <string name="library_open_player">Open player</string>
+    <string name="library_play_named">Play %1$s</string>
+    <string name="library_share_named">Share %1$s</string>
+    <string name="library_preview_named">Preview %1$s</string>
+    <string name="library_pause_named">Pause %1$s</string>
+    <string name="library_open_named">Open %1$s in the player</string>
+    <string name="library_share_recording">Share recording</string>
+    <string name="library_preview_position">Preview position</string>
+    <string name="library_play_preview">Play preview</string>
+    <string name="library_pause_preview">Pause preview</string>
+    <string name="library_preview_error">Preview stopped. Check file access and other audio apps, then select the track to retry.</string>
+    <string name="library_preview_help">Preview pauses when you leave this screen. Open the player for full controls.</string>
+    <string name="library_action_error">This audio could not be opened. Check file access and try again.</string>
+    <plurals name="library_count">
+        <item quantity="one">%1$d audio file</item>
+        <item quantity="other">%1$d audio files</item>
+    </plurals>
+    <string name="live_error_permission">Microphone access is unavailable. Check this app’s microphone permission and your device’s microphone privacy switch, then tap Start.</string>
+    <string name="live_error_service">The system audio service is unavailable. Reopen the app; if this continues, restart your device.</string>
+    <string name="live_error_focus">Another app or a call is using audio. Finish that activity, return here, and tap Start.</string>
+    <string name="live_error_configuration">This microphone and output combination could not be opened. Reconnect the output or try a different route, then tap Start.</string>
+    <string name="live_error_microphone">The microphone could not start. Close other microphone apps and check the microphone privacy switch, then tap Start.</string>
+    <string name="live_error_input">Microphone input stopped. Check the microphone connection and permissions, then tap Start to retry.</string>
+    <string name="live_error_output">Audio output stopped. Reconnect or select your output device, lower its volume, then tap Start.</string>
+    <string name="live_error_cancelled">Microphone start was cancelled. Nothing will restart automatically. Tap Start when you are ready.</string>
+    <style name="LibraryButton" parent="Widget.AppCompat.Button.Borderless">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:minWidth">48dp</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/studio_blue</item>
+        <item name="android:background">@drawable/library_button_background</item>
+        <item name="android:focusable">true</item>
+        <item name="android:clickable">true</item>
+    </style>
+    <style name="LibraryTitle" parent="StudioBody">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/studio_ink</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:layout_marginTop">0dp</item>
+    </style>
+    <style name="LibraryMetadata" parent="StudioBody">
+        <item name="android:textSize">14sp</item>
+        <item name="android:layout_marginTop">4dp</item>
+    </style>
+</resources>

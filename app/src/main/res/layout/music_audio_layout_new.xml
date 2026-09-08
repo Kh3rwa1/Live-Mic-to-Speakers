@@ -1,122 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical">
-
-    <RelativeLayout
-        android:id="@+id/card_root"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="12dp"
-        android:layout_marginBottom="8dp"
-        android:background="@drawable/card_tile_mint"
-        android:elevation="4dp"
-        android:paddingStart="16dp"
-        android:paddingTop="14dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="14dp">
-
-        <!-- Circular White Music Note Badge -->
-        <FrameLayout
-            android:id="@+id/iv_disc"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:layout_centerVertical="true"
-            android:layout_marginEnd="14dp"
-            android:background="@drawable/badge_circle_white">
-
-            <ImageView
-                android:layout_width="26dp"
-                android:layout_height="26dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_music_note"
-                android:importantForAccessibility="no" />
-        </FrameLayout>
-
-        <!-- Track Info -->
-        <LinearLayout
-            android:id="@+id/select_song"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_centerVertical="true"
-            android:layout_toStartOf="@+id/playLayout"
-            android:layout_toEndOf="@+id/iv_disc"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:ellipsize="end"
-                android:fontFamily="@font/poppins_bold"
-                android:maxLines="2"
-                android:textColor="@color/quality_text"
-                android:textSize="15sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/location"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:fontFamily="@font/poppins_regular"
-                android:singleLine="true"
-                android:text="Audio library"
-                android:textColor="@color/quality_secondary"
-                android:textSize="13sp" />
-
-            <TextView
-                android:id="@+id/author"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:fontFamily="@font/poppins_regular"
-                android:singleLine="true"
-                android:textColor="@color/quality_secondary"
-                android:textSize="12sp" />
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_root" android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:layout_marginStart="16dp" android:layout_marginEnd="16dp" android:layout_marginTop="8dp"
+    android:layout_marginBottom="8dp" android:padding="16dp" android:orientation="vertical"
+    android:background="@drawable/library_card_background">
+    <TextView android:id="@+id/title" style="@style/LibraryTitle"/>
+    <TextView android:id="@+id/duration" style="@style/LibraryMetadata"/>
+    <TextView android:id="@+id/author" style="@style/LibraryMetadata"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:layout_marginTop="16dp" android:baselineAligned="false">
+        <LinearLayout android:id="@+id/playLayout" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:minHeight="48dp" android:minWidth="48dp" android:padding="12dp"
+            android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/library_button_background"
+            android:clickable="true" android:focusable="true" android:descendantFocusability="blocksDescendants">
+            <ImageView android:id="@+id/iv_play" android:layout_width="24dp" android:layout_height="24dp"
+                android:src="@drawable/tool_play" app:tint="@color/studio_blue" android:importantForAccessibility="no"/>
+            <TextView android:id="@+id/library_preview_label" style="@style/StudioActionText"
+                android:textSize="16sp" android:text="@string/library_preview"/>
         </LinearLayout>
-
-        <!-- Right Side: Duration & Circular Play Button -->
-        <LinearLayout
-            android:id="@+id/playLayout"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:gravity="center_horizontal"
-            android:orientation="vertical"
-            android:minWidth="48dp">
-
-            <TextView
-                android:id="@+id/duration"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="6dp"
-                android:fontFamily="@font/poppins_bold"
-                android:gravity="center"
-                android:textColor="@color/quality_text"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-
-            <FrameLayout
-                android:id="@+id/play"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="@drawable/btn_circle_play">
-
-                <ImageView
-                    android:id="@+id/iv_play"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/tool_play"
-                    android:importantForAccessibility="no" />
-            </FrameLayout>
-        </LinearLayout>
-    </RelativeLayout>
+        <Button android:id="@+id/select_song" style="@style/LibraryButton" android:layout_width="0dp"
+            android:layout_weight="1" android:layout_marginStart="12dp" android:text="@string/library_open_player"/>
+    </LinearLayout>
 </LinearLayout>
