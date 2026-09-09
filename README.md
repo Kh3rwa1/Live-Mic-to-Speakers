@@ -17,7 +17,7 @@ Android utility for live microphone monitoring, hold-to-record announcements, sa
 
 GitHub Actions builds debug/release, runs lint and JVM regression checks, and runs Android tests on API 24, 34, 36 and 37, including APIs 36 and 37 at 200% font scale. Native screenshots are uploaded with the device-test reports for visual review. Inspect the checks on the pull request: a configured workflow is not proof that the final commit passed. A successful build also uploads `live-mic-debug-apk` for installation testing. Default release output uses demo ad configuration and is not a signed, device-verified production build.
 
-See [NON_UI_MODERNIZATION.md](NON_UI_MODERNIZATION.md) for the Android 17 toolchain, lifecycle migration, dependency policy and maintenance safeguards. Visual design is deferred. [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) retains the production configuration and earlier core-screen accessibility work. Production bundles require explicit configuration; no real ad IDs or signing credentials are invented or committed.
+See [NON_UI_MODERNIZATION.md](NON_UI_MODERNIZATION.md) for the Android 17 toolchain, lifecycle migration, dependency policy and maintenance safeguards. The core surfaces use a refined pastel studio design with border-first cards, restrained elevation, and scalable typography; visual acceptance still requires screenshot and physical-device review. [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) retains the production configuration and earlier core-screen accessibility work. Production bundles require explicit configuration; no real ad IDs or signing credentials are invented or committed.
 
 ## Audio and storage behavior
 
@@ -52,3 +52,7 @@ Start at low speaker volume and keep the microphone away from speakers; headphon
 JVM checks cover session ownership, cancellation, finalization, restart serialization, failure cleanup, finalized-file publication, consent readiness, deferred ad completion, search logic, audio MIME mapping and playback-state invariants. Android tests additionally exercise readable M4A recording, unpublished in-progress recordings, filtered playback identity, recording-provider boundaries, read-only sharing, measurement-deferral metadata and ad-flow resume/destruction with ads disabled, alongside navigation/recreation and core-layout checks. New tests cover recording-change owner lifecycles, service preparation without autoplay, typed errors, cleanup and installed-manifest policy. They do not validate regional consent, mediation network traffic or live ad rendering.
 
 See [VALIDATION.md](VALIDATION.md) and [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) for evidence and device, privacy, sharing, accessibility and release sign-off. Source changes and emulator checks cannot establish real-device latency, Bluetooth quality or production readiness.
+
+## License
+
+Released under the [MIT License](LICENSE).
