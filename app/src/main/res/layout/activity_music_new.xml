@@ -4,7 +4,7 @@
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="vertical" android:background="@drawable/bg_pastel_mesh">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="24dp" android:paddingTop="20dp" android:paddingEnd="24dp" android:paddingBottom="4dp">
+        android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="24dp" android:paddingTop="8dp" android:paddingEnd="24dp" android:paddingBottom="8dp">
         <ImageButton android:id="@+id/iv_back" style="@style/ToolControlCircleBack"
             android:src="@drawable/tool_back" app:tint="@color/quality_text" android:contentDescription="@string/tool_back"/>
     </LinearLayout>
@@ -21,7 +21,8 @@
                 android:layout_marginTop="24dp"
                 app:lottie_fileName="lottie_equalizer.json"
                 app:lottie_loop="true"
-                app:lottie_autoPlay="true" />
+                app:lottie_autoPlay="true"
+                android:importantForAccessibility="no" />
             <TextView android:id="@+id/textViewTitle" style="@style/ToolTitle" android:layout_marginTop="24dp" android:gravity="center"/>
             <TextView android:id="@+id/textViewArtist" style="@style/ToolBody" android:gravity="center" android:text="@string/tool_unknown_artist"/>
             <SeekBar android:id="@+id/seekBar" android:layout_width="match_parent" android:layout_height="wrap_content"

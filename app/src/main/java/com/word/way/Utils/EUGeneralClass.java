@@ -46,34 +46,23 @@ public final class EUGeneralClass {
 
         ViewGroup content = activity.findViewById(android.R.id.content);
         if (content == null || content.getChildCount() == 0) return;
-        content.setBackgroundColor(Color.TRANSPARENT);
-        content.setPadding(0, 0, 0, 0);
+
+        View root = content.getChildAt(0);
+        if (root != null && root.getBackground() != null) {
+            content.setBackground(root.getBackground().getConstantState() != null
+                    ? root.getBackground().getConstantState().newDrawable(activity.getResources())
+                    : root.getBackground());
+        }
 
         // Set status bar and navigation bar icons to dark for light pastel background
-        WindowInsetsControllerCompat bars = WindowCompat.getInsetsController(window, window.getDecorView());
+        WindowInsetsControllerCompat bars = WindowCompat.getInsetsController(window, content);
         bars.setAppearanceLightStatusBars(true);
         bars.setAppearanceLightNavigationBars(true);
 
-        View root = content.getChildAt(0);
-        if (root.getTag(com.word.way.R.id.quality_insets_installed) != null) return;
-        root.setTag(com.word.way.R.id.quality_insets_installed, Boolean.TRUE);
-
-        final int initLeft = root.getPaddingLeft();
-        final int initTop = root.getPaddingTop();
-        final int initRight = root.getPaddingRight();
-        final int initBottom = root.getPaddingBottom();
-
-        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
-            Insets safe = insets.getInsets(WindowInsetsCompat.Type.systemBars()
-                    | WindowInsetsCompat.Type.displayCutout());
-            v.setPadding(
-                initLeft + safe.left,
-                initTop + safe.top,
-                initRight + safe.right,
-                initBottom + safe.bottom
-            );
-            return insets;
-        });
-        ViewCompat.requestApplyInsets(root);
+        if (content.getTag(com.word.way.R.id.quality_insets_installed) != null) return;
+        SafeAreaInsets padding = new SafeAreaInsets(content);
+        content.setTag(com.word.way.R.id.quality_insets_installed, padding);
+        ViewCompat.setOnApplyWindowInsetsListener(content, padding::apply);
+        ViewCompat.requestApplyInsets(content);
     }
 }

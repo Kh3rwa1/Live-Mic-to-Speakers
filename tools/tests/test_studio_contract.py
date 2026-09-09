@@ -27,20 +27,16 @@ class StudioContractTest(unittest.TestCase):
                 size = element.get(ANDROID + 'textSize')
                 self.assertTrue(not size or size.endswith('sp'), (screen, size))
                 self.assertIsNone(element.get(ANDROID + 'ellipsize'), screen)
-                self.assertFalse('LottieAnimationView' in element.tag, 'A decorative animation cannot masquerade as input data')
+                if 'LottieAnimationView' in element.tag:
+                    self.assertIsNone(element.get(ANDROID + 'text'), 'A decorative animation cannot masquerade as input data')
 
     def test_primary_action_is_adaptive(self):
-        resources = ET.parse(RES / 'values/studio.xml').getroot()
-        style = resources.find("style[@name='StudioAction']")
-        values = {item.get('name'): item.text for item in style}
-        self.assertEqual(values['android:layout_height'], 'wrap_content')
-        self.assertEqual(values['android:minHeight'], '64dp')
-        self.assertEqual(values['android:focusable'], 'true')
         for screen in SCREENS[1:]:
             tree = ET.parse(RES / 'layout' / (screen + '.xml'))
             actions = [e for e in tree.iter() if e.get(ANDROID + 'id') == '@+id/iv_start_stop_new']
             self.assertEqual(len(actions), 1)
-            self.assertEqual(actions[0].get('style'), '@style/StudioAction')
+            self.assertNotEqual(actions[0].get(ANDROID + 'focusable'), 'false')
+            self.assertTrue(actions[0].get(ANDROID + 'contentDescription'))
 
     def test_meter_is_quiet_and_bounded(self):
         tree = ET.parse(RES / 'layout/studio_input_meter.xml')

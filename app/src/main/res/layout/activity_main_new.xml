@@ -88,7 +88,6 @@
                             android:textSize="15sp"
                             android:textStyle="bold"
                             android:maxLines="2"
-                            android:ellipsize="end"
                             android:includeFontPadding="false"
                             android:importantForAccessibility="no" />
                     </LinearLayout>
@@ -134,7 +133,6 @@
                             android:textSize="15sp"
                             android:textStyle="bold"
                             android:maxLines="2"
-                            android:ellipsize="end"
                             android:includeFontPadding="false"
                             android:importantForAccessibility="no" />
                     </LinearLayout>
@@ -199,7 +197,6 @@
                             android:textSize="15sp"
                             android:textStyle="bold"
                             android:maxLines="2"
-                            android:ellipsize="end"
                             android:includeFontPadding="false"
                             android:importantForAccessibility="no" />
                     </LinearLayout>
@@ -245,7 +242,6 @@
                             android:textSize="15sp"
                             android:textStyle="bold"
                             android:maxLines="2"
-                            android:ellipsize="end"
                             android:includeFontPadding="false"
                             android:importantForAccessibility="no" />
                     </LinearLayout>
