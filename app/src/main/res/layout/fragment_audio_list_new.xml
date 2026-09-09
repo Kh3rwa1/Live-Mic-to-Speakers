@@ -1,52 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
-    <androidx.appcompat.widget.SearchView android:id="@+id/search" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:minHeight="48dp" android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp" android:contentDescription="@string/library_search_audio" app:queryHint="@string/library_search_audio"/>
-    <TextView android:id="@+id/library_summary" style="@style/LibraryMetadata" android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp" android:layout_marginBottom="8dp"/>
-    <FrameLayout android:id="@+id/library_list_pane" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
-        <androidx.recyclerview.widget.RecyclerView android:id="@+id/list" android:layout_width="match_parent"
-            android:layout_height="match_parent" android:clipToPadding="false" android:paddingBottom="16dp"/>
-        <androidx.core.widget.NestedScrollView android:id="@+id/library_state_panel" android:layout_width="match_parent"
-            android:layout_height="match_parent" android:fillViewport="true">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="vertical" android:gravity="center" android:padding="24dp">
-                <TextView android:id="@+id/no_audio" style="@style/StudioBody" android:text="@string/library_loading"
-                    android:gravity="center" android:accessibilityLiveRegion="polite"/>
-                <Button android:id="@+id/library_permissions" style="@style/LibraryButton" android:layout_marginTop="16dp"
-                    android:text="@string/library_permission_action" android:visibility="gone"/>
-                <Button android:id="@+id/library_retry" style="@style/LibraryButton" android:layout_marginTop="16dp"
-                    android:text="@string/library_retry" android:visibility="gone"/>
-                <Button android:id="@+id/library_clear" style="@style/LibraryButton" android:layout_marginTop="16dp"
-                    android:text="@string/library_clear_search" android:visibility="gone"/>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+    <androidx.appcompat.widget.SearchView
+        android:id="@+id/search"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/studio_card"
+        android:contentDescription="@string/library_search_audio"
+        android:elevation="1dp"
+        android:minHeight="56dp"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        app:queryHint="@string/library_search_audio" />
+    <TextView
+        android:id="@+id/library_summary"
+        style="@style/LibraryMetadata"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="8dp" />
+    <FrameLayout
+        android:id="@+id/library_list_pane"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="16dp" />
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/library_state_panel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="24dp">
+                <TextView
+                    android:id="@+id/no_audio"
+                    style="@style/StudioBody"
+                    android:accessibilityLiveRegion="polite"
+                    android:gravity="center"
+                    android:text="@string/library_loading" />
+                <Button
+                    android:id="@+id/library_permissions"
+                    style="@style/LibraryButton"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/library_permission_action"
+                    android:visibility="gone" />
+                <Button
+                    android:id="@+id/library_retry"
+                    style="@style/LibraryButton"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/library_retry"
+                    android:visibility="gone" />
+                <Button
+                    android:id="@+id/library_clear"
+                    style="@style/LibraryButton"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/library_clear_search"
+                    android:visibility="gone" />
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
     </FrameLayout>
-    <!-- Independent weighted panes prevent a long preview title from covering library rows. -->
-    <androidx.core.widget.NestedScrollView android:id="@+id/mediaPlayerLayout" android:layout_width="match_parent"
-        android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true" android:visibility="gone"
-        android:background="@android:color/white">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:padding="16dp">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/title" style="@style/LibraryTitle" android:layout_width="0dp"
-                    android:layout_weight="1" android:layout_marginEnd="16dp"/>
-                <ImageButton android:id="@+id/play_pause" style="@style/ToolControl"
-                    android:background="@drawable/library_button_background" android:src="@drawable/tool_play"
-                    app:tint="@color/studio_blue" android:contentDescription="@string/library_play_preview"/>
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/mediaPlayerLayout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:layout_weight="1"
+        android:background="@drawable/studio_card"
+        android:elevation="1dp"
+        android:fillViewport="true"
+        android:visibility="gone">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <TextView
+                    android:id="@+id/title"
+                    style="@style/LibraryTitle"
+                    android:layout_width="0dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_weight="1" />
+                <ImageButton
+                    android:id="@+id/play_pause"
+                    style="@style/ToolControl"
+                    android:background="@drawable/library_button_background"
+                    android:contentDescription="@string/library_play_preview"
+                    android:src="@drawable/tool_play"
+                    app:tint="@color/studio_blue" />
             </LinearLayout>
-            <androidx.appcompat.widget.AppCompatSeekBar android:id="@+id/player_seekbar" android:layout_width="match_parent"
-                android:layout_height="48dp" android:contentDescription="@string/library_preview_position"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <TextView android:id="@+id/current_time" style="@style/LibraryMetadata" android:layout_width="0dp" android:layout_weight="1"/>
-                <TextView android:id="@+id/total_time" style="@style/LibraryMetadata" android:layout_width="0dp"
-                    android:layout_weight="1" android:gravity="end"/>
+            <androidx.appcompat.widget.AppCompatSeekBar
+                android:id="@+id/player_seekbar"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:contentDescription="@string/library_preview_position" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <TextView
+                    android:id="@+id/current_time"
+                    style="@style/LibraryMetadata"
+                    android:layout_width="0dp"
+                    android:layout_weight="1" />
+                <TextView
+                    android:id="@+id/total_time"
+                    style="@style/LibraryMetadata"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:gravity="end" />
             </LinearLayout>
-            <TextView android:id="@+id/library_preview_feedback" style="@style/StudioBody"
-                android:text="@string/library_preview_help" android:accessibilityLiveRegion="polite"/>
+            <TextView
+                android:id="@+id/library_preview_feedback"
+                style="@style/StudioBody"
+                android:accessibilityLiveRegion="polite"
+                android:text="@string/library_preview_help" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </LinearLayout>
