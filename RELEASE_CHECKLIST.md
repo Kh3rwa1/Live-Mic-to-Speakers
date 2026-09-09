@@ -1,53 +1,74 @@
-# Release gates — do not publish on source review alone
+# Release checklist — final-artifact evidence required
 
-These are release sign-off checks, not a list of unimplemented features. Record evidence for the final commit before marking a gate complete. See [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) for the current toolchain and production configuration.
+Record evidence for the exact signed artifact and commit being published. Source review, emulator success, and a configured workflow are not production certification.
 
-## Implemented safeguards to verify
+## Automated gates
 
-- Serialized live-audio sessions and asynchronous recorder preparation/finalization.
-- Cancellation while preparing, invalid-recording cleanup and stale-UI callback suppression.
-- Shared focus-aware/noisy-route-aware previews and background pause/stop behavior.
-- UMP-gated SDK initialization/ad requests, measurement deferral, screen-owned ad cleanup and privacy-options access.
-- Exactly-once fullscreen completion after resume, with pending navigation cancelled on destruction.
-- Off-main history/MediaStore loading, content-URI playback and corrected search/filter identity.
-- Read-only recording sharing with a narrow provider allowlist; unrelated private/cache/external files are excluded.
-- Additional JVM and Android recording/filter/sharing tests, debug/release builds and an API 24/34/36 CI matrix, including 200% text on API 36.
-- Production configuration gates and core-tool safe-area/accessibility checks.
+- [ ] Debug and R8-processed release builds pass on the final commit.
+- [ ] App and ads JVM tests and Android lint pass for every configured variant.
+- [ ] Quality-contract, helper-regression, dependency-policy, native ELF, and ZIP-alignment checks pass.
+- [ ] API 24, 34, 36, and 37 instrumentation jobs pass; APIs 36 and 37 also pass at 200% font scale.
+- [ ] API 37 runs on the intended 16 KiB image.
+- [ ] All seven native screenshots are fresh and manually inspected.
+- [ ] The signed release bundle passes the production-configuration gate and installs through a representative delivery path.
 
-## Automated and release builds
+Evidence links:
 
-- [ ] Build, JVM tests and Android lint pass on the final commit, for both debug and release where configured.
-- [ ] API 24, 34 and 36 instrumentation checks pass on the final commit, including 200% font scale on API 36.
-- [ ] Inspect the native screenshots uploaded with device-test reports; automated reachability tests do not replace visual review.
-- [ ] Signed release build is installable; run device tests against the actual release artifact.
+- Final commit:
+- CI run:
+- Signed artifact/version:
+- Test report archive:
+- Screenshot review:
 
 ## Real-device audio matrix
 
-- [ ] Test representative Android 7/12/14 and current Android devices.
-- [ ] Open/leave live mic without starting: no microphone resources retained.
-- [ ] Rapidly start/stop/restart and release hold-to-record during preparation: no overlap, late capture or stale UI.
-- [ ] Deny/grant/revoke microphone and audio-library permissions, including Settings revocation.
-- [ ] Use the phone speaker with Bluetooth permission denied.
-- [ ] Test wired/USB/Bluetooth outputs; disconnect and reconnect during audio.
-- [ ] Measure end-to-end latency for each route; publish measured ranges, not “zero latency”.
-- [ ] Verify low-volume guidance; test feedback resistance cautiously, never at high volume.
-- [ ] Test calls, focus loss/ducking, headphone unplug, screen lock, Home, Back and process recreation across every player/recorder.
-- [ ] Verify saved-track and preview pause/resume behavior, position, and filter changes while a track plays.
-- [ ] Test short/cancelled recordings, storage-full and finalization failures; no corrupt file shown as saved.
-- [ ] Validate M4A files in another player. Long-press to share; verify target apps can read but not modify the source, with no raw file URI exposure. Include older/misnamed recordings and unavailable sharing apps.
-- [ ] Confirm legacy public-folder files stay playable when accessible; sharing them should explain the Files-app alternative, not broaden provider access.
-- [ ] Test large audio libraries, empty libraries, missing files, search and rapid navigation while loading.
-- [ ] Test TalkBack, hold-to-record's double-tap fallback, large text, small screens and localization.
-- [ ] Verify gesture/three-button navigation, cutouts, the keyboard, RTL and tablet/window resizing with the API 36 target.
+For each tested device record Android version, manufacturer/model, output route, measured latency range, underruns, battery interval, and result.
 
-## Privacy, security and store sign-off
+- [ ] Representative Android 7, 12, 14, and current Android devices.
+- [ ] Screen opened without starting: no microphone resource or privacy indicator remains active.
+- [ ] Rapid start/stop/restart and cancellation during preparation: no overlap, late capture, or stale UI.
+- [ ] Permission deny, grant, revoke, and Settings revocation paths.
+- [ ] Phone speaker at low volume; wired, USB, and Bluetooth routes; route disconnect/reconnect.
+- [ ] Calls, focus loss/ducking, headphone unplug, screen lock, Home, Back, and process recreation.
+- [ ] Measured end-to-end latency, underruns, and battery use; no unmeasured “zero latency” claim.
+- [ ] Short, cancelled, storage-full, runtime-error, and finalization-failure recordings.
+- [ ] New M4A files play in another app; shared targets receive temporary read-only access.
+- [ ] Large and empty libraries, missing tracks, search, filter changes, and rapid navigation.
 
-- [ ] Configure AdMob UMP messages and test fresh install, prior consent, denial, offline/error, privacy-options changes, Activity recreation and applicable regions with designated test devices.
-- [ ] Confirm no SDK/ad requests occur before consent permits initialization/requests, including mediation adapters. Verify banner/native cleanup and fullscreen dismissal before/after owner resume. Automated tests do not validate live ads or network behavior.
-- [ ] Verify narrow FileProvider roots and grant revocation with another app, including traversal, unrelated files and unsupported/legacy paths.
-- [ ] Verify privacy-policy URL/content, Data Safety declarations, ad IDs and consent-console settings.
-- [ ] Check dependencies/security reports, packaged native libraries for 16 KB page-size compatibility and current Play requirements. The app targets API 36; this alone is not store-submission certification.
-- [ ] Confirm application ID, provider authority, versioning and signing. Identity was deliberately preserved; changing it can break upgrades to an existing installation.
-- [ ] Complete visual/device QA and an accessibility/localization audit beyond the changed controls.
+Evidence/device matrix:
 
-Background playback/capture remains out of scope. Implement a correctly typed foreground service, user-visible notification and platform permissions before advertising it.
+## UX and accessibility
+
+- [ ] TalkBack labels, order, actions, announcements, and hold-to-record fallback.
+- [ ] Keyboard/D-pad focus and visible focus indicators.
+- [ ] 200% font scale, smallest supported phone, cutouts, gesture and three-button navigation.
+- [ ] RTL, contrast, dark theme, tablet/window resizing, and every supported orientation.
+- [ ] No essential state communicated by color alone.
+- [ ] README/store listing screenshots and descriptions match the tested build.
+
+Evidence:
+
+## Privacy, security, and store sign-off
+
+- [ ] UMP configured and tested for fresh install, prior consent, denial, offline/error, revocation, and applicable regions.
+- [ ] No ad or mediation request occurs before the applicable consent/initialization gate opens.
+- [ ] Banner, native, fullscreen, and app-open resources clean up across pause, resume, destruction, and privacy-state changes.
+- [ ] FileProvider traversal, unrelated files, write attempts, and grant revocation tested from another app.
+- [ ] Cleartext traffic remains disabled and exported-component/permission tests pass on the installed release.
+- [ ] Privacy policy, Data Safety, content rating, ad declarations, target audience, and store metadata reviewed.
+- [ ] Dependency/security advisories and current Play requirements reviewed.
+- [ ] Application ID, provider authority, signing key, version code/name, and upgrade path verified.
+- [ ] License choice and third-party notices reviewed by the owner.
+
+Evidence:
+
+## Release decision
+
+- [ ] Every blocking item above has evidence or an explicit owner-approved exception.
+- [ ] Rollback and support plan prepared.
+- [ ] Changelog and release notes finalized.
+- [ ] Tag and release point to the exact verified commit.
+
+Decision, owner, and date:
+
+Background playback/capture remains out of scope. Do not advertise it without a correctly typed foreground service, a user-visible persistent notification, platform permissions, policy review, and dedicated tests.
