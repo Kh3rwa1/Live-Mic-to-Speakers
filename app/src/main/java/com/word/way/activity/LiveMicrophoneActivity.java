@@ -30,9 +30,11 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     private boolean requested, visible;
     private AlertDialog startDialog;
     private final ActivityResultLauncher<String> microphonePermission = registerForActivityResult(
-            new ActivityResultContracts.RequestPermission(), granted -> Toast.makeText(this,
-                    granted ? R.string.quality_mic_permission_granted : R.string.quality_mic_permission_denied,
-                    Toast.LENGTH_LONG).show());
+            new ActivityResultContracts.RequestPermission(), granted -> {
+                Toast.makeText(this, granted ? R.string.quality_mic_permission_granted
+                        : R.string.quality_mic_permission_denied, Toast.LENGTH_LONG).show();
+                if (!granted) ToolUi.permissionDenied(this);
+            });
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_live_microphone_new);
@@ -43,10 +45,21 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
         status = findViewById(R.id.tv_start_stop_new);
         lottiePulse = findViewById(R.id.lottie_mic_pulse);
         lottieSoundwave = findViewById(R.id.lottie_soundwave);
+        ToolUi.button(mic);
+        if (lottiePulse != null) lottiePulse.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        if (lottieSoundwave != null) lottieSoundwave.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         findViewById(R.id.iv_back).setOnClickListener(v -> finish());
         View pill = findViewById(R.id.btn_live_pill);
-        if (pill != null) pill.setOnClickListener(v -> toggle.performClick());
+        if (pill != null) {
+            pill.setFocusable(false);
+            pill.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            pill.setOnClickListener(v -> toggle.performClick());
+        }
         View heroContainer = findViewById(R.id.layout_mic_hero);
+        if (heroContainer != null) {
+            heroContainer.setFocusable(false);
+            heroContainer.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
         View.OnClickListener micTrigger = v -> toggle.performClick();
         mic.setOnClickListener(micTrigger);
         if (heroContainer != null) heroContainer.setOnClickListener(micTrigger);
@@ -62,8 +75,9 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
                 case MotionEvent.ACTION_CANCEL:
                     mic.animate().scaleX(requested ? 1.05f : 1.0f).scaleY(requested ? 1.05f : 1.0f).setDuration(160).start();
                     return true;
+                default:
+                    return false;
             }
-            return false;
         };
         mic.setOnTouchListener(micTouchFeedback);
         if (heroContainer != null) heroContainer.setOnTouchListener(micTouchFeedback);
@@ -151,7 +165,6 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
         TextView outputRoute = findViewById(R.id.studio_output_route);
         if (outputRoute != null) outputRoute.setText(R.string.studio_output_idle);
     }
-    // Kept package-visible for deterministic UI tests; no microphone is started by this method.
     void showAudioError(Exception error) {
         stopMic();
         int message;
@@ -169,7 +182,6 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
         TextView feedback = findViewById(R.id.studio_feedback);
         if (feedback != null) feedback.setText(message);
     }
-    // Package-visible so instrumentation can exercise long routes without starting capture.
     void renderMeter(int peak, String route) {
         ToolUi.level(this, peak);
         TextView outputRoute = findViewById(R.id.studio_output_route);
