@@ -21,7 +21,7 @@ public class ExitScreen extends AppCompatActivity {
         txt_rate.setOnClickListener(v -> rate());
         txt_yes.setOnClickListener(v -> yes());
         txt_no.setOnClickListener(v -> no());
-        GoogleAds.getInstance().addNativeView(ExitScreen.this, findViewById(R.id.nativeLay));
+        GoogleAds.getInstance().addBigNativeView(ExitScreen.this, findViewById(R.id.nativeLay));
 
     }
 

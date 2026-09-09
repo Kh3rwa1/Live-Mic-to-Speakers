@@ -5,12 +5,13 @@
     <string name="title_notifications">Notifications</string>
 
 
-    <string name="bnr_admob" translatable="false">ca-app-pub-3940256099942544/6300978111</string>
-    <string name="native_admob" translatable="false">ca-app-pub-3940256099942544/2247696110</string>
-    <string name="int_admob" translatable="false">ca-app-pub-3940256099942544/1033173712</string>
-    <string name="app_open_admob" translatable="false">ca-app-pub-3940256099942544/3419835294</string>
-    <string name="video_admob" translatable="false">ca-app-pub-3940256099942544/5224354917</string>
-    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="bnr_admob" translatable="false">ca-app-pub-7288061764998409/6752144636</string>
+    <string name="native_admob" translatable="false">ca-app-pub-7288061764998409/9040402210</string>
+    <string name="native_advance_admob" translatable="false">ca-app-pub-7288061764998409/9238044469</string>
+    <string name="int_admob" translatable="false">ca-app-pub-7288061764998409/9186736282</string>
+    <string name="app_open_admob" translatable="false">ca-app-pub-7288061764998409/1382497956</string>
+    <string name="video_admob" translatable="false"></string>
+    <string name="admob_app_id">ca-app-pub-7288061764998409~7764315732</string>
     <string name="privacy_policys">https://sites.google.com/view/live-mic-to-speaker/privacy-policy</string>
 
 

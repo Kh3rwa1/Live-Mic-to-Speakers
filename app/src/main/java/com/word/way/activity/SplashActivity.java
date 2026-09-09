@@ -14,7 +14,8 @@ public class SplashActivity extends AppCompatActivity {
         super.onCreate(state);
         setContentView(R.layout.activity_splash);
         new GetSmartAdmob(this, new String[]{getString(R.string.bnr_admob), getString(R.string.native_admob),
-                getString(R.string.int_admob), getString(R.string.app_open_admob), getString(R.string.video_admob)},
+                getString(R.string.int_admob), getString(R.string.app_open_admob), getString(R.string.video_admob),
+                getString(R.string.native_advance_admob)},
                 success -> { }).execute();
         new MyPref(this);
     }

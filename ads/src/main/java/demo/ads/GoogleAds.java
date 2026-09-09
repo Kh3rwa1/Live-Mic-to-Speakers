@@ -65,6 +65,7 @@ public final class GoogleAds {
     public boolean admobBanner90(Context context, View view) { return bind(context, view, 0); }
     public boolean addNativeView(Context context, View view) { return bind(context, view, R.layout.small_ad_unified); }
     public boolean addBigNativeView(Context context, View view) { return bind(context, view, R.layout.big_ad_unified); }
+    public boolean addNativeAdvanceView(Context context, View view) { return addBigNativeView(context, view); }
     private boolean bind(Context context, View view, int layout) {
         Activity host = activity(context);
         if (!(view instanceof ViewGroup) || !usable(host)) { if (view != null) view.setVisibility(View.GONE); return false; }
@@ -98,7 +99,14 @@ public final class GoogleAds {
             if (closed) return;
             if (!AdsHandler.isAdsOn()) { clear(); return; }
             if (!active() || loading || banner != null || nativeAd != null || !checkConnection(host)) return;
-            String id = layout == 0 ? AdsHandler.bannerId : AdsHandler.nativeId;
+            String id;
+            if (layout == 0) {
+                id = AdsHandler.bannerId;
+            } else if (layout == R.layout.big_ad_unified) {
+                id = validId(AdsHandler.nativeAdvanceId) ? AdsHandler.nativeAdvanceId : AdsHandler.nativeId;
+            } else {
+                id = validId(AdsHandler.nativeId) ? AdsHandler.nativeId : AdsHandler.nativeAdvanceId;
+            }
             if (!validId(id)) return;
             loading = true;
             long ticket = ++generation;

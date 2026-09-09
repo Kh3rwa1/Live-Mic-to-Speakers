@@ -18,6 +18,7 @@ public class GetSmartAdmob {
             if (ids.length > 2) AdsHandler.interstitialId = ids[2];
             if (ids.length > 3) AdsHandler.openAds = ids[3];
             if (ids.length > 4) AdsHandler.rewardedId = ids[4];
+            if (ids.length > 5) AdsHandler.nativeAdvanceId = ids[5];
         }
         if (AdsApplication.appOpenManager == null && AdsApplication.getInstance() != null
                 && AdsHandler.openAds != null && !AdsHandler.openAds.isEmpty() && !"0".equals(AdsHandler.openAds)) {

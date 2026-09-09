@@ -9,7 +9,7 @@ import java.io.InputStream;
 
 public class AdsHandler {
     public static AdsHandler instance;
-    public static String bannerId = "", nativeId = "", interstitialId = "", rewardedId = "", openAds = "";
+    public static String bannerId = "", nativeId = "", nativeAdvanceId = "", interstitialId = "", rewardedId = "", openAds = "";
     public static SharedPreferences sharedPreferences;
     public static SharedPreferences.Editor editor;
     public AdsHandler() { }
