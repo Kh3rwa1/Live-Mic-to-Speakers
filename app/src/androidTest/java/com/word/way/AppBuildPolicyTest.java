@@ -1,5 +1,6 @@
 package com.word.way;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
@@ -16,6 +17,14 @@ import static org.junit.Assert.*;
 /** Verify the installed, merged manifest rather than trusting source declarations alone. */
 @RunWith(AndroidJUnit4.class)
 public class AppBuildPolicyTest {
+    private static boolean requests(PackageInfo info, String permission) {
+        if (info.requestedPermissions == null) return false;
+        for (String requested : info.requestedPermissions) {
+            if (permission.equals(requested)) return true;
+        }
+        return false;
+    }
+
     @Test public void modernTargetPreservesIdentityAndPrivateComponents() throws Exception {
         Context app = ApplicationProvider.getApplicationContext();
         String name = app.getPackageName();
@@ -23,9 +32,22 @@ public class AppBuildPolicyTest {
         ApplicationInfo application = app.getApplicationInfo();
         assertEquals("Do not silently drop Android 7 support", 24, application.minSdkVersion);
         assertTrue("Android 17 must remain targeted", application.targetSdkVersion >= 37);
-        assertEquals("Recording backups must remain disabled", 0, application.flags & ApplicationInfo.FLAG_ALLOW_BACKUP);
+        assertEquals("Recording backups must remain disabled", 0,
+                application.flags & ApplicationInfo.FLAG_ALLOW_BACKUP);
+        assertEquals("Cleartext network traffic must remain disabled", 0,
+                application.flags & ApplicationInfo.FLAG_USES_CLEARTEXT_TRAFFIC);
+
         PackageInfo info = app.getPackageManager().getPackageInfo(name,
-                PackageManager.GET_ACTIVITIES | PackageManager.GET_SERVICES | PackageManager.GET_PROVIDERS);
+                PackageManager.GET_ACTIVITIES | PackageManager.GET_SERVICES
+                        | PackageManager.GET_PROVIDERS | PackageManager.GET_PERMISSIONS);
+
+        assertFalse("Foreground-screen playback must not request notification permission",
+                requests(info, Manifest.permission.POST_NOTIFICATIONS));
+        assertFalse("Bound playback must not request foreground-service permission",
+                requests(info, "android.permission.FOREGROUND_SERVICE"));
+        assertFalse("Bound playback must not request media-playback foreground-service permission",
+                requests(info, "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"));
+
         if (info.activities != null) for (ActivityInfo activity : info.activities) {
             if ((activity.name.startsWith(name + ".") || activity.name.startsWith("demo.ads."))
                     && !activity.name.equals(name + ".activity.SplashActivity"))
