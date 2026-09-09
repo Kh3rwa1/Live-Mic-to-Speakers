@@ -10,6 +10,10 @@ Notable user-visible and engineering changes are documented here. This project f
 
 ### Changed
 
+- Restored hold-to-speak slide-out cancellation and queued-clip recovery after activity recreation.
+- Ensured newly finalized recordings immediately enable their preview controls despite asynchronous callback ordering.
+- Restored permanent permission-denial recovery, removed duplicate accessibility targets, and kept decorative animations quiet for assistive technology without changing the visual design.
+- Added adaptive timer text only when required at large font scales, plus native clipping, cancellation, queue-restoration, and preview-readiness regression tests.
 - Refined the pastel studio design across the home screen, microphone tools, recording flows, settings, player, and audio library.
 - Replaced heavy clay-style surfaces with calmer border-first cards, restrained elevation, accessible dark accents, and consistent Poppins typography.
 - Preserved 48dp-or-larger controls, scalable text, scrolling at large font sizes, explicit focus states, and non-color action labels.

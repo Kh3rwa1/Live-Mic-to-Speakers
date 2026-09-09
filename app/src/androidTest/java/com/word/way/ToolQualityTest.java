@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.net.Uri;
+import android.text.Layout;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -78,18 +79,64 @@ public class ToolQualityTest {
             });
         }
     }
+    private static <T extends Activity> void textFits(ActivityScenario<T> screen, int id) {
+        screen.onActivity(activity -> {
+            View view = activity.findViewById(id);
+            assertNotNull(view);
+            view.requestRectangleOnScreen(new Rect(0, 0, view.getWidth(), view.getHeight()), true);
+        });
+        idle();
+        screen.onActivity(activity -> {
+            TextView view = activity.findViewById(id);
+            Layout layout = view.getLayout();
+            assertNotNull("Text has not been laid out", layout);
+            Rect visible = new Rect();
+            assertTrue("Text is outside the scrollable viewport", view.getGlobalVisibleRect(visible));
+            assertEquals("Text is horizontally clipped", view.getWidth(), visible.width());
+            int availableWidth = view.getWidth() - view.getCompoundPaddingLeft() - view.getCompoundPaddingRight();
+            int availableHeight = view.getHeight() - view.getCompoundPaddingTop() - view.getCompoundPaddingBottom();
+            assertTrue("Text is vertically clipped", layout.getHeight() <= availableHeight + 1);
+            for (int line = 0; line < layout.getLineCount(); line++) {
+                assertEquals("Text must not be ellipsized", 0, layout.getEllipsisCount(line));
+                assertTrue("Text line exceeds its measured width",
+                        layout.getLineRight(line) - layout.getLineLeft(line) <= availableWidth + 1);
+            }
+        });
+    }
     @Test public void coreToolsHaveReachableNamedControls() throws Exception {
         try (ActivityScenario<RecordAudioActivity> screen = ActivityScenario.launch(RecordAudioActivity.class)) {
             controls(screen, R.id.iv_back, R.id.iv_history, R.id.iv_start_stop_new, R.id.iv_play);
+            textFits(screen, R.id.tv_timer);
+            screen.onActivity(activity -> assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO,
+                    activity.findViewById(R.id.lottie_record_wave).getImportantForAccessibility()));
             capture("record");
             screen.recreate(); controls(screen, R.id.iv_start_stop_new);
         }
         try (ActivityScenario<HoldToSpeakActivity> screen = ActivityScenario.launch(HoldToSpeakActivity.class)) {
             controls(screen, R.id.iv_back, R.id.iv_history, R.id.iv_start_stop_new, R.id.iv_play);
+            screen.onActivity(activity -> {
+                View hero = activity.findViewById(R.id.layout_mic_hero);
+                assertFalse("Composite hero must not duplicate its named child", hero.isFocusable());
+                assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO, hero.getImportantForAccessibility());
+                assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO,
+                        activity.findViewById(R.id.lottie_voice_wave).getImportantForAccessibility());
+            });
             capture("hold");
         }
         try (ActivityScenario<LiveMicrophoneActivity> screen = ActivityScenario.launch(LiveMicrophoneActivity.class)) {
             controls(screen, R.id.iv_back, R.id.iv_start_stop_new);
+            screen.onActivity(activity -> {
+                View hero = activity.findViewById(R.id.layout_mic_hero);
+                View pill = activity.findViewById(R.id.btn_live_pill);
+                assertFalse("Composite hero must not duplicate its named child", hero.isFocusable());
+                assertFalse("Composite pill must not duplicate its named child", pill.isFocusable());
+                assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO, hero.getImportantForAccessibility());
+                assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO, pill.getImportantForAccessibility());
+                assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO,
+                        activity.findViewById(R.id.lottie_mic_pulse).getImportantForAccessibility());
+                assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO,
+                        activity.findViewById(R.id.lottie_soundwave).getImportantForAccessibility());
+            });
             capture("live");
         }
         try (ActivityScenario<Setting_Activity> screen = ActivityScenario.launch(Setting_Activity.class)) {
@@ -125,8 +172,6 @@ public class ToolQualityTest {
                         .setInsets(WindowInsetsCompat.Type.systemBars(), Insets.of(7, 17, 11, 19))
                         .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, 83))
                         .setVisible(WindowInsetsCompat.Type.ime(), true).build();
-                // A legacy platform WindowInsets round-trip cannot preserve a synthetic IME override.
-                // Exercise the actual padding policy directly, retaining every keyboard assertion on API 24+.
                 View fixture = new View(activity);
                 SafeAreaInsets padding = new SafeAreaInsets(fixture);
                 for (int i = 0; i < 3; i++) {
@@ -139,7 +184,6 @@ public class ToolQualityTest {
                 for (int i = 0; i < 3; i++) withBase.apply(fixture, keyboard);
                 assertEquals(9, fixture.getPaddingLeft()); assertEquals(20, fixture.getPaddingTop());
                 assertEquals(15, fixture.getPaddingRight()); assertEquals(88, fixture.getPaddingBottom());
-                // Also retain native listener-registration/idempotence coverage using real platform insets.
                 ViewGroup content = activity.findViewById(android.R.id.content);
                 Rect original = new Rect(content.getPaddingLeft(), content.getPaddingTop(), content.getPaddingRight(), content.getPaddingBottom());
                 WindowInsetsCompat nativeInsets = ViewCompat.getRootWindowInsets(content);

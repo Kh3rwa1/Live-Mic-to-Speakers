@@ -15,6 +15,28 @@ def luminance(value):
     return sum(a * b for a, b in zip(rgb, (.2126, .7152, .0722)))
 
 
+def styles():
+    result = {}
+    for name in ('styles_tools.xml', 'studio.xml'):
+        for style in ET.parse(RES / 'values' / name).getroot().findall('style'):
+            result[style.get('name')] = {item.get('name'): item.text for item in style}
+    return result
+
+
+def effective(element, name, available):
+    direct = element.get(ANDROID + name)
+    if direct is not None:
+        return direct
+    style = element.get('style', '')
+    if style.startswith('@style/'):
+        return available.get(style.removeprefix('@style/'), {}).get('android:' + name)
+    return None
+
+
+def dp(value):
+    return float(value[:-2]) if value and value.endswith('dp') else None
+
+
 class StudioContractTest(unittest.TestCase):
     def test_screens_keep_scalable_untruncated_labels(self):
         for screen in SCREENS:
@@ -30,13 +52,20 @@ class StudioContractTest(unittest.TestCase):
                 if 'LottieAnimationView' in element.tag:
                     self.assertIsNone(element.get(ANDROID + 'text'), 'A decorative animation cannot masquerade as input data')
 
-    def test_primary_action_is_adaptive(self):
+    def test_primary_actions_retain_named_48dp_targets(self):
+        available = styles()
         for screen in SCREENS[1:]:
             tree = ET.parse(RES / 'layout' / (screen + '.xml'))
             actions = [e for e in tree.iter() if e.get(ANDROID + 'id') == '@+id/iv_start_stop_new']
             self.assertEqual(len(actions), 1)
-            self.assertNotEqual(actions[0].get(ANDROID + 'focusable'), 'false')
-            self.assertTrue(actions[0].get(ANDROID + 'contentDescription'))
+            action = actions[0]
+            width = [dp(effective(action, name, available)) for name in ('layout_width', 'minWidth')]
+            height = [dp(effective(action, name, available)) for name in ('layout_height', 'minHeight')]
+            self.assertTrue(any(value is not None and value >= 48 for value in width), screen)
+            self.assertTrue(any(value is not None and value >= 48 for value in height), screen)
+            self.assertEqual(effective(action, 'focusable', available), 'true', screen)
+            self.assertEqual(effective(action, 'clickable', available), 'true', screen)
+            self.assertTrue(action.get(ANDROID + 'contentDescription', '').startswith('@string/'), screen)
 
     def test_meter_is_quiet_and_bounded(self):
         tree = ET.parse(RES / 'layout/studio_input_meter.xml')
@@ -51,6 +80,14 @@ class StudioContractTest(unittest.TestCase):
         for foreground, background in [('studio_ink', 'studio_canvas'), ('studio_muted', 'studio_canvas'), ('studio_blue', 'studio_soft')]:
             light, dark = sorted([luminance(colors[foreground]), luminance(colors[background])], reverse=True)
             self.assertGreaterEqual((light + .05) / (dark + .05), 4.5, (foreground, background))
+
+    def test_recording_regressions_remain_guarded(self):
+        hold = (ROOT / 'app/src/main/java/com/word/way/activity/HoldToSpeakActivity.java').read_text()
+        record = (ROOT / 'app/src/main/java/com/word/way/activity/RecordAudioActivity.java').read_text()
+        self.assertIn('MotionEvent.ACTION_MOVE', hold)
+        self.assertIn('queuedClips', hold)
+        self.assertIn('while (file != null && !file.isFile())', hold)
+        self.assertIn('setAutoSizeTextTypeUniformWithConfiguration(timer', record)
 
 
 if __name__ == '__main__':
