@@ -8,6 +8,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.util.TypedValue;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -15,16 +17,17 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.widget.TextViewCompat;
 import com.word.way.R;
 import com.word.way.Utils.EUGeneralClass;
 import com.word.way.Utils.MyPref;
+import com.word.way.Utils.ToolUi;
 import com.word.way.audio.PreviewPlayer;
 import com.word.way.audio.RecordingController;
 import com.word.way.audio.RecordingSession;
-import android.view.View;
+import demo.ads.GoogleAds;
 import java.io.File;
 import java.util.Locale;
-import demo.ads.GoogleAds;
 
 public class RecordAudioActivity extends AppCompatActivity {
     private RecordingController<File> recording;
@@ -45,8 +48,10 @@ public class RecordAudioActivity extends AppCompatActivity {
         }
     };
     private final ActivityResultLauncher<String> permission = registerForActivityResult(
-            new ActivityResultContracts.RequestPermission(), granted -> message(getString(granted
-                    ? R.string.tool_permission_record : R.string.tool_permission_denied)));
+            new ActivityResultContracts.RequestPermission(), granted -> {
+                message(getString(granted ? R.string.tool_permission_record : R.string.tool_permission_denied));
+                if (!granted) ToolUi.permissionDenied(this);
+            });
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_record_audio_new);
@@ -54,7 +59,9 @@ public class RecordAudioActivity extends AppCompatActivity {
         GoogleAds.getInstance().admobBanner(this, findViewById(R.id.nativeLay));
         toggle = findViewById(R.id.iv_start_stop_new); play = findViewById(R.id.iv_play);
         timer = findViewById(R.id.tv_timer); label = findViewById(R.id.tv_start_stop_new);
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(timer, 20, 44, 1, TypedValue.COMPLEX_UNIT_SP);
         lottieRecordWave = findViewById(R.id.lottie_record_wave);
+        if (lottieRecordWave != null) lottieRecordWave.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         findViewById(R.id.iv_back).setOnClickListener(v -> finish());
         findViewById(R.id.iv_history).setOnClickListener(v -> startActivity(new Intent(this, MySavedAnnounceActivity.class)));
         if (state != null && state.getString("lastSaved") != null) lastSaved = new File(state.getString("lastSaved"));
@@ -68,6 +75,7 @@ public class RecordAudioActivity extends AppCompatActivity {
             public void onFinished(File file, boolean keep) {
                 if (file != null) { lastSaved = file; message(getString(R.string.tool_saved_message)); }
                 else if (keep) message(getString(R.string.tool_too_short));
+                updatePreview();
             }
             public void onError(Exception error) { message(getString(R.string.tool_record_error)); }
         });
@@ -113,16 +121,19 @@ public class RecordAudioActivity extends AppCompatActivity {
                     : state == RecordingController.State.STOPPING ? R.string.tool_saving
                     : state == RecordingController.State.RECORDING ? R.string.tool_mic_active : R.string.studio_ready);
         }
-        play.setEnabled(state == RecordingController.State.IDLE && ((lastSaved != null && lastSaved.isFile()) || (preview != null && preview.hasTrack())));
         if (state == RecordingController.State.RECORDING && startedAt == 0) {
             startedAt = SystemClock.elapsedRealtime(); handler.post(tick);
         }
         if (state != RecordingController.State.RECORDING) handler.removeCallbacks(tick);
+        updatePreview();
     }
     private void updatePreview() {
+        if (play == null) return;
         boolean active = preview != null && preview.wantsPlayback();
         play.setImageResource(active ? R.drawable.tool_pause : R.drawable.tool_play);
         play.setContentDescription(getString(active ? R.string.tool_pause : R.string.tool_play_last));
+        play.setEnabled(recording != null && recording.getState() == RecordingController.State.IDLE
+                && ((lastSaved != null && lastSaved.isFile()) || (preview != null && preview.hasTrack())));
     }
     private void message(String text) { if (visible) Toast.makeText(this, text, Toast.LENGTH_LONG).show(); }
     @Override protected void onStart() { super.onStart(); visible = true; }
