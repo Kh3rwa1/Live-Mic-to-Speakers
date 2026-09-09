@@ -1,62 +1,76 @@
-# Core-tool quality and production readiness
+# Production readiness
 
-This change improves the app; it does not assign a measured 10/10 rating or certify production readiness.
+This document describes safeguards and release gates; it does not assign a measured 10/10 rating or certify a build for production.
 
-## Implemented
+## Current baseline
 
-- API 36 target/compile SDK with AGP 8.10.1 and Gradle 8.11.1 (JDK 17).
-- Shared system-bar, cutout and IME safe-area handling with non-accumulating insets. Existing screen backgrounds determine system-bar icon contrast.
-- Consistent, scrollable live-mic, recording, hold-to-record, playback and settings screens. Controls have visible focus, named actions, at least 48dp targets, scalable sp text and resource-based labels.
-- Direct ad-privacy choices in Settings. The existing consent gate, ad identifiers, policy URL and recording paths are preserved.
-- Existing worker ownership/cancellation/finalization and microphone interruption rules are preserved. Foreground-only behavior is explained in the interface.
-- Production configuration checks reject test ad identifiers, missing signing information and unspecified versioning. A release bundle cannot be built in demo mode accidentally.
+- JDK 17, Gradle 9.7.1, Android Gradle Plugin 9.4.0.
+- compileSdk/targetSdk 37 with Android 7 / API 24 as the minimum.
+- Java 17 source and target compatibility across app and ads modules.
+- Release builds use the optimized default R8 configuration, project rules, and resource shrinking.
+- Application identity remains `com.word.way`; backups remain disabled and internal components remain non-exported.
+- Cleartext traffic is disabled. The app manifest does not directly request notification or media-playback foreground-service permissions for its bound player. Review the final merged manifest because third-party SDKs can contribute generic permissions.
 
-## Build and verification
+## Implemented safeguards
 
-`bash ./gradlew :app:assembleDebug :app:assembleRelease` still builds demo-configuration artifacts for CI; release remains unsigned unless production is explicitly configured.
+- Serialized live-audio sessions with cancellation, non-blocking PCM transfer, focus handling, route interruption, and deterministic cleanup.
+- Serialized recording preparation/finalization, runtime-error recovery, pending-file publication, invalid-capture removal, and dead-screen callback suppression.
+- Focus-aware preview and saved-track playback with headphone-disconnect handling and asynchronous preparation.
+- App-specific recording storage, off-main library scans, content-URI playback, stable filtering identity, and read-only sharing through narrow provider roots.
+- Consent-aware ad initialization and requests, screen-owned ad cleanup, privacy choices, and guarded fullscreen completion.
+- Production configuration gates for signing, versioning, and non-test ad identifiers.
+- JVM, lint, helper, dependency-policy, native-alignment, and API 24/34/36/37 instrumentation checks, including 200% font-scale runs on APIs 36 and 37.
 
-`python3 tools/check_quality_contract.py` checks the migrated layouts and labels.
+## Building and verifying
 
-CI runs existing JVM and instrumented regressions plus native control-reachability, recreation, safe-inset and screenshot checks on APIs 24, 34 and 36. API 36 also runs at 200% font scale. Screenshots are uploaded with each device-test report. Read the actual checks on the final commit; configuration is not a passing result.
+```bash
+bash ./gradlew :app:assembleDebug :app:assembleRelease
+bash ./gradlew :app:testDebugUnitTest :app:testReleaseUnitTest :ads:testDebugUnitTest :ads:testReleaseUnitTest
+bash ./gradlew :app:lintDebug :app:lintRelease :ads:lintDebug
+python3 tools/check_quality_contract.py
+python3 -m unittest discover -s tools/tests -v
+bash ./gradlew :app:writeDependencyInventory
+python3 tools/check_dependency_policy.py app/build/reports/runtime-dependencies.json
+```
 
-This environment could not download an Android toolchain. Local validation is limited to XML/source contracts and Java syntax; native build/test evidence must come from GitHub CI. Screenshots require human visual inspection, including clipping, contrast, RTL and screen-reader use. Automated bounds checks are not a substitute.
+Inspect checks and uploaded reports for the exact commit being released. A workflow definition is not a passing result. R8 build success also does not replace runtime testing of the signed release artifact.
 
 ## Configuring a real release
 
-Do not paste signing secrets into chat, commit them, or put passwords on the command line. Use environment variables or your private Gradle user-home properties. Keep the existing application ID and signing key if this app is already distributed.
+Do not commit secrets, paste signing data into public discussions, or put passwords directly on a shared command line. Use environment variables or private Gradle user-home properties.
 
-Required setting names:
+Required settings:
 
-- LIVE_MIC_ADMOB_APP_ID
-- LIVE_MIC_AD_BANNER
-- LIVE_MIC_AD_NATIVE
-- LIVE_MIC_AD_INTERSTITIAL
-- LIVE_MIC_AD_OPEN
-- LIVE_MIC_AD_REWARDED
-- LIVE_MIC_KEYSTORE (absolute path recommended)
-- LIVE_MIC_STORE_PASSWORD
-- LIVE_MIC_KEY_ALIAS
-- LIVE_MIC_KEY_PASSWORD
-- LIVE_MIC_VERSION_CODE (positive integer; must increase over the last published version)
-- LIVE_MIC_VERSION_NAME
+- `LIVE_MIC_ADMOB_APP_ID`
+- `LIVE_MIC_AD_BANNER`
+- `LIVE_MIC_AD_NATIVE`
+- `LIVE_MIC_AD_INTERSTITIAL`
+- `LIVE_MIC_AD_OPEN`
+- `LIVE_MIC_AD_REWARDED`
+- `LIVE_MIC_KEYSTORE`
+- `LIVE_MIC_STORE_PASSWORD`
+- `LIVE_MIC_KEY_ALIAS`
+- `LIVE_MIC_KEY_PASSWORD`
+- `LIVE_MIC_VERSION_CODE`
+- `LIVE_MIC_VERSION_NAME`
 
-Run `bash ./gradlew :app:verifyProductionRelease -PproductionRelease=true`, then `bash ./gradlew :app:bundleRelease -PproductionRelease=true`.
+Run:
 
-Production ad strings are generated as a release-only resource overlay; the committed demo IDs remain unchanged for debug. Validation never prints supplied credential values. Configuration validation does not certify live ads, mediation, regional consent or store compliance.
+```bash
+bash ./gradlew :app:verifyProductionRelease -PproductionRelease=true
+bash ./gradlew :app:bundleRelease -PproductionRelease=true
+```
 
-## Still required before publishing
+Production ad resources are generated only for the opted-in release variant. Validation never prints supplied credential values. It does not certify live ads, mediation, regional consent, privacy disclosures, or store compliance.
 
-Complete RELEASE_CHECKLIST.md against the actual signed artifact. In particular:
+## Required before publishing
 
-- Measure end-to-end audio latency, underruns, battery use and disconnect/focus behavior on representative physical phones and output routes, at safe speaker volume.
-- Inspect all native screenshots and test TalkBack, keyboard controls, large text, cutouts, gesture/three-button navigation, RTL and tablet/window resizing. Library/history layouts outside the migrated core screens still need a full design/localization audit.
-- Verify real UMP/AdMob/mediation traffic, privacy policy and Data Safety disclosures.
-- Check packaged native dependencies for current 16 KB page-size requirements and other current store requirements; updating targetSdk alone does not establish compliance.
-- No production publishing, merging, signing-key rotation or alteration of existing recordings is performed by this change.
+- Obtain an all-green run for the final commit, including API 24 and the API 37 16 KiB image.
+- Install and test the actual signed, R8-processed release artifact.
+- Measure latency, underruns, battery use, feedback risk, and interruption behavior on representative physical devices and wired/USB/Bluetooth routes.
+- Inspect screenshots and manually test TalkBack, keyboard focus, 200% text, contrast, RTL, cutouts, gesture/three-button navigation, and resizing.
+- Verify real UMP, AdMob, mediation, privacy policy, and Data Safety behavior in applicable regions.
+- Verify Play-generated APKs and packaged native dependencies on a 16 KiB device.
+- Complete the evidence fields in `RELEASE_CHECKLIST.md`.
 
-References checked on 2026-09-07:
-
-- https://developer.android.com/google/play/requirements/target-sdk
-- https://developer.android.com/build/releases/agp-8-10-0-release-notes
-- https://developer.android.com/about/versions/16/behavior-changes-16
-- https://developer.android.com/develop/ui/views/layout/edge-to-edge
+No source-only change can complete these physical-device, account-console, legal, signing, or store-owner decisions automatically.

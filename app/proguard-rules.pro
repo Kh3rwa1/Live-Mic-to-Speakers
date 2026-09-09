@@ -1,12 +1,10 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Project-specific R8 rules for production release builds.
+# Android components referenced from the manifest and library consumer rules are
+# retained automatically; avoid broad keep rules that would disable shrinking.
+
+# Preserve useful crash diagnostics while hiding local source paths.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# Retain metadata used by AndroidX and reflection-based libraries.
+-keepattributes RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations,AnnotationDefault,Signature,InnerClasses,EnclosingMethod

@@ -21,10 +21,13 @@ adb shell settings put secure show_ime_with_hard_keyboard 1
 # Preserve screenshots until collection; AGP otherwise uninstalls the app and removes its external files.
 output_dir="quality-screenshots-$(date +%s)-$$"
 set +e
-bash ./gradlew --no-daemon :app:connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true "-Pandroid.testInstrumentationRunnerArguments.qualityOutputDir=$output_dir" 2>&1 | tee device-test.log
+timeout --signal=TERM --kill-after=60s 20m bash ./gradlew --no-daemon :app:connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true "-Pandroid.testInstrumentationRunnerArguments.qualityOutputDir=$output_dir" 2>&1 | tee device-test.log
 statuses=("${PIPESTATUS[@]}")
 set -e
 result=${statuses[0]}
+if [[ "$result" == 124 || "$result" == 137 ]]; then
+  echo 'Android device tests exceeded the 20-minute command deadline; failing with reports instead of hanging the full CI job.'
+fi
 if [[ "$result" == 0 && "${statuses[1]}" != 0 ]]; then result=1; fi
 mkdir -p app/build/quality-screenshots
 for screen in record hold live settings settings-rtl player keyboard; do rm -f "app/build/quality-screenshots/$screen.png"; done
