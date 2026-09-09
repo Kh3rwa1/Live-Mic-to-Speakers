@@ -1,47 +1,133 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@color/studio_canvas">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-    android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingTop="8dp" android:paddingBottom="8dp">
-    <ImageButton android:id="@+id/iv_back" style="@style/ToolControlCircleBack" android:elevation="0dp"
-        android:src="@drawable/tool_back" app:tint="@color/studio_ink" android:contentDescription="@string/tool_back"/>
-</LinearLayout>
-    <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
-            android:paddingStart="24dp" android:paddingEnd="24dp" android:paddingBottom="32dp">
-            <TextView android:id="@+id/tv_tittle" style="@style/StudioTitle" android:text="@string/quality_record_title"/>
-    <TextView style="@style/StudioBody" android:text="@string/tool_record_help"/>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-    android:layout_marginTop="24dp" android:padding="16dp" android:background="@drawable/studio_card" android:orientation="vertical">
-    <TextView style="@style/StudioBody" android:layout_marginTop="0dp" android:text="@string/studio_elapsed_title"/>
-    <TextView android:id="@+id/tv_timer" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="8dp" android:text="@string/tool_timer_initial" android:textSize="24sp"
-        android:textColor="@color/studio_ink" android:fontFamily="monospace" android:accessibilityLiveRegion="none"/>
-</LinearLayout>
-    <LinearLayout android:id="@+id/iv_start_stop_new" style="@style/StudioAction"
-        android:contentDescription="@string/tool_start_recording">
-        <ImageView android:id="@+id/studio_action_icon"
-            android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/tool_record"
-            app:tint="@color/studio_blue" android:importantForAccessibility="no"/>
-        <TextView android:id="@+id/tv_start_stop_new" style="@style/StudioActionText" android:text="@string/tool_start"/>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_pastel_mesh"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="24dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="8dp">
+        <ImageButton
+            android:id="@+id/iv_back"
+            style="@style/ToolControlCircleBack"
+            android:contentDescription="@string/tool_back"
+            android:src="@drawable/tool_back"
+            app:tint="@color/studio_ink" />
     </LinearLayout>
-    <TextView android:id="@+id/studio_feedback" style="@style/StudioBody" android:layout_marginTop="16dp"
-        android:accessibilityLiveRegion="polite" android:text="@string/studio_ready"/>
-    <include layout="@layout/studio_input_meter"/><TextView android:id="@+id/studio_saved_detail" style="@style/StudioBody"
-            android:layout_marginTop="24dp" android:text="@string/studio_no_saved"/><LinearLayout android:id="@+id/iv_play" style="@style/StudioAction"
-        android:contentDescription="@string/tool_play_last">
-        <ImageView 
-            android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/tool_play"
-            app:tint="@color/studio_blue" android:importantForAccessibility="no"/>
-        <TextView android:id="@+id/studio_preview_label" style="@style/StudioActionText" android:text="@string/tool_play_last"/>
-    </LinearLayout><androidx.appcompat.widget.AppCompatButton android:id="@+id/iv_history"
-            android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="56dp"
-            android:layout_marginTop="16dp" android:padding="12dp" android:textSize="16sp"
-            android:textAllCaps="false" android:text="@string/tool_saved" android:contentDescription="@string/tool_saved"
-            android:textColor="@color/studio_ink" android:clickable="true" android:focusable="true"/>
-        <TextView style="@style/StudioBody" android:text="@string/studio_storage_note" android:textSize="14sp"/><TextView style="@style/StudioBody" android:layout_marginTop="24dp" android:text="@string/tool_foreground_note" android:textSize="14sp"/>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:fillViewport="true">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="32dp">
+            <TextView
+                android:id="@+id/tv_tittle"
+                style="@style/StudioTitle"
+                android:text="@string/quality_record_title" />
+            <TextView
+                style="@style/StudioBody"
+                android:text="@string/tool_record_help" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:background="@drawable/studio_card"
+                android:elevation="1dp"
+                android:orientation="vertical"
+                android:padding="18dp">
+                <TextView
+                    style="@style/StudioBody"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/studio_elapsed_title" />
+                <TextView
+                    android:id="@+id/tv_timer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:accessibilityLiveRegion="none"
+                    android:fontFamily="monospace"
+                    android:text="@string/tool_timer_initial"
+                    android:textColor="@color/studio_ink"
+                    android:textSize="26sp" />
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/iv_start_stop_new"
+                style="@style/StudioAction"
+                android:contentDescription="@string/tool_start_recording">
+                <ImageView
+                    android:id="@+id/studio_action_icon"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/tool_record"
+                    app:tint="@color/studio_blue" />
+                <TextView
+                    android:id="@+id/tv_start_stop_new"
+                    style="@style/StudioActionText"
+                    android:text="@string/tool_start" />
+            </LinearLayout>
+            <TextView
+                android:id="@+id/studio_feedback"
+                style="@style/StudioBody"
+                android:layout_marginTop="16dp"
+                android:accessibilityLiveRegion="polite"
+                android:text="@string/studio_ready" />
+            <include layout="@layout/studio_input_meter" />
+            <TextView
+                android:id="@+id/studio_saved_detail"
+                style="@style/StudioBody"
+                android:layout_marginTop="24dp"
+                android:text="@string/studio_no_saved" />
+            <LinearLayout
+                android:id="@+id/iv_play"
+                style="@style/StudioAction"
+                android:contentDescription="@string/tool_play_last">
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/tool_play"
+                    app:tint="@color/studio_blue" />
+                <TextView
+                    android:id="@+id/studio_preview_label"
+                    style="@style/StudioActionText"
+                    android:text="@string/tool_play_last" />
+            </LinearLayout>
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/iv_history"
+                style="@style/ToolTextButton"
+                android:contentDescription="@string/tool_saved"
+                android:text="@string/tool_saved" />
+            <TextView
+                style="@style/StudioBody"
+                android:text="@string/studio_storage_note"
+                android:textSize="14sp" />
+            <TextView
+                style="@style/StudioBody"
+                android:layout_marginTop="24dp"
+                android:text="@string/tool_foreground_note"
+                android:textSize="14sp" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-    <LinearLayout android:id="@+id/nativeLay" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:gravity="center_horizontal" android:orientation="vertical"/>
+
+    <LinearLayout
+        android:id="@+id/nativeLay"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical" />
 </LinearLayout>

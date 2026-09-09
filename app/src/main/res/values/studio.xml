@@ -11,6 +11,11 @@
     <color name="studio_line">#DED8D4</color>
     <color name="studio_notice_fill">#FBEDE8</color>
     <color name="studio_notice_line">#E8BCAF</color>
+    <string name="studio_home_eyebrow">Four focused audio tools</string>
+    <string name="studio_home_tools">Choose a tool</string>
+    <string name="studio_settings_eyebrow">App preferences</string>
+    <string name="studio_settings_actions">Privacy and feedback</string>
+    <string name="studio_player_eyebrow">Now playing</string>
     <string name="studio_tool_summary">%1$s. %2$s</string>
     <string name="studio_ready">Ready. The microphone is off.</string>
     <string name="studio_level_title">Input level</string>
