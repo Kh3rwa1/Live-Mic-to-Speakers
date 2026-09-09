@@ -17,7 +17,7 @@ junit = "4.13.2"
 androidxTest = "1.7.0"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
-licensesDialog = "2.1.0"
+licensesDialog = "2.2.0"
 scalableDimensions = "1.1.1"
 
 [libraries]
