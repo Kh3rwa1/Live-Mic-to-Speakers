@@ -1,15 +1,14 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme with true Edge-to-Edge support. -->
+    <!-- Intentionally light: the pastel palette stays predictable in every system mode. -->
     <style name="Theme.DecMictospeaker" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/pastel_peach</item>
-        <item name="colorPrimaryVariant">@color/pastel_peach_pressed</item>
-        <item name="colorOnPrimary">@color/quality_text</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/pastel_mint</item>
-        <item name="colorSecondaryVariant">@color/pastel_mint_pressed</item>
-        <item name="colorOnSecondary">@color/quality_text</item>
-        <!-- True Edge-to-Edge window attributes -->
+        <item name="colorPrimary">@color/studio_blue</item>
+        <item name="colorPrimaryVariant">@color/studio_blue_pressed</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorSecondary">@color/quality_accent</item>
+        <item name="colorSecondaryVariant">@color/quality_accent</item>
+        <item name="colorOnSecondary">@color/quality_on_accent</item>
+        <item name="android:colorAccent">@color/quality_accent</item>
+        <item name="android:windowActionModeOverlay">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
@@ -44,9 +43,9 @@
         <item name="android:progressBackgroundTint">#ff3f4250</item>
     </style>
     <style name="SearchViewTheme" parent="@style/Widget.AppCompat.SearchView">
-        <item name="android:textColorHint">#80ffffff</item>
-        <item name="android:tint">@color/white</item>
-        <item name="android:editTextColor">@android:color/white</item>
+        <item name="android:textColorHint">@color/quality_secondary</item>
+        <item name="android:tint">@color/studio_blue</item>
+        <item name="android:editTextColor">@color/quality_text</item>
         <item name="searchHintIcon">@drawable/ic_search</item>
         <item name="searchIcon">@drawable/ic_search</item>
     </style>

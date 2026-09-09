@@ -1,26 +1,81 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:background="@drawable/bg_pastel_mesh">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="24dp" android:paddingTop="12dp" android:paddingEnd="24dp" android:paddingBottom="12dp">
-        <ImageButton android:id="@+id/iv_back" style="@style/ToolControlCircleBack"
-            android:src="@drawable/tool_back" app:tint="@color/quality_text" android:contentDescription="@string/tool_back"/>
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_pastel_mesh"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="24dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="8dp">
+        <ImageButton
+            android:id="@+id/iv_back"
+            style="@style/ToolControlCircleBack"
+            android:contentDescription="@string/tool_back"
+            android:src="@drawable/tool_back"
+            app:tint="@color/quality_text" />
     </LinearLayout>
-    <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="0dp"
-        android:layout_weight="1" android:fillViewport="true">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:padding="24dp">
-            <TextView android:id="@+id/tv_tittle" style="@style/ToolTitle" android:text="@string/tool_settings_title"/>
-            <TextView style="@style/ToolBody" android:text="@string/tool_privacy_help"/>
-            <Button android:id="@+id/rl_privacy_policy" style="@style/ToolTextButton" android:text="@string/tool_privacy_policy"/>
-            <Button android:id="@+id/tool_privacy_choices" style="@style/ToolTextButton" android:text="@string/tool_privacy_choices"/>
-            <Button android:id="@+id/rl_share_app" style="@style/ToolTextButton" android:text="@string/tool_share_app"/>
-            <Button android:id="@+id/rl_rate" style="@style/ToolTextButton" android:text="@string/tool_rate_app"/>
-            <TextView style="@style/ToolBody" android:text="@string/tool_saved_help"/>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:fillViewport="true">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="32dp">
+            <TextView
+                style="@style/StudioEyebrow"
+                android:text="@string/studio_settings_eyebrow" />
+            <TextView
+                android:id="@+id/tv_tittle"
+                style="@style/StudioTitle"
+                android:layout_marginTop="8dp"
+                android:text="@string/tool_settings_title" />
+            <TextView
+                style="@style/StudioBody"
+                android:text="@string/tool_privacy_help" />
+            <TextView
+                style="@style/StudioSectionTitle"
+                android:text="@string/studio_settings_actions" />
+            <Button
+                android:id="@+id/rl_privacy_policy"
+                style="@style/ToolTextButton"
+                android:text="@string/tool_privacy_policy" />
+            <Button
+                android:id="@+id/tool_privacy_choices"
+                style="@style/ToolTextButton"
+                android:text="@string/tool_privacy_choices" />
+            <Button
+                android:id="@+id/rl_share_app"
+                style="@style/ToolTextButton"
+                android:text="@string/tool_share_app" />
+            <Button
+                android:id="@+id/rl_rate"
+                style="@style/ToolTextButton"
+                android:text="@string/tool_rate_app" />
+            <TextView
+                style="@style/StudioNotice"
+                android:text="@string/tool_saved_help" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-    <LinearLayout android:id="@+id/nativeLay" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:gravity="center_horizontal"/>
+
+    <LinearLayout
+        android:id="@+id/nativeLay"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical" />
 </LinearLayout>

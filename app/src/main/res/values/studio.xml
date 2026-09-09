@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="studio_canvas">#F8FAFC</color>
-    <color name="studio_ink">#1E293B</color>
-    <color name="studio_muted">#475569</color>
-    <color name="studio_blue">#205FA5</color>
-    <color name="studio_soft">#E8F0FB</color>
-    <color name="studio_line">#CBD5E1</color>
+    <color name="studio_canvas">#FBF9F7</color>
+    <color name="studio_surface">#FFFFFFFF</color>
+    <color name="studio_ink">#29262D</color>
+    <color name="studio_muted">#625D67</color>
+    <color name="studio_blue">#3E5D7C</color>
+    <color name="studio_blue_pressed">#2E4762</color>
+    <color name="studio_soft">#EDF2F7</color>
+    <color name="studio_soft_pressed">#E1EAF2</color>
+    <color name="studio_line">#DED8D4</color>
+    <color name="studio_notice_fill">#FBEDE8</color>
+    <color name="studio_notice_line">#E8BCAF</color>
+    <string name="studio_home_eyebrow">Four focused audio tools</string>
+    <string name="studio_home_tools">Choose a tool</string>
+    <string name="studio_settings_eyebrow">App preferences</string>
+    <string name="studio_settings_actions">Privacy and feedback</string>
+    <string name="studio_player_eyebrow">Now playing</string>
     <string name="studio_tool_summary">%1$s. %2$s</string>
     <string name="studio_ready">Ready. The microphone is off.</string>
     <string name="studio_level_title">Input level</string>
@@ -32,25 +42,50 @@
         <item quantity="other">%1$d clips waiting to play</item>
     </plurals>
     <style name="StudioTitle" parent="ToolTitle">
-        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:fontFamily">@font/poppins_bold</item>
         <item name="android:textColor">@color/studio_ink</item>
-        <item name="android:textSize">26sp</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:lineSpacingExtra">2dp</item>
     </style>
     <style name="StudioBody" parent="ToolBody">
-        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:fontFamily">@font/poppins_regular</item>
         <item name="android:textSize">16sp</item>
         <item name="android:textColor">@color/studio_muted</item>
-        <item name="android:lineSpacingExtra">3dp</item>
+        <item name="android:lineSpacingExtra">4dp</item>
+    </style>
+    <style name="StudioEyebrow">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:fontFamily">@font/poppins_bold</item>
+        <item name="android:textColor">@color/studio_blue</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.08</item>
+    </style>
+    <style name="StudioSectionTitle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:fontFamily">@font/poppins_bold</item>
+        <item name="android:textColor">@color/studio_ink</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:layout_marginTop">24dp</item>
+    </style>
+    <style name="StudioNotice" parent="StudioBody">
+        <item name="android:background">@drawable/studio_notice_background</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:layout_marginTop">20dp</item>
+        <item name="android:textColor">@color/studio_ink</item>
     </style>
     <style name="StudioAction">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:minHeight">64dp</item>
         <item name="android:padding">16dp</item>
-        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:layout_marginTop">12dp</item>
         <item name="android:gravity">center_vertical</item>
         <item name="android:orientation">horizontal</item>
         <item name="android:background">@drawable/studio_action_background</item>
+        <item name="android:elevation">1dp</item>
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
         <item name="android:descendantFocusability">blocksDescendants</item>
@@ -60,10 +95,10 @@
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_weight">1</item>
-        <item name="android:layout_marginStart">12dp</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
-        <item name="android:textSize">18sp</item>
-        <item name="android:textColor">@color/studio_blue</item>
+        <item name="android:layout_marginStart">16dp</item>
+        <item name="android:fontFamily">@font/poppins_bold</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:textColor">@color/studio_ink</item>
         <item name="android:importantForAccessibility">no</item>
     </style>
 </resources>
