@@ -7,8 +7,8 @@ Notable user-visible and engineering changes are documented here. This project f
 ### Changed
 
 - Production release builds use R8 code shrinking, optimization, obfuscation, and resource shrinking.
-- Java source and target compatibility now match the required JDK 17 toolchain.
-- Foreground-screen playback no longer declares unused notification or foreground-service permissions.
+- App and ads modules now use Java 17 source and target compatibility, matching the required toolchain.
+- The application manifest no longer directly declares notification or media-playback foreground-service permissions for foreground-screen playback. Third-party SDKs may still contribute generic permissions to the merged manifest, which must be reviewed on the final artifact.
 - Cleartext network traffic is disabled at the installed-manifest level.
 - Device-test execution has a bounded command deadline so a stalled test produces diagnostics instead of consuming the entire CI job.
 

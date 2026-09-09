@@ -6,10 +6,10 @@ This document describes safeguards and release gates; it does not assign a measu
 
 - JDK 17, Gradle 9.7.1, Android Gradle Plugin 9.4.0.
 - compileSdk/targetSdk 37 with Android 7 / API 24 as the minimum.
-- Java 17 source and target compatibility.
+- Java 17 source and target compatibility across app and ads modules.
 - Release builds use the optimized default R8 configuration, project rules, and resource shrinking.
 - Application identity remains `com.word.way`; backups remain disabled and internal components remain non-exported.
-- Cleartext traffic is disabled. Foreground-screen playback does not request notification or foreground-service permissions.
+- Cleartext traffic is disabled. The app manifest does not directly request notification or media-playback foreground-service permissions for its bound player. Review the final merged manifest because third-party SDKs can contribute generic permissions.
 
 ## Implemented safeguards
 

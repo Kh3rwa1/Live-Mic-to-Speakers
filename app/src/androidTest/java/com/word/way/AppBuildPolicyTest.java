@@ -43,8 +43,8 @@ public class AppBuildPolicyTest {
 
         assertFalse("Foreground-screen playback must not request notification permission",
                 requests(info, Manifest.permission.POST_NOTIFICATIONS));
-        assertFalse("Bound playback must not request foreground-service permission",
-                requests(info, "android.permission.FOREGROUND_SERVICE"));
+        // Mobile Ads dependencies may contribute the generic FOREGROUND_SERVICE permission.
+        // Prevent this app's bound player from claiming the media-playback service capability.
         assertFalse("Bound playback must not request media-playback foreground-service permission",
                 requests(info, "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"));
 
