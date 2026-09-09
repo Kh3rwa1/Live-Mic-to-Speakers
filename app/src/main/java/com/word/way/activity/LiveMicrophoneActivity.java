@@ -16,8 +16,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import com.word.way.R;
 import com.word.way.Utils.EUGeneralClass;
+import com.word.way.Utils.ToolUi;
 import com.word.way.audio.AndroidAudioSession;
 import com.word.way.audio.AudioSessionRunner;
+import com.word.way.audio.LiveAudioFailure;
 import demo.ads.GoogleAds;
 
 public class LiveMicrophoneActivity extends AppCompatActivity {
@@ -67,23 +69,30 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
         if (heroContainer != null) heroContainer.setOnTouchListener(micTouchFeedback);
         runner = new AudioSessionRunner(ticket -> new AndroidAudioSession(getApplicationContext(),
                 (peak, route) -> runOnUiThread(() -> {
-                    if (visible && requested && runner.isCurrent(ticket))
+                    if (visible && requested && runner.isCurrent(ticket)) {
                         status.setText(getString(R.string.quality_mic_meter, route, peak));
+                        renderMeter(peak, route);
+                    }
                 }), () -> runOnUiThread(() -> {
                     if (runner.isCurrent(ticket)) {
-                        stopMic(); Toast.makeText(this, R.string.quality_mic_interrupted, Toast.LENGTH_LONG).show();
+                        stopMic();
+                        TextView feedback = findViewById(R.id.studio_feedback);
+                        if (feedback != null) feedback.setText(R.string.quality_mic_interrupted);
+                        Toast.makeText(this, R.string.quality_mic_interrupted, Toast.LENGTH_LONG).show();
                     }
                 })), new AudioSessionRunner.Listener() {
             @Override public void onStarted(long generation) {
                 runOnUiThread(() -> {
-                    if (visible && runner.isCurrent(generation)) status.setText(R.string.quality_mic_on);
+                    if (visible && runner.isCurrent(generation)) {
+                        status.setText(R.string.quality_mic_on);
+                        TextView feedback = findViewById(R.id.studio_feedback);
+                        if (feedback != null) feedback.setText(R.string.tool_mic_active);
+                    }
                 });
             }
             @Override public void onError(long generation, Exception error) {
                 runOnUiThread(() -> {
-                    if (runner.isCurrent(generation)) {
-                        stopMic(); Toast.makeText(LiveMicrophoneActivity.this, R.string.quality_mic_error, Toast.LENGTH_LONG).show();
-                    }
+                    if (runner.isCurrent(generation)) showAudioError(error);
                 });
             }
         });
@@ -136,6 +145,35 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             lottieSoundwave.setVisibility(View.GONE);
         }
         status.setText(R.string.quality_mic_off);
+        TextView feedback = findViewById(R.id.studio_feedback);
+        if (feedback != null) feedback.setText(R.string.studio_ready);
+        ToolUi.level(this, 0);
+        TextView outputRoute = findViewById(R.id.studio_output_route);
+        if (outputRoute != null) outputRoute.setText(R.string.studio_output_idle);
+    }
+    // Kept package-visible for deterministic UI tests; no microphone is started by this method.
+    void showAudioError(Exception error) {
+        stopMic();
+        int message;
+        switch (LiveAudioFailure.reasonOf(error)) {
+            case PERMISSION: message = R.string.live_error_permission; break;
+            case SERVICE_UNAVAILABLE: message = R.string.live_error_service; break;
+            case FOCUS_UNAVAILABLE: message = R.string.live_error_focus; break;
+            case UNSUPPORTED_CONFIGURATION: message = R.string.live_error_configuration; break;
+            case MICROPHONE_UNAVAILABLE: message = R.string.live_error_microphone; break;
+            case READ_FAILED: message = R.string.live_error_input; break;
+            case OUTPUT_FAILED: message = R.string.live_error_output; break;
+            case CANCELLED: message = R.string.live_error_cancelled; break;
+            default: message = R.string.quality_mic_error;
+        }
+        TextView feedback = findViewById(R.id.studio_feedback);
+        if (feedback != null) feedback.setText(message);
+    }
+    // Package-visible so instrumentation can exercise long routes without starting capture.
+    void renderMeter(int peak, String route) {
+        ToolUi.level(this, peak);
+        TextView outputRoute = findViewById(R.id.studio_output_route);
+        if (outputRoute != null) outputRoute.setText(getString(R.string.studio_output_route, route));
     }
     @Override protected void onResume() { super.onResume(); visible = true; }
     @Override protected void onPause() {

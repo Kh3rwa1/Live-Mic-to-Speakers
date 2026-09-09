@@ -136,6 +136,23 @@
             </LinearLayout>
 
             <TextView
+                android:id="@+id/studio_feedback"
+                style="@style/ToolBody"
+                android:gravity="center"
+                android:accessibilityLiveRegion="polite"
+                android:text="@string/studio_ready"
+                android:textColor="@color/quality_secondary"
+                android:textSize="14sp" />
+
+            <include layout="@layout/studio_input_meter" />
+
+            <TextView
+                android:id="@+id/studio_output_route"
+                style="@style/StudioNotice"
+                android:gravity="center"
+                android:text="@string/studio_output_idle" />
+
+            <TextView
                 style="@style/ToolBody"
                 android:gravity="center"
                 android:text="@string/tool_foreground_note"

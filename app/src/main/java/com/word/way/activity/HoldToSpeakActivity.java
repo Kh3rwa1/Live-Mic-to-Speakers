@@ -127,7 +127,7 @@ public class HoldToSpeakActivity extends AppCompatActivity {
         ((TextView) findViewById(R.id.tv_start_stop_new)).setText(state == RecordingController.State.STARTING ? R.string.tool_preparing
                 : state == RecordingController.State.STOPPING ? R.string.tool_saving
                 : active ? R.string.tool_hold_active : R.string.tool_hold_idle);
-        play.setEnabled(state == RecordingController.State.IDLE);
+        play.setEnabled(state == RecordingController.State.IDLE && (!queue.isEmpty() || (preview != null && preview.hasTrack())));
     }
     private void playNext() {
         if (recording.getState() != RecordingController.State.IDLE) return;

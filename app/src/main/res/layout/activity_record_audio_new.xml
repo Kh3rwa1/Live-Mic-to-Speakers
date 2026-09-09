@@ -127,10 +127,11 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/studio_feedback"
                 style="@style/ToolBody"
                 android:layout_marginTop="20dp"
                 android:gravity="center"
-                android:text="@string/tool_mic_active"
+                android:text="@string/studio_ready"
                 android:textColor="@color/quality_secondary"
                 android:textSize="14sp" />
         </LinearLayout>

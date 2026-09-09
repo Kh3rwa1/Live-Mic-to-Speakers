@@ -107,7 +107,13 @@ public class RecordAudioActivity extends AppCompatActivity {
         }
         label.setText(state == RecordingController.State.STARTING ? R.string.tool_preparing
                 : state == RecordingController.State.STOPPING ? R.string.tool_saving : active ? R.string.tool_stop : R.string.tool_start);
-        play.setEnabled(state == RecordingController.State.IDLE);
+        TextView feedback = findViewById(R.id.studio_feedback);
+        if (feedback != null) {
+            feedback.setText(state == RecordingController.State.STARTING ? R.string.tool_preparing
+                    : state == RecordingController.State.STOPPING ? R.string.tool_saving
+                    : state == RecordingController.State.RECORDING ? R.string.tool_mic_active : R.string.studio_ready);
+        }
+        play.setEnabled(state == RecordingController.State.IDLE && ((lastSaved != null && lastSaved.isFile()) || (preview != null && preview.hasTrack())));
         if (state == RecordingController.State.RECORDING && startedAt == 0) {
             startedAt = SystemClock.elapsedRealtime(); handler.post(tick);
         }
