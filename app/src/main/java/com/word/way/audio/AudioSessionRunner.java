@@ -5,7 +5,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
-/** Serial, single-owner audio sessions. stop() never blocks the UI thread. */
+/** Serial, single-owner audio sessions. stop() never blocks the UI thread.
+ * Listener callbacks run on the single audio worker; UI owners must post to the main thread. */
 public final class AudioSessionRunner implements AutoCloseable {
     public interface Session extends AutoCloseable {
         void start() throws Exception;
@@ -53,6 +54,9 @@ public final class AudioSessionRunner implements AutoCloseable {
             if (!isCurrent(ticket)) return;
             listener.onStarted(ticket);
             while (isCurrent(ticket)) {
+                // The live session's pump() blocks on the record device, which paces this loop
+                // without polling. The short fallback only keeps non-blocking test doubles from
+                // spinning the worker when they legitimately have no frames.
                 int frames = session.pump();
                 if (frames < 0) throw new IllegalStateException("Audio device disconnected");
                 if (frames == 0) Thread.sleep(4);
