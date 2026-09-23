@@ -53,6 +53,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.DecMictospeaker">
 
+        <meta-data
+            android:name="com.google.android.gms.ads.flag.NATIVE_AD_DEBUGGER_ENABLED"
+            android:value="false" />
+
         <!-- Only SplashActivity is exported as the application launcher -->
         <activity
             android:name="com.word.way.activity.SplashActivity"
