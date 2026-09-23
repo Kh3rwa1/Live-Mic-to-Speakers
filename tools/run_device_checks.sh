@@ -21,7 +21,13 @@ adb shell settings put secure show_ime_with_hard_keyboard 1
 # Preserve screenshots until collection; AGP otherwise uninstalls the app and removes its external files.
 output_dir="quality-screenshots-$(date +%s)-$$"
 set +e
-timeout --signal=TERM --kill-after=60s 20m bash ./gradlew --no-daemon :app:connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true "-Pandroid.testInstrumentationRunnerArguments.qualityOutputDir=$output_dir" 2>&1 | tee device-test.log
+if command -v timeout >/dev/null 2>&1; then
+  timeout --signal=TERM --kill-after=60s 20m bash ./gradlew --no-daemon :app:connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true "-Pandroid.testInstrumentationRunnerArguments.qualityOutputDir=$output_dir" 2>&1 | tee device-test.log
+elif command -v gtimeout >/dev/null 2>&1; then
+  gtimeout --signal=TERM --kill-after=60s 20m bash ./gradlew --no-daemon :app:connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true "-Pandroid.testInstrumentationRunnerArguments.qualityOutputDir=$output_dir" 2>&1 | tee device-test.log
+else
+  bash ./gradlew --no-daemon :app:connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true "-Pandroid.testInstrumentationRunnerArguments.qualityOutputDir=$output_dir" 2>&1 | tee device-test.log
+fi
 statuses=("${PIPESTATUS[@]}")
 set -e
 result=${statuses[0]}

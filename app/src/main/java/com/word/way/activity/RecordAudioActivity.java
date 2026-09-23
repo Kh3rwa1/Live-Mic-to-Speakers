@@ -12,6 +12,7 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.util.TypedValue;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -90,7 +91,8 @@ public class RecordAudioActivity extends AppCompatActivity {
                 }
             });
         }
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(binding.tvTimer, 20, 44, 1, TypedValue.COMPLEX_UNIT_SP);
+        TextView timer = binding.tvTimer;
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(timer, 20, 44, 1, TypedValue.COMPLEX_UNIT_SP);
         if (binding.lottieRecordWave != null) {
             binding.lottieRecordWave.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         }

@@ -229,7 +229,8 @@ public class HoldToSpeakActivity extends AppCompatActivity {
 
     private void playNext() {
         if (recording.getState() != RecordingController.State.IDLE) return;
-        File file = viewModel.pollNext();
+        File file;
+        do { file = viewModel.pollNext(); } while (file != null && !file.isFile());
         if (file == null) { message(getString(R.string.tool_no_recording)); updatePreview(); return; }
         preview.play(Uri.fromFile(file));
     }

@@ -13,13 +13,13 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="20dp"
-        android:paddingTop="16dp"
+        android:paddingTop="10dp"
         android:paddingEnd="20dp"
-        android:paddingBottom="8dp">
+        android:paddingBottom="6dp">
 
         <ImageView
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:src="@drawable/ic_header_equalizer"
             android:importantForAccessibility="no" />
 
@@ -38,7 +38,7 @@
                 android:fontFamily="@font/poppins_bold"
                 android:text="@string/quality_home_title"
                 android:textColor="@color/quality_text"
-                android:textSize="24sp"
+                android:textSize="22sp"
                 android:textStyle="bold"
                 android:includeFontPadding="false" />
 
@@ -49,7 +49,7 @@
                 android:fontFamily="@font/poppins_regular"
                 android:text="@string/quality_home_subtitle"
                 android:textColor="@color/home_subtitle_text"
-                android:textSize="12sp"
+                android:textSize="11sp"
                 android:letterSpacing="0.01"
                 android:includeFontPadding="false" />
         </LinearLayout>
@@ -94,7 +94,7 @@
                     android:id="@+id/cv_live_microphone"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:minHeight="152dp"
+                    android:minHeight="104dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     android:background="@drawable/card_tile_mint"
@@ -108,7 +108,7 @@
 
                     <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="84dp">
+                        android:layout_height="48dp">
 
                         <ImageView
                             android:layout_width="match_parent"
@@ -120,28 +120,28 @@
                         <!-- "● Live" Badge Pill -->
                         <LinearLayout
                             android:layout_width="wrap_content"
-                            android:layout_height="22dp"
-                            android:layout_marginStart="10dp"
-                            android:layout_marginTop="8dp"
+                            android:layout_height="18dp"
+                            android:layout_marginStart="8dp"
+                            android:layout_marginTop="6dp"
                             android:background="@drawable/bg_live_badge"
                             android:gravity="center_vertical"
-                            android:paddingStart="8dp"
-                            android:paddingEnd="10dp"
+                            android:paddingStart="6dp"
+                            android:paddingEnd="8dp"
                             android:importantForAccessibility="no">
 
                             <View
-                                android:layout_width="6dp"
-                                android:layout_height="6dp"
+                                android:layout_width="5dp"
+                                android:layout_height="5dp"
                                 android:background="@drawable/ic_live_dot" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="5dp"
+                                android:layout_marginStart="4dp"
                                 android:fontFamily="@font/poppins_semibold"
                                 android:text="@string/quality_live_badge"
                                 android:textColor="#065F46"
-                                android:textSize="10.5sp" />
+                                android:textSize="9.5sp" />
                         </LinearLayout>
                     </FrameLayout>
 
@@ -150,9 +150,9 @@
                         android:layout_height="match_parent"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="10dp"
-                        android:paddingBottom="8dp">
+                        android:paddingStart="10dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="6dp">
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -166,7 +166,7 @@
                                 android:fontFamily="@font/poppins_bold"
                                 android:text="@string/quality_live_title"
                                 android:textColor="@color/quality_text"
-                                android:textSize="13.5sp"
+                                android:textSize="13sp"
                                 android:textStyle="bold"
                                 android:includeFontPadding="false" />
 
@@ -177,17 +177,17 @@
                                 android:fontFamily="@font/poppins_regular"
                                 android:text="@string/quality_live_subtitle"
                                 android:textColor="@color/home_subtitle_text"
-                                android:textSize="10.5sp"
+                                android:textSize="10sp"
                                 android:includeFontPadding="false" />
                         </LinearLayout>
 
                         <ImageView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
                             android:layout_marginStart="4dp"
                             android:background="@drawable/btn_home_circle_mint"
                             android:src="@drawable/ic_chevron_right_action"
-                            android:padding="8dp"
+                            android:padding="6dp"
                             app:tint="@android:color/white"
                             android:importantForAccessibility="no" />
                     </LinearLayout>
@@ -198,7 +198,7 @@
                     android:id="@+id/cv_hold_to_speak"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:minHeight="152dp"
+                    android:minHeight="104dp"
                     android:layout_weight="1"
                     android:layout_marginStart="6dp"
                     android:background="@drawable/card_tile_peach"
@@ -212,7 +212,7 @@
 
                     <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="84dp">
+                        android:layout_height="48dp">
 
                         <ImageView
                             android:layout_width="match_parent"
@@ -227,9 +227,9 @@
                         android:layout_height="match_parent"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="10dp"
-                        android:paddingBottom="8dp">
+                        android:paddingStart="10dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="6dp">
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -243,7 +243,7 @@
                                 android:fontFamily="@font/poppins_bold"
                                 android:text="@string/quality_hold_title"
                                 android:textColor="@color/quality_text"
-                                android:textSize="13.5sp"
+                                android:textSize="13sp"
                                 android:textStyle="bold"
                                 android:includeFontPadding="false" />
 
@@ -254,17 +254,17 @@
                                 android:fontFamily="@font/poppins_regular"
                                 android:text="@string/quality_hold_subtitle"
                                 android:textColor="@color/home_subtitle_text"
-                                android:textSize="10.5sp"
+                                android:textSize="10sp"
                                 android:includeFontPadding="false" />
                         </LinearLayout>
 
                         <ImageView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
                             android:layout_marginStart="4dp"
                             android:background="@drawable/btn_home_circle_peach"
                             android:src="@drawable/ic_chevron_right_action"
-                            android:padding="8dp"
+                            android:padding="6dp"
                             app:tint="@android:color/white"
                             android:importantForAccessibility="no" />
                     </LinearLayout>
@@ -295,7 +295,7 @@
                     android:id="@+id/cv_record_audio"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:minHeight="152dp"
+                    android:minHeight="104dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     android:background="@drawable/card_tile_lavender"
@@ -309,7 +309,7 @@
 
                     <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="84dp">
+                        android:layout_height="48dp">
 
                         <ImageView
                             android:layout_width="match_parent"
@@ -324,9 +324,9 @@
                         android:layout_height="match_parent"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="10dp"
-                        android:paddingBottom="8dp">
+                        android:paddingStart="10dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="6dp">
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -340,7 +340,7 @@
                                 android:fontFamily="@font/poppins_bold"
                                 android:text="@string/quality_record_title"
                                 android:textColor="@color/quality_text"
-                                android:textSize="13.5sp"
+                                android:textSize="13sp"
                                 android:textStyle="bold"
                                 android:includeFontPadding="false" />
 
@@ -351,17 +351,17 @@
                                 android:fontFamily="@font/poppins_regular"
                                 android:text="@string/quality_record_subtitle"
                                 android:textColor="@color/home_subtitle_text"
-                                android:textSize="10.5sp"
+                                android:textSize="10sp"
                                 android:includeFontPadding="false" />
                         </LinearLayout>
 
                         <ImageView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
                             android:layout_marginStart="4dp"
                             android:background="@drawable/btn_home_circle_lavender"
                             android:src="@drawable/ic_chevron_right_action"
-                            android:padding="8dp"
+                            android:padding="6dp"
                             app:tint="@android:color/white"
                             android:importantForAccessibility="no" />
                     </LinearLayout>
@@ -372,7 +372,7 @@
                     android:id="@+id/cv_music_list"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:minHeight="152dp"
+                    android:minHeight="104dp"
                     android:layout_weight="1"
                     android:layout_marginStart="6dp"
                     android:background="@drawable/card_tile_yellow"
@@ -386,7 +386,7 @@
 
                     <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="84dp">
+                        android:layout_height="48dp">
 
                         <ImageView
                             android:layout_width="match_parent"
@@ -401,9 +401,9 @@
                         android:layout_height="match_parent"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="10dp"
-                        android:paddingBottom="8dp">
+                        android:paddingStart="10dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="6dp">
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -417,7 +417,7 @@
                                 android:fontFamily="@font/poppins_bold"
                                 android:text="@string/quality_music_title"
                                 android:textColor="@color/quality_text"
-                                android:textSize="13.5sp"
+                                android:textSize="13sp"
                                 android:textStyle="bold"
                                 android:includeFontPadding="false" />
 
@@ -428,17 +428,17 @@
                                 android:fontFamily="@font/poppins_regular"
                                 android:text="@string/quality_music_subtitle"
                                 android:textColor="@color/home_subtitle_text"
-                                android:textSize="10.5sp"
+                                android:textSize="10sp"
                                 android:includeFontPadding="false" />
                         </LinearLayout>
 
                         <ImageView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
                             android:layout_marginStart="4dp"
                             android:background="@drawable/btn_home_circle_yellow"
                             android:src="@drawable/ic_chevron_right_action"
-                            android:padding="8dp"
+                            android:padding="6dp"
                             app:tint="@android:color/white"
                             android:importantForAccessibility="no" />
                     </LinearLayout>
@@ -449,9 +449,12 @@
             <LinearLayout
                 android:id="@+id/card_volume_safety"
                 android:layout_width="match_parent"
-                android:layout_height="68dp"
+                android:layout_height="wrap_content"
+                android:minHeight="56dp"
                 android:layout_marginTop="6dp"
                 android:layout_marginBottom="4dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
                 android:background="@drawable/bg_card_white_elevated"
                 android:clickable="true"
                 android:focusable="true"

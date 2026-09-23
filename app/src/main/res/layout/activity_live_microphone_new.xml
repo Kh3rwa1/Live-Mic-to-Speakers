@@ -345,11 +345,10 @@
             <TextView
                 android:id="@+id/studio_output_route"
                 style="@style/StudioNotice"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:text="@string/studio_output_idle"
-                android:visibility="gone" />
+                android:gravity="center"
+                android:text="@string/studio_output_idle" />
 
             <include
                 layout="@layout/studio_input_meter"
