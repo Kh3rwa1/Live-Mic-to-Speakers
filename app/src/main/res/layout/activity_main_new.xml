@@ -53,6 +53,14 @@
                 android:letterSpacing="0.01"
                 android:includeFontPadding="false" />
         </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/tv_settings"
+            style="@style/ToolControlCircleBack"
+            android:layout_marginStart="12dp"
+            android:contentDescription="@string/quality_settings"
+            android:src="@drawable/setting"
+            app:tint="@color/quality_text" />
     </LinearLayout>
 
     <androidx.core.widget.NestedScrollView

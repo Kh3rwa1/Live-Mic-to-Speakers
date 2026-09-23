@@ -11,9 +11,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingStart="20dp"
-        android:paddingTop="12dp"
+        android:paddingTop="8dp"
         android:paddingEnd="20dp"
-        android:paddingBottom="4dp">
+        android:paddingBottom="8dp"
+        android:clipToPadding="false">
 
         <ImageButton
             android:id="@+id/iv_back"
@@ -210,23 +211,32 @@
                     android:contentDescription="@string/tool_play_last" />
             </LinearLayout>
 
-            <!-- Compatibility views (retained, hidden) -->
+            <!-- Record Action Label & Status Feedback -->
             <TextView
                 android:id="@+id/tv_start_stop_new"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp"
+                android:fontFamily="@font/poppins_bold"
+                android:gravity="center"
                 android:text="@string/tool_start"
-                android:textSize="10sp"
-                android:visibility="gone" />
+                android:textColor="@color/quality_text"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/studio_feedback"
                 style="@style/ToolBody"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="8dp"
+                android:gravity="center"
                 android:text="@string/studio_ready"
-                android:textSize="10sp"
-                android:visibility="gone" />
+                android:textColor="@color/quality_secondary"
+                android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/tv_record_status_desc"

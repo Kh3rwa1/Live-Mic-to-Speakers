@@ -214,7 +214,7 @@ public class HoldToSpeakActivity extends AppCompatActivity {
         }
         binding.tvStartStopNew.setText(state == RecordingController.State.STARTING ? R.string.tool_preparing
                 : state == RecordingController.State.STOPPING ? R.string.tool_saving
-                : active ? R.string.tool_hold_active : R.string.hold_to_speak_caps);
+                : active ? R.string.tool_hold_active : R.string.tool_hold_idle);
         updatePreview();
     }
 

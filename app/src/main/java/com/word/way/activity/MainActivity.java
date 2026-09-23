@@ -62,6 +62,9 @@ public class MainActivity extends AppCompatActivity implements AdConsent.HomeScr
             binding.scroller.setOverScrollMode(View.OVER_SCROLL_NEVER);
             binding.scroller.setVerticalScrollBarEnabled(false);
         }
+        if (binding.tvSettings != null) {
+            binding.tvSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
+        }
         if (binding.cardVolumeSafety != null) {
             binding.cardVolumeSafety.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
         }

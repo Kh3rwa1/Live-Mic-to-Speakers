@@ -134,7 +134,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             @Override public void onStarted(long generation) {
                 runOnUiThread(() -> {
                     if (visible && runner.isCurrent(generation)) {
-                        binding.tvStartStopNew.setText(R.string.status_microphone_on);
+                        binding.tvStartStopNew.setText(R.string.quality_mic_on);
                         if (binding.studioFeedback != null) binding.studioFeedback.setText(R.string.tool_mic_active);
                     }
                 });
@@ -253,7 +253,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             binding.lottieSoundwave.pauseAnimation();
             binding.lottieSoundwave.setVisibility(View.VISIBLE);
         }
-        binding.tvStartStopNew.setText(R.string.status_microphone_off);
+        binding.tvStartStopNew.setText(R.string.quality_mic_off);
         if (binding.studioFeedback != null) binding.studioFeedback.setText(R.string.studio_ready);
         ToolUi.level(this, 0);
         if (binding.studioOutputRoute != null) binding.studioOutputRoute.setText(R.string.studio_output_idle);
