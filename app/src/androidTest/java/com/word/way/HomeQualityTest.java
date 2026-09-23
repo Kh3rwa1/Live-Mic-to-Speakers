@@ -23,6 +23,9 @@ public class HomeQualityTest {
         Context app = ApplicationProvider.getApplicationContext();
         AdsHandler.getInstance(app); AdsHandler.setAdsOn(false);
     }
+    @org.junit.After public void restoreAds() {
+        AdsHandler.setAdsOn(true);
+    }
     @Test public void homeControlsHaveLabelsAndLargeTouchTargets() {
         try (ActivityScenario<MainActivity> screen = ActivityScenario.launch(MainActivity.class)) {
             screen.onActivity(activity -> {

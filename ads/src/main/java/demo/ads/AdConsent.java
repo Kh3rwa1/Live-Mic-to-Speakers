@@ -7,11 +7,14 @@ import android.os.Looper;
 import android.widget.Toast;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
+import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.RequestConfiguration;
 import com.google.android.ump.ConsentInformation;
 import com.google.android.ump.ConsentRequestParameters;
 import com.google.android.ump.UserMessagingPlatform;
 import java.lang.ref.WeakReference;
+import java.util.Arrays;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /** UMP is the source of consent truth. No SDK initialization or requests before consent allows it. */
@@ -58,6 +61,12 @@ public final class AdConsent {
         gate.consentResolved(allowed);
         if (allowed && !initializing) {
             initializing = true;
+            RequestConfiguration configuration = MobileAds.getRequestConfiguration().toBuilder()
+                    .setTestDeviceIds(Arrays.asList(
+                            AdRequest.DEVICE_ID_EMULATOR,
+                            "F96C3A5E789445DD5896009229E43316"
+                    )).build();
+            MobileAds.setRequestConfiguration(configuration);
             MobileAds.initialize(app, result -> main.post(() -> {
                 gate.sdkInitialized(); notifyAdsChanged();
             }));

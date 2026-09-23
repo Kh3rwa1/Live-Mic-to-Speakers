@@ -33,6 +33,10 @@ public class MicrophoneNavigationTest {
         AdsHandler.setAdsOn(false);
     }
 
+    @org.junit.After public void restoreAds() {
+        AdsHandler.setAdsOn(true);
+    }
+
     private static void reveal(ActivityScenario<MainActivity> screen, int id) {
         screen.onActivity(activity -> {
             View target = activity.findViewById(id);
