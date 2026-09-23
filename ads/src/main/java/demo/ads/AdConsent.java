@@ -40,7 +40,7 @@ public final class AdConsent {
     public static void request(Activity activity) {
         if (!resumed(activity) || !AdsHandler.isEnabledByUser()) return;
         host = new WeakReference<>(activity);
-        if (busy || attempted) return;
+        if (busy || (attempted && canRequestAds())) return;
         busy = true;
         gate.consentResolved(false);
         notifyAdsChanged();

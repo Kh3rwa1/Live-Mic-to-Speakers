@@ -29,6 +29,6 @@ The route-guard instrumentation check does not simulate physical device disconne
 2. Inspect the native home UI with TalkBack, keyboard navigation, RTL, small screens, and 1.5x/2x text. Visual QA has not been signed off by this source pass.
 3. Safely test actual wired, USB and Bluetooth disconnections and explicit route switches. Begin at low volume, away from speakers. Confirm monitoring stops and requires an explicit restart.
 4. Measure end-to-end latency, feedback behavior, stability, and battery use on representative phones. There is no zero-latency claim or measurement in this change.
-5. Complete the existing RELEASE_CHECKLIST.md, including signed-release installation, current Play target-SDK requirements, live UMP/mediation behavior, privacy-policy/Data Safety verification, and app-specific production ad identifiers. The repository currently uses test ad identifiers; replacing them requires the developer's real configuration.
+5. Complete the existing RELEASE_CHECKLIST.md, including signed-release installation, current Play target-SDK requirements, live UMP/mediation behavior, privacy-policy/Data Safety verification, and app-specific production ad identifiers. The repository uses the owner's real AdMob IDs (ca-app-pub-7288061764998409/…) as committed fallback; production bundles inject overrides via LIVE_MIC_* env/props and never commit signing secrets.
 
 Nothing in this change enables background microphone capture, merges other pull requests, or publishes an app release.

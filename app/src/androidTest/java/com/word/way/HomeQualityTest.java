@@ -44,7 +44,7 @@ public class HomeQualityTest {
     }
     @Test public void settingsAndPrivacyStayReachableFromDirectHome() {
         try (ActivityScenario<MainActivity> screen = ActivityScenario.launch(MainActivity.class)) {
-            onView(withId(R.id.tv_settings)).perform(click());
+            onView(withId(R.id.card_volume_safety)).perform(click());
             onView(withId(R.id.rl_privacy_policy)).check(matches(isDisplayed()));
             pressBack();
             onView(withText(R.string.quality_home_title)).check(matches(isDisplayed()));

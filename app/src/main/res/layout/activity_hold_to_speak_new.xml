@@ -3,136 +3,225 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@drawable/bg_pastel_mesh">
+    android:background="@drawable/bg_pastel_mesh"
+    android:orientation="vertical">
 
     <!-- Top Navigation Bar -->
-    <LinearLayout
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="24dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="24dp"
-        android:paddingBottom="8dp">
+        android:paddingStart="20dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="4dp">
 
         <ImageButton
             android:id="@+id/iv_back"
             style="@style/ToolControlCircleBack"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:contentDescription="@string/tool_back"
             android:src="@drawable/tool_back"
-            app:tint="@color/quality_text"
-            android:contentDescription="@string/tool_back" />
-    </LinearLayout>
+            app:tint="@color/quality_text" />
+
+        <!-- Info / How it works circle button on top right -->
+        <ImageButton
+            android:id="@+id/btn_how_it_works"
+            style="@style/ToolControlCircleBack"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:contentDescription="@string/tool_how_it_works"
+            android:src="@drawable/ic_help_question" />
+    </RelativeLayout>
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroller"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:overScrollMode="never"
+        android:scrollbars="none"
         android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp"
-            android:paddingBottom="24dp">
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="12dp">
 
+            <!-- Super Header Kicker: "SPEAK MODE" -->
             <TextView
-                android:id="@+id/tv_tittle"
-                style="@style/ToolTitle"
-                android:text="@string/quality_hold_title" />
-
-            <TextView
-                style="@style/ToolBody"
-                android:text="@string/tool_hold_help" />
-
-            <!-- Hero 3D Pastel Microphone with Voice Visualizer -->
-            <FrameLayout
-                android:id="@+id/layout_mic_hero"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="4dp">
+                android:layout_marginTop="2dp"
+                android:fontFamily="@font/poppins_bold"
+                android:letterSpacing="0.12"
+                android:text="@string/kicker_speak_mode"
+                android:textColor="#0B6FD6"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
-                <com.airbnb.lottie.LottieAnimationView
-                    android:id="@+id/lottie_voice_wave"
-                    android:layout_width="260dp"
-                    android:layout_height="260dp"
+            <!-- Title: Hold to Speak -->
+            <TextView
+                android:id="@+id/tv_title"
+                style="@style/ToolTitle"
+                android:layout_marginTop="2dp"
+                android:text="@string/quality_hold_title"
+                android:textColor="@color/quality_text"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
+            <!-- Central Hero Stage with Peach Glowing Backdrop + Megaphone -->
+            <FrameLayout
+                android:id="@+id/layout_mic_hero"
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp"
+                android:clickable="true"
+                android:focusable="false"
+                android:importantForAccessibility="no">
+
+                <!-- Glowing Peach Circular Stage -->
+                <View
+                    android:layout_width="220dp"
+                    android:layout_height="220dp"
                     android:layout_gravity="center"
-                    app:lottie_fileName="lottie_wave_hold.json"
-                    app:lottie_loop="true"
-                    app:lottie_autoPlay="false"
-                    android:visibility="invisible"
+                    android:background="@drawable/bg_hero_stage_peach"
                     android:importantForAccessibility="no" />
 
+                <!-- Concentric Pulse Ripple Lottie Animation -->
+                <com.airbnb.lottie.LottieAnimationView
+                    android:id="@+id/lottie_voice_wave"
+                    android:layout_width="220dp"
+                    android:layout_height="220dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    app:lottie_fileName="lottie_pulse_hold.json"
+                    app:lottie_loop="true"
+                    app:lottie_autoPlay="false"
+                    android:visibility="invisible" />
+
+                <!-- Interactive Visualizer Canvas (Compatibility) -->
+                <com.word.way.view.InteractiveWaveVisualizerView
+                    android:id="@+id/visualizer_hold"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:visibility="gone" />
+
+                <!-- Center 3D Megaphone -->
                 <ImageView
                     android:id="@+id/iv_mic"
-                    android:layout_width="160dp"
-                    android:layout_height="180dp"
+                    android:layout_width="145dp"
+                    android:layout_height="145dp"
                     android:layout_gravity="center"
                     android:clickable="true"
-                    android:focusable="true"
                     android:contentDescription="@string/tool_hold_accessibility"
+                    android:focusable="true"
                     android:scaleType="fitCenter"
-                    android:src="@drawable/hero_mic_3d" />
+                    android:src="@drawable/ic_home_hold_speaker" />
             </FrameLayout>
 
-            <!-- 3-Button Pastel Squircle Dock -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="center"
-                android:orientation="horizontal">
-
-                <ImageButton
-                    android:id="@+id/iv_history"
-                    style="@style/ToolControlMint"
-                    android:layout_margin="10dp"
-                    android:src="@drawable/tool_history"
-                    app:tint="@color/quality_text"
-                    android:contentDescription="@string/tool_saved" />
+            <!-- Push-To-Talk Concentric Circles Button -->
+            <FrameLayout
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/btn_circle_hold_outer">
 
                 <ImageButton
                     android:id="@+id/iv_start_stop_new"
-                    style="@style/ToolControlPeach"
-                    android:layout_margin="10dp"
-                    android:src="@drawable/tool_record"
-                    android:contentDescription="@string/tool_hold_accessibility" />
+                    android:layout_width="76dp"
+                    android:layout_height="76dp"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/btn_circle_hold_coral"
+                    android:clickable="true"
+                    android:contentDescription="@string/tool_hold_accessibility"
+                    android:elevation="4dp"
+                    android:focusable="true"
+                    android:padding="20dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_mic_white" />
+            </FrameLayout>
 
+            <!-- "HOLD TO SPEAK" Label -->
+            <TextView
+                android:id="@+id/tv_start_stop_new"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp"
+                android:fontFamily="@font/poppins_bold"
+                android:letterSpacing="0.14"
+                android:text="@string/hold_to_speak_caps"
+                android:textColor="@color/quality_secondary"
+                android:textSize="11.5sp"
+                android:accessibilityLiveRegion="polite"
+                android:textStyle="bold" />
+
+            <!-- Bottom Dock Controls Row (Settings / Gear and Play) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="6dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <!-- Left: Gear / Options Circle Button -->
+                <ImageButton
+                    android:id="@+id/iv_history"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:layout_marginEnd="60dp"
+                    android:background="@drawable/btn_circle_dock_control"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:elevation="2dp"
+                    android:padding="14dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/tool_history"
+                    android:contentDescription="@string/tool_saved" />
+
+                <!-- Right: Play Circle Button -->
                 <ImageButton
                     android:id="@+id/iv_play"
-                    style="@style/ToolControlLavender"
-                    android:layout_margin="10dp"
-                    android:src="@drawable/tool_play"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:layout_marginStart="60dp"
+                    android:background="@drawable/btn_circle_dock_control"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:elevation="2dp"
+                    android:padding="14dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_play_dark"
                     android:contentDescription="@string/tool_play_queue" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/tv_start_stop_new"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:fontFamily="@font/poppins_bold"
-                android:gravity="center"
-                android:text="@string/tool_hold_idle"
-                android:textColor="@color/quality_text"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-
-            <TextView
-                style="@style/ToolBody"
-                android:layout_marginTop="12dp"
-                android:gravity="center"
-                android:text="@string/tool_foreground_note"
-                android:textColor="@color/quality_secondary"
-                android:textSize="13sp" />
+            <!-- Guide Card (retained for contract/backward compatibility, hidden/collapsed) -->
+            <LinearLayout
+                android:id="@+id/card_hold_guide"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone"
+                android:orientation="vertical" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Bottom Unified Ad View -->
     <LinearLayout
         android:id="@+id/nativeLay"
         android:layout_width="match_parent"

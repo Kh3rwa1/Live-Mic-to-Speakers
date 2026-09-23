@@ -99,4 +99,6 @@
     <string name="label_input_level">Input Level</string>
     <string name="label_input_level_sample" translatable="false">72%</string>
     <string name="btn_recording_settings_pill">Recording settings</string>
+    <string name="bluetooth_rationale_title">Nearby devices permission</string>
+    <string name="bluetooth_rationale_message">Permission to find nearby devices is used to display Bluetooth speaker names and route audio to them. Live microphone will continue to work even if this is skipped.</string>
 </resources>

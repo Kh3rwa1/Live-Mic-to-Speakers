@@ -1,24 +1,227 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/card_root" android:layout_width="match_parent" android:layout_height="wrap_content"
-    android:layout_marginStart="16dp" android:layout_marginEnd="16dp" android:layout_marginTop="8dp"
-    android:layout_marginBottom="8dp" android:padding="16dp" android:orientation="vertical"
-    android:background="@drawable/library_card_background">
-    <TextView android:id="@+id/title" style="@style/LibraryTitle"/>
-    <TextView android:id="@+id/duration" style="@style/LibraryMetadata"/>
-    <TextView android:id="@+id/author" style="@style/LibraryMetadata"/>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="horizontal" android:layout_marginTop="16dp" android:baselineAligned="false">
-        <LinearLayout android:id="@+id/playLayout" android:layout_width="0dp" android:layout_weight="1"
-            android:layout_height="wrap_content" android:minHeight="48dp" android:minWidth="48dp" android:padding="12dp"
-            android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/library_button_background"
-            android:clickable="true" android:focusable="true" android:descendantFocusability="blocksDescendants">
-            <ImageView android:id="@+id/iv_play" android:layout_width="24dp" android:layout_height="24dp"
-                android:src="@drawable/tool_play" app:tint="@color/studio_blue" android:importantForAccessibility="no"/>
-            <TextView android:id="@+id/library_preview_label" style="@style/StudioActionText"
-                android:textSize="16sp" android:text="@string/library_preview"/>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="16dp"
+    android:layout_marginTop="6dp"
+    android:layout_marginEnd="16dp"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_card_white_elevated"
+    android:elevation="2dp"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Top Row: Icon, Title & Metadata, More & Favorite -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="top"
+        android:orientation="horizontal">
+
+        <!-- Pastel Squircle Music Badge -->
+        <FrameLayout
+            android:id="@+id/iv_music_badge_bg"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@drawable/bg_squircle_peach_soft">
+
+            <ImageView
+                android:id="@+id/iv_music_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/music"
+                app:tint="#FF5277" />
+        </FrameLayout>
+
+        <!-- Title & Metadata -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/title"
+                style="@style/LibraryTitle"
+                android:fontFamily="@font/poppins_bold"
+                android:textColor="@color/quality_text"
+                android:textSize="15sp" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/duration"
+                    style="@style/LibraryMetadata"
+                    android:layout_marginTop="0dp"
+                    android:fontFamily="@font/poppins_regular"
+                    android:textColor="@color/quality_secondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    style="@style/LibraryMetadata"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/bullet_separator"
+                    android:textColor="@color/quality_secondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/author"
+                    style="@style/LibraryMetadata"
+                    android:layout_marginTop="0dp"
+                    android:fontFamily="@font/poppins_regular"
+                    android:textColor="@color/quality_secondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    style="@style/LibraryMetadata"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/bullet_separator"
+                    android:textColor="@color/quality_secondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tv_format"
+                    style="@style/LibraryMetadata"
+                    android:layout_marginTop="0dp"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:textColor="@color/quality_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
         </LinearLayout>
-        <Button android:id="@+id/select_song" style="@style/LibraryButton" android:layout_width="0dp"
-            android:layout_weight="1" android:layout_marginStart="12dp" android:text="@string/library_open_player"/>
+
+        <!-- More Options & Favorite Toggle -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:id="@+id/iv_more_options"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:padding="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/library_more_desc"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_more_vert"
+                app:tint="@color/quality_secondary" />
+
+            <ImageButton
+                android:id="@+id/iv_favorite"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:padding="8dp"
+                android:layout_marginTop="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/library_favorite_desc"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_heart_outline"
+                app:tint="@color/quality_secondary" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Waveform Visualizer Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="12dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.word.way.view.AudioWaveformBarView
+            android:id="@+id/waveform_bar"
+            android:layout_width="0dp"
+            android:layout_height="28dp"
+            android:layout_weight="1"
+            android:importantForAccessibility="no" />
+
+        <TextView
+            android:id="@+id/tv_waveform_duration"
+            style="@style/LibraryMetadata"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="0dp"
+            android:fontFamily="@font/poppins_regular"
+            android:textColor="@color/quality_secondary"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Bottom Actions: Preview & Open Player -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <!-- Preview Button -->
+        <LinearLayout
+            android:id="@+id/playLayout"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:background="@drawable/btn_pill_preview"
+            android:clickable="true"
+            android:descendantFocusability="blocksDescendants"
+            android:focusable="true"
+            android:gravity="center"
+            android:minWidth="48dp"
+            android:minHeight="44dp"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp">
+
+            <ImageView
+                android:id="@+id/iv_play"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/tool_play"
+                app:tint="@color/quality_text" />
+
+            <TextView
+                android:id="@+id/library_preview_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/poppins_semibold"
+                android:text="@string/library_preview"
+                android:textColor="@color/quality_text"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- Open Player Button -->
+        <Button
+            android:id="@+id/select_song"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1.2"
+            android:background="@drawable/btn_pill_open_player_peach"
+            android:fontFamily="@font/poppins_semibold"
+            android:minWidth="48dp"
+            android:minHeight="44dp"
+            android:text="@string/library_open_player"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            app:drawableStartCompat="@drawable/ic_open_external" />
     </LinearLayout>
 </LinearLayout>

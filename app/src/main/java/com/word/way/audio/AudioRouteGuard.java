@@ -66,11 +66,11 @@ public final class AudioRouteGuard implements AutoCloseable {
     @Override public void close() {
         signal.close();
         if (receiverRegistered) {
-            context.unregisterReceiver(receiver);
+            try { context.unregisterReceiver(receiver); } catch (RuntimeException ignored) { }
             receiverRegistered = false;
         }
         if (callbackRegistered) {
-            manager.unregisterAudioDeviceCallback(devices);
+            try { manager.unregisterAudioDeviceCallback(devices); } catch (RuntimeException ignored) { }
             callbackRegistered = false;
         }
     }

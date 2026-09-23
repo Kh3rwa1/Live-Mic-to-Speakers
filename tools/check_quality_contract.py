@@ -36,7 +36,7 @@ keys = [e.get('name') for e in strings.getroot()]
 if len(keys) != len(set(keys)):
     problems.append('Duplicate tool string resources')
 source = root / 'app/src/main/java/com/word/way/activity'
-for name in ['RecordAudioActivity', 'HoldToSpeakActivity', 'LiveMicrophoneActivity', 'Setting_Activity', 'MusicActivity']:
+for name in ['RecordAudioActivity', 'HoldToSpeakActivity', 'LiveMicrophoneActivity', 'SettingsActivity', 'MusicActivity']:
     text = (source / (name + '.java')).read_text()
     if re.search(r'\.set(?:Text|ContentDescription)\("', text):
         problems.append(f'{name}: hard-coded UI label')

@@ -59,17 +59,17 @@ public final class PreviewPlayer implements AutoCloseable {
                 if (mp != player) return;
                 wanted = false; abandonFocus(); listener.onChanged(); listener.onCompleted();
             });
-            next.setOnErrorListener((mp, what, extra) -> { if (mp == player) fail(); return true; });
+            next.setOnErrorListener((mp, what, extra) -> { if (mp == player) fail(new RuntimeException("Preview error " + what + "," + extra)); return true; });
             next.prepareAsync();
             listener.onChanged();
-        } catch (Exception error) { fail(); }
+        } catch (Exception error) { fail(error); }
     }
     public void resume() {
         if (player == null) return;
         wanted = true;
         if (!prepared) { listener.onChanged(); return; }
         try {
-            if (!requestFocus()) { fail(); return; }
+            if (!requestFocus()) { fail(null); return; }
             if (!registered) {
                 ContextCompat.registerReceiver(context, noisy, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
                         ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -78,7 +78,7 @@ public final class PreviewPlayer implements AutoCloseable {
             if (getDuration() > 0 && getPosition() >= getDuration()) player.seekTo(0);
             player.start();
             listener.onChanged();
-        } catch (RuntimeException error) { fail(); }
+        } catch (RuntimeException error) { fail(error); }
     }
     private boolean requestFocus() {
         if (hasFocus) return true;
@@ -102,7 +102,10 @@ public final class PreviewPlayer implements AutoCloseable {
         abandonFocus(); listener.onChanged();
     }
     private void abandonFocus() {
-        if (registered) { context.unregisterReceiver(noisy); registered = false; }
+        if (registered) {
+            try { context.unregisterReceiver(noisy); } catch (RuntimeException ignored) { }
+            registered = false;
+        }
         if (hasFocus && manager != null) {
             if (Build.VERSION.SDK_INT >= 26 && focusRequest != null) manager.abandonAudioFocusRequest(focusRequest);
             else manager.abandonAudioFocus(focus);
@@ -112,7 +115,7 @@ public final class PreviewPlayer implements AutoCloseable {
     public void seekTo(int position) {
         pendingPosition = Math.max(0, position);
         if (prepared && player != null) {
-            try { player.seekTo(Math.min(pendingPosition, getDuration())); } catch (RuntimeException error) { fail(); }
+            try { player.seekTo(Math.min(pendingPosition, getDuration())); } catch (RuntimeException error) { fail(error); }
         }
     }
     public int getPosition() {
@@ -127,8 +130,13 @@ public final class PreviewPlayer implements AutoCloseable {
         MediaPlayer old = player;
         player = null; prepared = false; wanted = false; pendingPosition = 0;
         if (old != null) { try { old.release(); } catch (RuntimeException ignored) { } }
-        abandonFocus(); listener.onChanged();
+        try { abandonFocus(); } catch (RuntimeException ignored) { }
+        listener.onChanged();
     }
-    private void fail() { stop(); listener.onError(); }
+    private void fail() { fail(null); }
+    private void fail(Exception cause) {
+        if (cause != null) android.util.Log.w("PreviewPlayer", "Preview failed", cause);
+        stop(); listener.onError();
+    }
     @Override public void close() { stop(); }
 }

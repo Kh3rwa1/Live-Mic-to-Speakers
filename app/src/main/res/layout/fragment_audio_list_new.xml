@@ -4,67 +4,221 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
+
+    <!-- Search Input Card -->
     <androidx.appcompat.widget.SearchView
         android:id="@+id/search"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="8dp"
-        android:background="@drawable/studio_card"
+        android:background="@drawable/bg_search_card"
         android:contentDescription="@string/library_search_audio"
-        android:elevation="1dp"
-        android:minHeight="56dp"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp"
+        android:elevation="2dp"
+        android:minHeight="52dp"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
         app:queryHint="@string/library_search_audio" />
-    <TextView
-        android:id="@+id/library_summary"
-        style="@style/LibraryMetadata"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
-        android:layout_marginBottom="8dp" />
+
+    <!-- Filter Chips Row -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipToPadding="false"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="6dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/chip_all"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
+                android:background="@drawable/btn_chip_active_purple"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="@string/library_chip_recordings"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/chip_recordings"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/btn_chip_inactive"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="@string/library_chip_recordings"
+                android:textColor="@color/quality_text"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/chip_imports"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/btn_chip_inactive"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="@string/library_chip_imports"
+                android:textColor="@color/quality_text"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:id="@+id/chip_favorites"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/btn_chip_inactive"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="14dp"
+                android:paddingEnd="16dp">
+
+                <ImageView
+                    android:id="@+id/iv_chip_favorites"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_heart_outline"
+                    app:tint="@color/quality_text" />
+
+                <TextView
+                    android:id="@+id/tv_chip_favorites"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="@string/library_chip_favorites"
+                    android:textColor="@color/quality_text"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- Count & Sort Subheader -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="20dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="6dp">
+
+        <TextView
+            android:id="@+id/library_summary"
+            style="@style/LibraryMetadata"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/quality_secondary"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:id="@+id/btn_sort"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/library_sort_by"
+                android:textColor="@color/quality_secondary"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tv_sort_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/btn_chip_inactive"
+                android:paddingStart="10dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="4dp"
+                android:text="@string/library_sort_newest"
+                android:textColor="@color/quality_text"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Weighted List Pane (Contract Enforced: Direct Child, Weight 1) -->
     <FrameLayout
         android:id="@+id/library_list_pane"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
             android:paddingBottom="16dp" />
+
         <androidx.core.widget.NestedScrollView
             android:id="@+id/library_state_panel"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:fillViewport="true">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:orientation="vertical"
                 android:padding="24dp">
+
                 <TextView
                     android:id="@+id/no_audio"
                     style="@style/StudioBody"
                     android:accessibilityLiveRegion="polite"
                     android:gravity="center"
                     android:text="@string/library_loading" />
+
                 <Button
                     android:id="@+id/library_permissions"
                     style="@style/LibraryButton"
                     android:layout_marginTop="16dp"
                     android:text="@string/library_permission_action"
                     android:visibility="gone" />
+
                 <Button
                     android:id="@+id/library_retry"
                     style="@style/LibraryButton"
                     android:layout_marginTop="16dp"
                     android:text="@string/library_retry"
                     android:visibility="gone" />
+
                 <Button
                     android:id="@+id/library_clear"
                     style="@style/LibraryButton"
@@ -74,6 +228,8 @@
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
     </FrameLayout>
+
+    <!-- Weighted Preview Pane (Contract Enforced: Direct Child, Weight 1, ScrollView) -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/mediaPlayerLayout"
         android:layout_width="match_parent"
@@ -86,22 +242,26 @@
         android:elevation="1dp"
         android:fillViewport="true"
         android:visibility="gone">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
+
                 <TextView
                     android:id="@+id/title"
                     style="@style/LibraryTitle"
                     android:layout_width="0dp"
                     android:layout_marginEnd="16dp"
                     android:layout_weight="1" />
+
                 <ImageButton
                     android:id="@+id/play_pause"
                     style="@style/ToolControl"
@@ -110,20 +270,24 @@
                     android:src="@drawable/tool_play"
                     app:tint="@color/studio_blue" />
             </LinearLayout>
+
             <androidx.appcompat.widget.AppCompatSeekBar
                 android:id="@+id/player_seekbar"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:contentDescription="@string/library_preview_position" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
+
                 <TextView
                     android:id="@+id/current_time"
                     style="@style/LibraryMetadata"
                     android:layout_width="0dp"
                     android:layout_weight="1" />
+
                 <TextView
                     android:id="@+id/total_time"
                     style="@style/LibraryMetadata"
@@ -131,6 +295,7 @@
                     android:layout_weight="1"
                     android:gravity="end" />
             </LinearLayout>
+
             <TextView
                 android:id="@+id/library_preview_feedback"
                 style="@style/StudioBody"

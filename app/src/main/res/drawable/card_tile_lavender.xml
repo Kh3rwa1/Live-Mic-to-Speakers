@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Frosted glass: steel mist melting to white with a chrome edge. -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-    android:color="@color/pastel_lavender_pressed">
+    android:color="#A9C2DE">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/pastel_lavender" />
+            <gradient
+                android:angle="135"
+                android:startColor="#E6DDE9F1"
+                android:endColor="#F7F9FC" />
             <corners android:radius="24dp" />
+            <stroke android:width="1.5dp" android:color="#D9FFFFFF" />
         </shape>
     </item>
 </ripple>

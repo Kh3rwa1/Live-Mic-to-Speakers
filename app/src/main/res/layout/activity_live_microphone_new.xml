@@ -56,7 +56,7 @@
 
             <!-- Title: Live Microphone -->
             <TextView
-                android:id="@+id/tv_tittle"
+                android:id="@+id/tv_title"
                 style="@style/ToolTitle"
                 android:layout_marginTop="2dp"
                 android:text="@string/quality_live_screen_title"

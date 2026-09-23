@@ -18,7 +18,8 @@ import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.word.way.R;
-import com.word.way.Utils.EUGeneralClass;
+import com.word.way.databinding.ActivityRecordAudioListNewBinding;
+import com.word.way.util.SystemBars;
 import com.word.way.player.AudioSearch;
 import com.word.way.player.LibraryState;
 import com.word.way.player.SongListModel;
@@ -38,6 +39,7 @@ import demo.ads.GoogleAds;
 
 /** Shared, cancellable history loading with explicit loading/empty/search/error states. */
 public abstract class RecordingHistoryActivity extends AppCompatActivity implements SongListAdapter.Actions {
+    private ActivityRecordAudioListNewBinding binding;
     private final ExecutorService loader = Executors.newSingleThreadExecutor();
     private Future<?> pending;
     private int generation;
@@ -50,24 +52,25 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity impleme
     protected abstract String legacyFolder();
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        setContentView(R.layout.activity_record_audio_list_new);
-        EUGeneralClass.BottomNavigationColor(this);
-        GoogleAds.getInstance().admobBanner(this, findViewById(R.id.nativeLay));
-        findViewById(R.id.iv_back).setOnClickListener(v -> finish());
-        ViewCompat.setAccessibilityHeading(findViewById(R.id.tv_tittle), true);
-        RecyclerView list = findViewById(R.id.rvSongList);
+        binding = ActivityRecordAudioListNewBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+        SystemBars.applyEdgeToEdge(this);
+        GoogleAds.getInstance().admobBanner(this, binding.nativeLay);
+        binding.ivBack.setOnClickListener(v -> finish());
+        ViewCompat.setAccessibilityHeading(binding.tvTitle, true);
         adapter = new SongListAdapter(this, new ArrayList<>(), this);
-        list.setLayoutManager(new LinearLayoutManager(this)); list.setAdapter(adapter);
+        binding.rvSongList.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvSongList.setAdapter(adapter);
         if (state != null) query = state.getString("historyQuery", "");
-        search = findViewById(R.id.search);
+        search = binding.search;
         search.setQueryHint(getString(R.string.library_search_recordings));
         search.setIconified(false); search.setQuery(query, false); search.clearFocus();
         search.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             public boolean onQueryTextSubmit(String value) { search.clearFocus(); return true; }
             public boolean onQueryTextChange(String value) { filter(value); return true; }
         });
-        findViewById(R.id.library_retry).setOnClickListener(v -> reload());
-        findViewById(R.id.library_clear).setOnClickListener(v -> search.setQuery("", false));
+        binding.libraryRetry.setOnClickListener(v -> reload());
+        binding.libraryClear.setOnClickListener(v -> search.setQuery("", false));
         RecordingChanges.revisions().observe(this, revision -> { if (resumed) reload(); });
         renderState();
     }
@@ -138,10 +141,14 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity impleme
             });
         });
     }
-    public static String convertMillieToHMmSs(long millis) {
+    public static String formatDuration(long millis) {
         long seconds = Math.max(0, millis) / 1000;
         return seconds >= 3600 ? String.format(Locale.getDefault(), "%02d:%02d:%02d", seconds / 3600, (seconds / 60) % 60, seconds % 60)
                 : String.format(Locale.getDefault(), "%02d:%02d", seconds / 60, seconds % 60);
+    }
+    @Deprecated
+    public static String convertMillieToHMmSs(long millis) {
+        return formatDuration(millis);
     }
     public List<SongListModel> getMusicPlayer() {
         List<SongListModel> found = new ArrayList<>();
@@ -170,7 +177,7 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity impleme
         for (File file : files) {
             if (Thread.currentThread().isInterrupted()) break;
             MediaMetadataRetriever metadata = new MediaMetadataRetriever();
-            String name = file.getName(), artist = getString(R.string.library_unknown_artist), duration = convertMillieToHMmSs(0);
+            String name = file.getName(), artist = getString(R.string.library_unknown_artist), duration = formatDuration(0);
             try {
                 metadata.setDataSource(file.getAbsolutePath());
                 String title = metadata.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
@@ -178,7 +185,7 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity impleme
                 String author = metadata.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
                 if (author != null && !author.isEmpty()) artist = author;
                 String value = metadata.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-                if (value != null) duration = convertMillieToHMmSs(Long.parseLong(value));
+                if (value != null) duration = formatDuration(Long.parseLong(value));
             } catch (RuntimeException ignored) { }
             finally { try { metadata.release(); } catch (Exception ignored) { } }
             found.add(new SongListModel(String.valueOf(file.hashCode()), artist, name, file.getAbsolutePath(), file.getName(), duration));
@@ -192,20 +199,20 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity impleme
         if (adapter != null) { adapter.filterList(filtered); renderState(); }
     }
     private void renderState() {
+        if (binding == null) return;
         LibraryState state = LibraryState.resolve(loading, failed, rows.size(), adapter.getItemCount());
         boolean content = state == LibraryState.CONTENT;
-        findViewById(R.id.rvSongList).setVisibility(content ? View.VISIBLE : View.GONE);
-        findViewById(R.id.library_state_panel).setVisibility(content ? View.GONE : View.VISIBLE);
-        findViewById(R.id.library_retry).setVisibility(state == LibraryState.ERROR ? View.VISIBLE : View.GONE);
-        findViewById(R.id.library_clear).setVisibility(state == LibraryState.NO_MATCHES ? View.VISIBLE : View.GONE);
-        TextView summary = findViewById(R.id.library_summary);
-        summary.setVisibility(loading || failed ? View.GONE : View.VISIBLE);
-        summary.setText(getResources().getQuantityString(R.plurals.library_count, adapter.getItemCount(), adapter.getItemCount()));
+        binding.rvSongList.setVisibility(content ? View.VISIBLE : View.GONE);
+        binding.libraryStatePanel.setVisibility(content ? View.GONE : View.VISIBLE);
+        binding.libraryRetry.setVisibility(state == LibraryState.ERROR ? View.VISIBLE : View.GONE);
+        binding.libraryClear.setVisibility(state == LibraryState.NO_MATCHES ? View.VISIBLE : View.GONE);
+        binding.librarySummary.setVisibility(loading || failed ? View.GONE : View.VISIBLE);
+        binding.librarySummary.setText(getResources().getQuantityString(R.plurals.library_count, adapter.getItemCount(), adapter.getItemCount()));
         int text = R.string.library_history_empty;
         if (state == LibraryState.LOADING) text = R.string.library_loading;
         else if (state == LibraryState.ERROR) text = R.string.library_history_error;
         else if (state == LibraryState.NO_MATCHES) text = R.string.library_no_matches;
-        ((TextView) findViewById(R.id.noData)).setText(text);
+        binding.noData.setText(text);
     }
     @Override protected void onSaveInstanceState(Bundle state) {
         state.putString("historyQuery", query); super.onSaveInstanceState(state);

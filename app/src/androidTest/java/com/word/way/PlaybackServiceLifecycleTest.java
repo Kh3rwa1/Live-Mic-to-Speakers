@@ -10,7 +10,7 @@ import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.rule.ServiceTestRule;
-import com.word.way.Service.MediaPlaybackService;
+import com.word.way.service.MediaPlaybackService;
 import com.word.way.audio.PlaybackState;
 import java.io.File;
 import java.io.FileOutputStream;

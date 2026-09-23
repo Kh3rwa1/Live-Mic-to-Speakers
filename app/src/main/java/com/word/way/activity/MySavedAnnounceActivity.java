@@ -1,6 +1,6 @@
 package com.word.way.activity;
 
-import com.word.way.Utils.MyPref;
+import com.word.way.util.MyPref;
 import java.io.File;
 
 public class MySavedAnnounceActivity extends RecordingHistoryActivity {

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Glacier backdrop: ice-white over a soft electric-blue glow, matching the logo. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#FFFFFF"
+                android:centerColor="#F2F8FE"
+                android:endColor="#E2F0FD" />
+        </shape>
+    </item>
+    <item
+        android:left="-120dp"
+        android:right="-120dp"
+        android:top="280dp"
+        android:bottom="-260dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="420dp"
+                android:startColor="#8CC6F8"
+                android:centerColor="#59AFF5"
+                android:endColor="#001A9BF0" />
+        </shape>
+    </item>
+</layer-list>

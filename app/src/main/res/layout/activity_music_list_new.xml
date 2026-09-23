@@ -5,35 +5,55 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_pastel_mesh"
     android:orientation="vertical">
+
+    <!-- Top Navigation & Header Bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="24dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="24dp"
-        android:paddingBottom="8dp">
+        android:paddingStart="20dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="6dp">
+
         <ImageButton
             android:id="@+id/iv_back"
             style="@style/ToolControlCircleBack"
             android:contentDescription="@string/tool_back"
             android:src="@drawable/tool_back"
-            app:tint="@color/studio_ink" />
-        <TextView
-            android:id="@+id/tv_tittle"
-            style="@style/StudioTitle"
+            app:tint="@color/quality_text" />
+
+        <LinearLayout
             android:layout_width="0dp"
-            android:layout_marginStart="16dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="12dp"
             android:layout_weight="1"
-            android:text="@string/library_title"
-            android:textSize="22sp" />
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_title"
+                style="@style/ToolTitle"
+                android:text="@string/quality_music_title"
+                android:textColor="@color/quality_text"
+                android:textSize="26sp" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btn_filter"
+            style="@style/ToolControlCircleBack"
+            android:contentDescription="@string/library_filter_desc"
+            android:src="@drawable/ic_filter_sliders"
+            app:tint="@color/quality_text" />
     </LinearLayout>
+
     <FrameLayout
         android:id="@+id/container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
+
     <LinearLayout
         android:id="@+id/nativeLay"
         android:layout_width="match_parent"

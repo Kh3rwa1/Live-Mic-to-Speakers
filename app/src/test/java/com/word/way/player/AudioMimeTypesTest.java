@@ -20,4 +20,10 @@ public class AudioMimeTypesTest {
         assertNull(AudioMimeTypes.forName(null)); assertNull(AudioMimeTypes.forName(""));
         assertNull(AudioMimeTypes.forName("secret.xml")); assertNull(AudioMimeTypes.forName("audio.m4a.exe"));
     }
+    @Test public void futureCodecsHaveExplicitTypes() {
+        assertEquals("audio/ogg", AudioMimeTypes.forName("clip.ogg"));
+        assertEquals("audio/opus", AudioMimeTypes.forName("clip.opus"));
+        assertEquals("audio/flac", AudioMimeTypes.forName("clip.flac"));
+        assertEquals("audio/3gpp", AudioMimeTypes.forName("clip.3gp"));
+    }
 }

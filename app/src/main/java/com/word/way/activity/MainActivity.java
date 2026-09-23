@@ -14,13 +14,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import com.word.way.R;
-import com.word.way.Utils.EUGeneralClass;
+import com.word.way.databinding.ActivityMainNewBinding;
+import com.word.way.util.SystemBars;
 import com.word.way.player.activity.MusicListActivity;
 import demo.ads.AdConsent;
 import demo.ads.GoogleAds;
 
 /** Direct landing screen: one tap to a tool, with consent and settings still reachable. */
 public class MainActivity extends AppCompatActivity implements AdConsent.HomeScreen {
+    private ActivityMainNewBinding binding;
     private Class<?> pendingScreen;
     private final ActivityResultLauncher<String> permission = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(), granted -> {
@@ -29,24 +31,46 @@ public class MainActivity extends AppCompatActivity implements AdConsent.HomeScr
                 if (granted && screen != null && !isFinishing() && !isDestroyed()) startActivity(new Intent(this, screen));
                 else if (!granted) Toast.makeText(this, R.string.quality_feature_permission, Toast.LENGTH_LONG).show();
             });
+
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        setContentView(R.layout.activity_main_new);
-        EUGeneralClass.BottomNavigationColor(this);
-        ViewCompat.setAccessibilityHeading(findViewById(R.id.quality_headline), true);
+        binding = ActivityMainNewBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+        SystemBars.applyEdgeToEdge(this);
+        ViewCompat.setAccessibilityHeading(binding.qualityHeadline, true);
+        if (binding.qualityHeadline != null) {
+            // Locale-safe: gradient across the full translated title, no hardcoded word split.
+            binding.qualityHeadline.post(() -> {
+                float textWidth = binding.qualityHeadline.getPaint().measureText(binding.qualityHeadline.getText().toString());
+                if (textWidth > 0) {
+                    binding.qualityHeadline.getPaint().setShader(new android.graphics.LinearGradient(
+                            0, 0, textWidth, 0,
+                            new int[]{0xFF111827, 0xFF1A9BF0, 0xFF0B6FD6},
+                            new float[]{0.0f, 0.55f, 1.0f},
+                            android.graphics.Shader.TileMode.CLAMP));
+                    binding.qualityHeadline.invalidate();
+                }
+            });
+        }
         if (state != null) {
             for (Class<?> candidate : new Class<?>[]{LiveMicrophoneActivity.class, HoldToSpeakActivity.class,
                     RecordAudioActivity.class, MusicListActivity.class})
                 if (candidate.getName().equals(state.getString("pendingScreen"))) pendingScreen = candidate;
         }
-        GoogleAds.getInstance().addNativeView(this, findViewById(R.id.nativeLay));
-        View settings = findViewById(R.id.tv_settings);
-        if (settings != null) settings.setOnClickListener(v -> startActivity(new Intent(this, Setting_Activity.class)));
-        attachCardInteractions(findViewById(R.id.cv_live_microphone), this::onLiveMicrophoneClick);
-        attachCardInteractions(findViewById(R.id.cv_hold_to_speak), this::onHoldToSpeakClick);
-        attachCardInteractions(findViewById(R.id.cv_record_audio), this::onRecordAudioClick);
-        attachCardInteractions(findViewById(R.id.cv_music_list), this::onMusicListClick);
+        GoogleAds.getInstance().addNativeView(this, binding.nativeLay);
+        if (binding.scroller != null) {
+            binding.scroller.setOverScrollMode(View.OVER_SCROLL_NEVER);
+            binding.scroller.setVerticalScrollBarEnabled(false);
+        }
+        if (binding.cardVolumeSafety != null) {
+            binding.cardVolumeSafety.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
+        }
+        attachCardInteractions(binding.cvLiveMicrophone, this::onLiveMicrophoneClick);
+        attachCardInteractions(binding.cvHoldToSpeak, this::onHoldToSpeakClick);
+        attachCardInteractions(binding.cvRecordAudio, this::onRecordAudioClick);
+        attachCardInteractions(binding.cvMusicList, this::onMusicListClick);
     }
+
     @android.annotation.SuppressLint("ClickableViewAccessibility")
     private void attachCardInteractions(View view, Runnable onClick) {
         if (view == null) return;
@@ -64,6 +88,7 @@ public class MainActivity extends AppCompatActivity implements AdConsent.HomeScr
             return false;
         });
     }
+
     @Override protected void onPostResume() { super.onPostResume(); AdConsent.request(this); }
     @Override protected void onSaveInstanceState(Bundle state) {
         if (pendingScreen != null) state.putString("pendingScreen", pendingScreen.getName());

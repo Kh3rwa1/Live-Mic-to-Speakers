@@ -8,35 +8,111 @@
         <ImageButton android:id="@+id/iv_back" style="@style/ToolControlCircleBack"
             android:src="@drawable/tool_back" app:tint="@color/quality_text" android:contentDescription="@string/tool_back"/>
     </LinearLayout>
-    <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="0dp"
-        android:layout_weight="1" android:fillViewport="true">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:padding="24dp">
-            <TextView android:id="@+id/tv_tittle" style="@style/ToolTitle" android:text="@string/tool_player_title"/>
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroller"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:overScrollMode="never"
+        android:scrollbars="none"
+        android:fillViewport="true">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+            <TextView
+                android:id="@+id/tv_title"
+                style="@style/ToolTitle"
+                android:text="@string/tool_player_title"/>
             <com.airbnb.lottie.LottieAnimationView
                 android:id="@+id/lottie_player_equalizer"
                 android:layout_width="120dp"
                 android:layout_height="80dp"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="16dp"
                 app:lottie_fileName="lottie_equalizer.json"
                 app:lottie_loop="true"
                 app:lottie_autoPlay="true"
                 android:importantForAccessibility="no" />
-            <TextView android:id="@+id/textViewTitle" style="@style/ToolTitle" android:layout_marginTop="24dp" android:gravity="center"/>
-            <TextView android:id="@+id/textViewArtist" style="@style/ToolBody" android:gravity="center" android:text="@string/tool_unknown_artist"/>
-            <SeekBar android:id="@+id/seekBar" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:minHeight="48dp" android:layout_marginTop="24dp" android:thumbTint="@color/quality_accent" android:progressTint="@color/quality_accent"
+            <TextView
+                android:id="@+id/textViewTitle"
+                style="@style/ToolTitle"
+                android:layout_marginTop="16dp"
+                android:textSize="20sp"
+                android:gravity="center"/>
+            <TextView
+                android:id="@+id/textViewArtist"
+                style="@style/ToolBody"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:text="@string/tool_unknown_artist"/>
+            <SeekBar
+                android:id="@+id/seekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:layout_marginTop="16dp"
+                android:thumbTint="@color/quality_accent"
+                android:progressTint="@color/quality_accent"
                 android:contentDescription="@string/tool_position"/>
-            <TextView android:id="@+id/textViewElapsedTime" style="@style/ToolBody" android:text="@string/tool_timer_initial"/>
-            <TextView android:id="@+id/textViewDuration" style="@style/ToolBody" android:text="@string/tool_timer_initial"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:gravity="center" android:orientation="horizontal">
-                <ImageButton android:id="@+id/imageButtonPre" style="@style/ToolControlMint" android:layout_margin="10dp" android:src="@drawable/tool_previous" app:tint="@color/quality_text" android:contentDescription="@string/tool_previous"/>
-                <ImageButton android:id="@+id/imageButtonPlayPause" style="@style/ToolControlPeach" android:layout_margin="10dp" android:src="@drawable/tool_play" app:tint="@color/quality_text" android:contentDescription="@string/tool_play"/>
-                <ImageButton android:id="@+id/imageButtonNext" style="@style/ToolControlLavender" android:layout_margin="10dp" android:src="@drawable/tool_next" app:tint="@color/quality_text" android:contentDescription="@string/tool_next"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <TextView
+                    android:id="@+id/textViewElapsedTime"
+                    style="@style/ToolBody"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/tool_timer_initial"/>
+                <TextView
+                    android:id="@+id/textViewDuration"
+                    style="@style/ToolBody"
+                    android:layout_width="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:gravity="end"
+                    android:text="@string/tool_timer_initial"/>
             </LinearLayout>
-            <Button android:id="@+id/fab" style="@style/ToolTextButton" android:text="@string/tool_change_audio"/>
-            <TextView style="@style/ToolBody" android:text="@string/tool_foreground_note"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+                <ImageButton
+                    android:id="@+id/imageButtonPre"
+                    style="@style/ToolControlMint"
+                    android:layout_margin="8dp"
+                    android:src="@drawable/tool_previous"
+                    app:tint="@color/quality_text"
+                    android:contentDescription="@string/tool_previous"/>
+                <ImageButton
+                    android:id="@+id/imageButtonPlayPause"
+                    style="@style/ToolControlPeach"
+                    android:layout_margin="8dp"
+                    android:src="@drawable/tool_play"
+                    app:tint="@color/quality_text"
+                    android:contentDescription="@string/tool_play"/>
+                <ImageButton
+                    android:id="@+id/imageButtonNext"
+                    style="@style/ToolControlLavender"
+                    android:layout_margin="8dp"
+                    android:src="@drawable/tool_next"
+                    app:tint="@color/quality_text"
+                    android:contentDescription="@string/tool_next"/>
+            </LinearLayout>
+            <Button
+                android:id="@+id/fab"
+                style="@style/ToolTextButton"
+                android:layout_marginTop="14dp"
+                android:text="@string/tool_change_audio"/>
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:importantForAccessibility="no" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
     <LinearLayout android:id="@+id/nativeLay" android:layout_width="match_parent" android:layout_height="wrap_content"

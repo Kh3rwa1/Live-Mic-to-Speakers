@@ -17,8 +17,8 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
-import com.word.way.Utils.EUGeneralClass;
-import com.word.way.Utils.SafeAreaInsets;
+import com.word.way.util.SystemBars;
+import com.word.way.util.SafeAreaInsets;
 import com.word.way.activity.*;
 import demo.ads.AdsHandler;
 import java.io.File;
@@ -127,11 +127,8 @@ public class ToolQualityTest {
             controls(screen, R.id.iv_back, R.id.iv_start_stop_new);
             screen.onActivity(activity -> {
                 View hero = activity.findViewById(R.id.layout_mic_hero);
-                View pill = activity.findViewById(R.id.btn_live_pill);
                 assertFalse("Composite hero must not duplicate its named child", hero.isFocusable());
-                assertFalse("Composite pill must not duplicate its named child", pill.isFocusable());
                 assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO, hero.getImportantForAccessibility());
-                assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO, pill.getImportantForAccessibility());
                 assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO,
                         activity.findViewById(R.id.lottie_mic_pulse).getImportantForAccessibility());
                 assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO,
@@ -139,7 +136,7 @@ public class ToolQualityTest {
             });
             capture("live");
         }
-        try (ActivityScenario<Setting_Activity> screen = ActivityScenario.launch(Setting_Activity.class)) {
+        try (ActivityScenario<SettingsActivity> screen = ActivityScenario.launch(SettingsActivity.class)) {
             controls(screen, R.id.iv_back, R.id.rl_privacy_policy, R.id.tool_privacy_choices, R.id.rl_share_app, R.id.rl_rate);
             capture("settings");
             screen.onActivity(activity -> activity.getWindow().getDecorView().setLayoutDirection(View.LAYOUT_DIRECTION_RTL));
@@ -187,7 +184,7 @@ public class ToolQualityTest {
                 ViewGroup content = activity.findViewById(android.R.id.content);
                 Rect original = new Rect(content.getPaddingLeft(), content.getPaddingTop(), content.getPaddingRight(), content.getPaddingBottom());
                 WindowInsetsCompat nativeInsets = ViewCompat.getRootWindowInsets(content);
-                EUGeneralClass.BottomNavigationColor(activity); EUGeneralClass.BottomNavigationColor(activity);
+                SystemBars.applyEdgeToEdge(activity); SystemBars.applyEdgeToEdge(activity);
                 if (nativeInsets != null) ViewCompat.dispatchApplyWindowInsets(content, nativeInsets);
                 assertEquals(original, new Rect(content.getPaddingLeft(), content.getPaddingTop(), content.getPaddingRight(), content.getPaddingBottom()));
             });

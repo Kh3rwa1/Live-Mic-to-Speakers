@@ -1,15 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="wrap_content"
-    android:layout_marginTop="24dp" android:padding="16dp"
-    android:background="@drawable/studio_card" android:orientation="vertical">
-    <TextView style="@style/StudioBody" android:layout_marginTop="0dp" android:text="@string/studio_level_title"/>
-    <TextView android:id="@+id/studio_level_value" style="@style/StudioBody"
-        android:accessibilityLiveRegion="none" android:textColor="@color/studio_ink"/>
-    <ProgressBar android:id="@+id/studio_input_level" style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent" android:layout_height="16dp" android:layout_marginTop="8dp"
-        android:max="100" android:progress="0" android:indeterminate="false"
-        android:progressTint="@color/studio_blue" android:progressBackgroundTint="@color/studio_line"
-        android:importantForAccessibility="no"/>
-    <TextView style="@style/StudioBody" android:text="@string/studio_level_help" android:textSize="14sp"/>
+    android:id="@+id/studio_input_meter_card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="12dp"
+    android:background="@drawable/bg_card_white_elevated"
+    android:elevation="3dp"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <!-- Header Row: Purple Icon Badge + Title + Value Readout -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <FrameLayout
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:background="@drawable/bg_badge_purple_rounded">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_meter_bars_purple" />
+        </FrameLayout>
+
+        <TextView
+            style="@style/ToolTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:text="@string/studio_level_title"
+            android:textColor="@color/quality_text"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/studio_level_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:accessibilityLiveRegion="none"
+            android:fontFamily="@font/poppins_bold"
+            android:text="@string/studio_level_default"
+            android:textColor="@color/quality_text"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Gradient Rounded Input Level Bar -->
+    <ProgressBar
+        android:id="@+id/studio_input_level"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="10dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="4dp"
+        android:indeterminate="false"
+        android:max="100"
+        android:progress="0"
+        android:progressDrawable="@drawable/progress_input_level_gradient"
+        android:importantForAccessibility="no" />
+
+    <!-- Help Description -->
+    <TextView
+        style="@style/ToolBody"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/studio_level_help"
+        android:textColor="@color/quality_secondary"
+        android:textSize="12sp" />
 </LinearLayout>

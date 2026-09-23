@@ -26,13 +26,14 @@ public final class RecordingShare {
     public static void share(Context context, String path) {
         try {
             if (path == null) throw new IllegalArgumentException("No recording selected");
-            Intent chooser = Intent.createChooser(createShareIntent(context, new File(path)), "Share recording");
+            Intent chooser = Intent.createChooser(createShareIntent(context, new File(path)),
+                    context.getString(com.word.way.R.string.library_share_recording));
             if (!(context instanceof Activity)) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(chooser);
         } catch (ActivityNotFoundException error) {
-            Toast.makeText(context, "No app is available to share this recording.", Toast.LENGTH_LONG).show();
+            Toast.makeText(context, com.word.way.R.string.library_share_unavailable, Toast.LENGTH_LONG).show();
         } catch (IllegalArgumentException | SecurityException error) {
-            Toast.makeText(context, "Only this app's saved recordings can be shared. For older public-folder files, use your device's Files app.", Toast.LENGTH_LONG).show();
+            Toast.makeText(context, com.word.way.R.string.library_share_restricted, Toast.LENGTH_LONG).show();
         }
     }
 }

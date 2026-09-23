@@ -21,7 +21,7 @@
             android:src="@drawable/tool_back"
             app:tint="@color/studio_ink" />
         <TextView
-            android:id="@+id/tv_tittle"
+            android:id="@+id/tv_title"
             style="@style/StudioTitle"
             android:layout_width="0dp"
             android:layout_marginStart="16dp"

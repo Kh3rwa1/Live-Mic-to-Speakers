@@ -2,10 +2,8 @@ package com.word.way.player;
 
 import android.content.Context;
 import com.word.way.R;
-import java.text.DateFormatSymbols;
+import java.text.DateFormat;
 import java.util.Date;
-import java.util.GregorianCalendar;
-import kotlin.jvm.internal.Intrinsics;
 
 
 public final class MediaPlayerUtils {
@@ -47,9 +45,13 @@ public final class MediaPlayerUtils {
 
 
     public  String getTimeAgo(String str, Context context) {
-        Intrinsics.checkNotNullParameter(str, "timestamp");
-        Intrinsics.checkNotNullParameter(context, "context");
-        long parseLong = Long.parseLong(str);
+        if (str == null || context == null) return null;
+        long parseLong;
+        try {
+            parseLong = Long.parseLong(str);
+        } catch (NumberFormatException notNumeric) {
+            return null;
+        }
         if (parseLong < 1000000000000L) {
             parseLong *= 1000;
         }
@@ -68,13 +70,8 @@ public final class MediaPlayerUtils {
             int i2 = ((int) j) / 3600000;
             return context.getResources().getQuantityString(R.plurals.hour_count_string, i2, Integer.valueOf(i2));
         } else {
-            Date date = new Date(parseLong);
-            GregorianCalendar gregorianCalendar = new GregorianCalendar();
-            gregorianCalendar.setTime(date);
-            int i3 = gregorianCalendar.get(1);
-            int i4 = gregorianCalendar.get(5);
-            String str2 = new DateFormatSymbols().getShortMonths()[(gregorianCalendar.get(2) + 1) - 1];
-            return str2 + ' ' + i4 + ", " + i3;
+            // Locale-correct short date (e.g. "Sep 10, 2026" / localized equivalent).
+            return DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date(parseLong));
         }
     }
 }

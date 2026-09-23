@@ -5,22 +5,30 @@
     <color name="quality_surface_soft">#F5F1EE</color>
     <color name="quality_text">#21232E</color>
     <color name="quality_secondary">#5C5E6E</color>
-    <color name="quality_accent">#FCBBAB</color>
+    <!-- Glacier Graphite theme: electric logo blue, graphite ink, ice-blue glow. -->
+    <color name="quality_accent">#1A9BF0</color>
     <color name="quality_on_accent">#FFFFFFFF</color>
     <color name="quality_border">#E0DCD8</color>
 
-    <!-- 3D Pastel Claymorphic Theme Colors -->
-    <color name="pastel_mint">#C0E6DE</color>
-    <color name="pastel_mint_pressed">#A9D8CE</color>
-    <color name="pastel_peach">#FCBBAB</color>
-    <color name="pastel_peach_pressed">#F8A693</color>
-    <color name="pastel_lavender">#CAC0FD</color>
-    <color name="pastel_lavender_pressed">#B8ACF5</color>
-    <color name="pastel_yellow">#FCE6AC</color>
-    <color name="pastel_yellow_pressed">#F8D78E</color>
+    <!-- Logo-blue pastel family: ice, sky, steel mist, pale azure. -->
+    <color name="pastel_mint">#BFE2FC</color>
+    <color name="pastel_mint_pressed">#93CCF9</color>
+    <color name="pastel_peach">#A9D6FB</color>
+    <color name="pastel_peach_pressed">#7CBCF8</color>
+    <color name="pastel_lavender">#CBD8EC</color>
+    <color name="pastel_lavender_pressed">#A5BCE0</color>
+    <color name="pastel_yellow">#D9EBFD</color>
+    <color name="pastel_yellow_pressed">#B2D6FA</color>
 
     <color name="pastel_frosted_bar">#4DF7F5F2</color>
     <color name="pastel_circle_btn">#E6FFFFFF</color>
     <color name="pastel_circle_btn_pressed">#D9F0ED</color>
     <color name="pastel_shadow_tint">#1A000000</color>
+    <color name="home_title_accent">#1A9BF0</color>
+    <color name="home_settings_text">#0B6FD6</color>
+    <color name="home_subtitle_text">#64748B</color>
+    <!-- Library badge icon tints (3:1+ on pastel soft backgrounds for graphics). -->
+    <color name="badge_icon_purple">#1A9BF0</color>
+    <color name="badge_icon_teal">#0B6FD6</color>
+    <color name="badge_icon_coral">#E11D48</color>
 </resources>

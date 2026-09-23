@@ -16,12 +16,13 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.SearchView;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.word.way.R;
-import com.word.way.Utils.ToolUi;
+import com.word.way.util.ToolUi;
 import com.word.way.activity.MusicActivity;
 import com.word.way.audio.PreviewPlayer;
 import com.word.way.player.LibraryState;
@@ -29,6 +30,7 @@ import com.word.way.player.LocalAudio;
 import com.word.way.player.MediaPlayerUtils;
 import com.word.way.player.adapter.AudioAdapter;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -47,6 +49,11 @@ public final class LocalAudioPickerFragment extends Fragment {
     private LocalAudio selected;
     private RecyclerView list;
     private TextView empty, title, currentTime, totalTime, summary, previewFeedback;
+    private TextView chipAll, chipRecordings, chipImports, tvChipFavorites, tvSortValue;
+    private ImageView ivChipFavorites;
+    private View chipFavorites;
+    private int activeFilter = 0;
+    private final ArrayList<LocalAudio> fullAudioList = new ArrayList<>();
     private ImageView play;
     private SeekBar seek;
     private SearchView search;
@@ -76,6 +83,22 @@ public final class LocalAudioPickerFragment extends Fragment {
         controls = view.findViewById(R.id.mediaPlayerLayout); statePanel = view.findViewById(R.id.library_state_panel);
         retry = view.findViewById(R.id.library_retry); clear = view.findViewById(R.id.library_clear);
         permissions = view.findViewById(R.id.library_permissions);
+        chipAll = view.findViewById(R.id.chip_all);
+        chipRecordings = view.findViewById(R.id.chip_recordings);
+        chipImports = view.findViewById(R.id.chip_imports);
+        chipFavorites = view.findViewById(R.id.chip_favorites);
+        tvChipFavorites = view.findViewById(R.id.tv_chip_favorites);
+        ivChipFavorites = view.findViewById(R.id.iv_chip_favorites);
+        tvSortValue = view.findViewById(R.id.tv_sort_value);
+
+        if (chipAll != null) chipAll.setOnClickListener(v -> selectFilter(0));
+        if (chipRecordings != null) chipRecordings.setOnClickListener(v -> selectFilter(1));
+        if (chipImports != null) chipImports.setOnClickListener(v -> selectFilter(2));
+        if (chipFavorites != null) chipFavorites.setOnClickListener(v -> selectFilter(3));
+
+        View btnSort = view.findViewById(R.id.btn_sort);
+        if (btnSort != null) btnSort.setOnClickListener(this::showSortPopup);
+
         controls.setVisibility(View.GONE); seek.setEnabled(false);
         list.setLayoutManager(new LinearLayoutManager(requireContext()));
         loader = Executors.newSingleThreadExecutor();
@@ -106,6 +129,89 @@ public final class LocalAudioPickerFragment extends Fragment {
         clear.setOnClickListener(v -> search.setQuery("", false));
         permissions.setOnClickListener(v -> ToolUi.permissionDenied(requireActivity()));
         loadAudio();
+    }
+    public void showSortPopup(View anchor) {
+        if (getContext() == null || anchor == null) return;
+        PopupMenu popup = new PopupMenu(requireContext(), anchor);
+        popup.getMenu().add(0, 1, 0, R.string.library_sort_newest);
+        popup.getMenu().add(0, 2, 1, R.string.library_sort_oldest);
+        popup.getMenu().add(0, 3, 2, R.string.library_sort_name);
+        popup.getMenu().add(0, 4, 3, R.string.library_sort_duration);
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 1) {
+                fullAudioList.sort((a, b) -> b.getDateModified().compareTo(a.getDateModified()));
+                if (tvSortValue != null) tvSortValue.setText(R.string.library_sort_newest);
+            } else if (item.getItemId() == 2) {
+                fullAudioList.sort((a, b) -> a.getDateModified().compareTo(b.getDateModified()));
+                if (tvSortValue != null) tvSortValue.setText(R.string.library_sort_oldest);
+            } else if (item.getItemId() == 3) {
+                fullAudioList.sort((a, b) -> a.getAudioTitle().compareToIgnoreCase(b.getAudioTitle()));
+                if (tvSortValue != null) tvSortValue.setText(R.string.library_sort_name);
+            } else if (item.getItemId() == 4) {
+                fullAudioList.sort((a, b) -> Long.compare(b.getAudioDuration(), a.getAudioDuration()));
+                if (tvSortValue != null) tvSortValue.setText(R.string.library_sort_duration);
+            }
+            applyFilter();
+            return true;
+        });
+        popup.show();
+    }
+    private void selectFilter(int filterIndex) {
+        activeFilter = filterIndex;
+        int activeText = 0xFFFFFFFF;
+        int inactiveText = 0xFF111827;
+        if (chipAll != null) {
+            boolean selected = filterIndex == 0;
+            chipAll.setBackgroundResource(selected ? R.drawable.btn_chip_active_purple : R.drawable.btn_chip_inactive);
+            chipAll.setTextColor(selected ? activeText : inactiveText);
+            chipAll.setSelected(selected);
+        }
+        if (chipRecordings != null) {
+            boolean selected = filterIndex == 1;
+            chipRecordings.setBackgroundResource(selected ? R.drawable.btn_chip_active_purple : R.drawable.btn_chip_inactive);
+            chipRecordings.setTextColor(selected ? activeText : inactiveText);
+            chipRecordings.setSelected(selected);
+        }
+        if (chipImports != null) {
+            boolean selected = filterIndex == 2;
+            chipImports.setBackgroundResource(selected ? R.drawable.btn_chip_active_purple : R.drawable.btn_chip_inactive);
+            chipImports.setTextColor(selected ? activeText : inactiveText);
+            chipImports.setSelected(selected);
+        }
+        if (chipFavorites != null) {
+            boolean selected = filterIndex == 3;
+            chipFavorites.setBackgroundResource(selected ? R.drawable.btn_chip_active_purple : R.drawable.btn_chip_inactive);
+            chipFavorites.setSelected(selected);
+            if (tvChipFavorites != null) tvChipFavorites.setTextColor(selected ? activeText : inactiveText);
+            if (ivChipFavorites != null) ivChipFavorites.setColorFilter(selected ? activeText : inactiveText);
+        }
+        applyFilter();
+    }
+    private void applyFilter() {
+        if (adapter == null) return;
+        ArrayList<LocalAudio> filtered = new ArrayList<>();
+        for (LocalAudio audio : fullAudioList) {
+            if (activeFilter == 0) {
+                filtered.add(audio);
+            } else if (activeFilter == 1) {
+                String name = audio.getAudioTitle();
+                if (name != null && (name.toLowerCase(Locale.ROOT).contains("record") || name.toLowerCase(Locale.ROOT).contains("voice") || name.toLowerCase(Locale.ROOT).contains("mic") || name.toLowerCase(Locale.ROOT).contains("audio_"))) {
+                    filtered.add(audio);
+                }
+            } else if (activeFilter == 2) {
+                String name = audio.getAudioTitle();
+                if (name != null && !(name.toLowerCase(Locale.ROOT).contains("record") || name.toLowerCase(Locale.ROOT).contains("voice") || name.toLowerCase(Locale.ROOT).contains("mic") || name.toLowerCase(Locale.ROOT).contains("audio_"))) {
+                    filtered.add(audio);
+                }
+            } else if (activeFilter == 3) {
+                if (audio.isHighlight()) {
+                    filtered.add(audio);
+                }
+            }
+        }
+        adapter.localAudioLists.clear();
+        adapter.localAudioLists.addAll(filtered);
+        adapter.getFilter().filter(query);
     }
     private void loadAudio() {
         if (getView() == null || loader == null || loader.isShutdown()) return;
@@ -147,6 +253,9 @@ public final class LocalAudioPickerFragment extends Fragment {
                 // Never present a partial query result as a successful library load.
                 if (message != 0) result.clear();
                 loading = false; failureMessage = message; totalCount = result.size();
+                fullAudioList.clear();
+                fullAudioList.addAll(result);
+                if (chipAll != null) chipAll.setText(getString(R.string.library_chip_all, totalCount));
                 adapter = new AudioAdapter(requireContext(), result, (audio, position, clicked) -> {
                     if (clicked.getId() == R.id.select_song) {
                         preview.pause();
@@ -218,8 +327,8 @@ public final class LocalAudioPickerFragment extends Fragment {
         main.removeCallbacks(progress);
         if (list != null) list.setAdapter(null);
         adapter = null; selected = null; list = null; empty = null; title = null; currentTime = null;
-        totalTime = null; play = null; seek = null; search = null; controls = null;
-        summary = null; previewFeedback = null; statePanel = null; retry = null; clear = null; permissions = null;
+        totalTime = null; play = null; seek = null; search = null; summary = null; previewFeedback = null;
+        controls = null; statePanel = null; retry = null; clear = null; permissions = null;
         super.onDestroyView();
     }
 }

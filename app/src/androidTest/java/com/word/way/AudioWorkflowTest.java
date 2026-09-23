@@ -12,7 +12,7 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.rule.GrantPermissionRule;
-import com.word.way.Utils.MyPref;
+import com.word.way.util.MyPref;
 import com.word.way.activity.HoldToSpeakActivity;
 import com.word.way.activity.MainActivity;
 import com.word.way.activity.RecordAudioActivity;

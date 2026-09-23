@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
-import com.word.way.Utils.MyPref;
+import com.word.way.util.MyPref;
 import com.word.way.activity.MySavedAnnounceActivity;
 import com.word.way.player.activity.MusicListActivity;
 import demo.ads.AdsHandler;

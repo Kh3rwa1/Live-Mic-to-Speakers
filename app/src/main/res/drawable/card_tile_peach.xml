@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Frosted glass: sky tint melting to white with a chrome edge. -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-    android:color="@color/pastel_peach_pressed">
+    android:color="#93C4F5">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/pastel_peach" />
+            <gradient
+                android:angle="135"
+                android:startColor="#E0C4DFFB"
+                android:endColor="#F5FAFF" />
             <corners android:radius="24dp" />
+            <stroke android:width="1.5dp" android:color="#D9FFFFFF" />
         </shape>
     </item>
 </ripple>

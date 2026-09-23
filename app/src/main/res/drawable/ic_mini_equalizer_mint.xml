@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16dp"
+    android:height="16dp"
+    android:viewportWidth="16"
+    android:viewportHeight="16">
+    <!-- Bar 1 -->
+    <path android:fillColor="#00DFBA" android:pathData="M2,4 L2,12 A1.25,1.25 0 0 1 0.75,13.25 L0.75,13.25 A1.25,1.25 0 0 1 -0.5,12 L-0.5,4 A1.25,1.25 0 0 1 0.75,2.75 L0.75,2.75 A1.25,1.25 0 0 1 2,4 Z" />
+    <!-- Bar 2 (center tall) -->
+    <path android:fillColor="#00DFBA" android:pathData="M8,1 L8,15 A1.25,1.25 0 0 1 6.75,16.25 L6.75,16.25 A1.25,1.25 0 0 1 5.5,15 L5.5,1 A1.25,1.25 0 0 1 6.75,-0.25 L6.75,-0.25 A1.25,1.25 0 0 1 8,1 Z" />
+    <!-- Bar 3 -->
+    <path android:fillColor="#00DFBA" android:pathData="M14,3 L14,13 A1.25,1.25 0 0 1 12.75,14.25 L12.75,14.25 A1.25,1.25 0 0 1 11.5,13 L11.5,3 A1.25,1.25 0 0 1 12.75,1.75 L12.75,1.75 A1.25,1.25 0 0 1 14,3 Z" />
+</vector>
