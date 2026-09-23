@@ -16,6 +16,12 @@ Use the checks on the exact commit you plan to merge or release. The current non
 
 App build and device-test jobs have read-only repository permissions and do not persist checkout credentials. Actions are pinned to resolved commits, and Gradle validates wrapper JARs. An isolated, same-repository PR reporter can read Actions logs and write concise failure comments; it never checks out or executes application code. Weekly Dependabot PRs do not merge themselves. The owner has explicitly requested merging PR #7 after its final checks pass; that is separate from production publication.
 
+## Live-audio and recording changes in this pass
+
+- **Low-latency monitoring:** the live session uses the device's native output sample rate and burst, requests the API 26+ low-latency `AudioTrack` path, and sizes each buffer to a small multiple of the native burst but never below `getMinBufferSize`. The worker now blocks on the record device instead of polling with `Thread.sleep`; stop still returns immediately and release stays bounded to about one buffer. Debug builds log rate, burst and `AudioTrack.getUnderrunCount()` for on-device evidence; release builds are silent.
+- **Hearing safety:** a pure-Java gain stage applies a 300 ms start-up ramp, a persisted user gain and a monotonic soft limiter whose output can never reach full scale. A sustained near-full-scale window latches a `FEEDBACK_DETECTED` state, mutes output and surfaces guidance to use headphones or lower the volume. JVM tests cover the ramp, limiter bounds, feedback trigger/non-trigger and reset between sessions. Feedback detection has not yet been measured against a real speaker.
+- **Recording robustness:** finalized `.pending` files use readable timestamp names with a numeric collision suffix, and publication appends a suffix instead of overwriting when the target exists. A background recovery step when history opens validates non-empty pending files, publishes the valid ones and removes only empty or invalid ones, without touching the actively recording file. History rows gained rename and delete with confirmation, executed off the UI thread and notifying `RecordingChanges` on success. Unit tests cover naming, collision, recovery and rename logic; an instrumentation test covers the file operations on device.
+
 ## Where to find the evidence
 
 In the successful Actions run for the chosen commit, download:
@@ -28,7 +34,7 @@ Run CI helper checks locally with `python3 -m unittest discover -s tools/tests -
 
 ## Still requires physical-device or owner sign-off
 
-1. **Audio:** measure end-to-end latency, underruns and battery use on representative phones and wired/USB/Bluetooth routes. Test calls, focus loss, disconnection and explicit restart. Begin at low volume; do not perform feedback tests at high speaker volume.
+1. **Audio:** measure end-to-end latency, underruns and battery use on representative phones and wired/USB/Bluetooth routes. Test calls, focus loss, disconnection and explicit restart. Confirm the debug rate/burst/underrun logs on at least one low-end and one flagship phone, verify feedback detection with a real speaker at low volume, and measure battery over ten minutes of live monitoring. Begin at low volume; do not perform feedback tests at high speaker volume.
 2. **Visual/accessibility:** UI design is deferred. Inspect the collected native images and test TalkBack, keyboard focus, large text, RTL, cutouts and resizing. Bounds assertions and screenshot capture are not visual or screen-reader sign-off. Library/history screens still need the wider design/localization audit.
 3. **Production privacy:** use the real ad configuration and verify regional UMP choices, offline/error/revocation behavior, mediation traffic, privacy policy and Data Safety disclosures. These tests disable ads; they do not validate live ad behavior.
 4. **Signed delivery:** follow [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md), retain the existing app identity/signing key where applicable, advance the published version, and test the actual signed artifact. Run it on a 16 KB device or emulator as well: static ELF/ZIP checks do not certify every runtime dependency or the Play-generated APKs from an app bundle.

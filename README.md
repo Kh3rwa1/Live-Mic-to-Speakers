@@ -1,6 +1,50 @@
 # Live Mic to Speakers
 
-Android utility for live microphone monitoring, hold-to-record announcements, saved recordings and local audio playback.
+Turn your phone into a pocket PA: live microphone monitoring, hold-to-record announcements, saved
+recordings and local audio playback — all on-device, with no account.
+
+## What it does
+
+Live Mic to Speakers amplifies your voice through the phone speaker in real time, records
+press-and-hold announcements, keeps a library of saved clips, and plays them back. Everything runs
+locally; recordings stay in the app's own folders and are removed when you uninstall.
+
+### Features
+
+- **Live microphone** — real-time monitoring with an input-level meter, an output-route readout and
+  an adjustable monitoring-gain slider.
+- **Hold to speak** — press and hold to record an announcement; release to save, slide away to cancel.
+- **Recorder** — standalone AAC (`.m4a`) recording with a live level meter.
+- **Audio library** — search, sort, preview, play and share; rename or delete saved recordings with
+  a confirmation step.
+- **Crash-safe saves** — a clip is only listed once it is finalized, and unfinished saves are
+  recovered the next time the library opens.
+- **Privacy-minded ads** — ad measurement is deferred until consent allows it, and missing or
+  offline ads never block navigation.
+
+### Screenshots
+
+Native screenshots are produced by the device-test job (API 24/34/36/37, including 200% font scale)
+and uploaded with the test report. The four core screens are live microphone, hold to speak,
+recorder and settings.
+
+![Live microphone](app/build/quality-screenshots/live.png)
+![Hold to speak](app/build/quality-screenshots/hold.png)
+![Recorder](app/build/quality-screenshots/record.png)
+![Settings](app/build/quality-screenshots/settings.png)
+
+> The paths above are populated on a device/emulator run via
+> `bash ./gradlew :app:connectedDebugAndroidTest` (see `tools/run_device_checks.sh`); they are not
+> committed, so the images render only where the device-test artifacts have been extracted.
+
+### Safety first
+
+- **Start at low speaker volume** and keep the microphone away from the speaker. Acoustic feedback
+  can become very loud very quickly.
+- **Headphones are safer.** Live monitoring detects runaway feedback and stops automatically, but it
+  cannot prevent every case.
+- Disconnecting the output stops monitoring; you must start it again deliberately.
+- The input meter is a relative indicator, not a calibrated sound-pressure meter.
 
 ## Build and test
 

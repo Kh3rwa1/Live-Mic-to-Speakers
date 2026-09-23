@@ -19,6 +19,13 @@ This engineering pass deliberately defers visual design. It does not change layo
 - Playback uses modern audio-focus requests on API 26+, retains the API 24 fallback and pauses on noisy output changes. Leaving the screen pauses playback before asynchronous unbinding; prior track/position/intent restoration remains intact.
 - Existing consent gating, foreground-only recording, finalized-file publication and narrowly scoped read-only sharing are preserved.
 
+## Audio and recording improvements
+
+- Live monitoring probes the native output sample rate/burst and requests the API 26+ low-latency `AudioTrack` path, with device-paced blocking reads replacing sleep polling. Route/focus handling and AEC/NS behavior are unchanged.
+- A pure-Java gain stage adds a 300 ms start-up ramp, a persisted user gain and a soft limiter below full scale, and latches acoustic feedback into a typed `FEEDBACK_DETECTED` failure with muted output.
+- Finalized recordings use readable timestamp pending names and collision-suffixed publication; an off-UI-thread recovery step on opening history republishes valid leftovers and deletes only empty/invalid ones. History rows gained rename and delete with confirmation.
+- Ad identifiers were moved behind validated `AdsHandler` accessors, and `GoogleAds.checkConnection` dropped its unreachable `NetworkInfo` branch now that `minSdk 24` guarantees `NetworkCapabilities`. `MyPref` was reduced to the members actually used, and the directory helpers were renamed to `holdToSpeakDirectory`/`recordingsDirectory`.
+
 ## Regression and maintenance safeguards
 
 - Unit checks cover playback time bounds, consistent playback intent, immutable state and error identity.
