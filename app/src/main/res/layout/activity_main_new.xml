@@ -74,7 +74,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="vertical"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
@@ -84,6 +84,8 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:minHeight="112dp"
                 android:baselineAligned="false"
                 android:orientation="horizontal"
                 android:layout_marginTop="2dp"
@@ -94,7 +96,7 @@
                     android:id="@+id/cv_live_microphone"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:minHeight="104dp"
+                    android:minHeight="112dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     android:background="@drawable/card_tile_mint"
@@ -108,12 +110,15 @@
 
                     <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="48dp">
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:minHeight="48dp">
 
                         <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:scaleType="fitCenter"
+                            android:padding="6dp"
                             android:src="@drawable/ic_home_live_mic"
                             android:importantForAccessibility="no" />
 
@@ -147,7 +152,7 @@
 
                     <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
+                        android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
                         android:paddingStart="10dp"
@@ -198,7 +203,7 @@
                     android:id="@+id/cv_hold_to_speak"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:minHeight="104dp"
+                    android:minHeight="112dp"
                     android:layout_weight="1"
                     android:layout_marginStart="6dp"
                     android:background="@drawable/card_tile_peach"
@@ -212,19 +217,22 @@
 
                     <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="48dp">
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:minHeight="48dp">
 
                         <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:scaleType="fitCenter"
+                            android:padding="6dp"
                             android:src="@drawable/ic_home_hold_speaker"
                             android:importantForAccessibility="no" />
                     </FrameLayout>
 
                     <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
+                        android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
                         android:paddingStart="10dp"
@@ -286,6 +294,8 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:minHeight="112dp"
                 android:baselineAligned="false"
                 android:orientation="horizontal"
                 android:layout_marginBottom="6dp">
@@ -295,7 +305,7 @@
                     android:id="@+id/cv_record_audio"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:minHeight="104dp"
+                    android:minHeight="112dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     android:background="@drawable/card_tile_lavender"
@@ -309,19 +319,22 @@
 
                     <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="48dp">
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:minHeight="48dp">
 
                         <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:scaleType="fitCenter"
+                            android:padding="6dp"
                             android:src="@drawable/ic_home_record_mic"
                             android:importantForAccessibility="no" />
                     </FrameLayout>
 
                     <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
+                        android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
                         android:paddingStart="10dp"
@@ -372,7 +385,7 @@
                     android:id="@+id/cv_music_list"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:minHeight="104dp"
+                    android:minHeight="112dp"
                     android:layout_weight="1"
                     android:layout_marginStart="6dp"
                     android:background="@drawable/card_tile_yellow"
@@ -386,19 +399,22 @@
 
                     <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="48dp">
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:minHeight="48dp">
 
                         <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:scaleType="fitCenter"
+                            android:padding="6dp"
                             android:src="@drawable/ic_home_library_folder"
                             android:importantForAccessibility="no" />
                     </FrameLayout>
 
                     <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
+                        android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
                         android:paddingStart="10dp"
