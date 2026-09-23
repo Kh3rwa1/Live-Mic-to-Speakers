@@ -8,3 +8,20 @@
 
 # Retain metadata used by AndroidX and reflection-based libraries.
 -keepattributes RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations,AnnotationDefault,Signature,InnerClasses,EnclosingMethod
+
+# Room Database implementations instantiated dynamically via reflection
+-keep class * extends androidx.room.RoomDatabase {
+    <init>();
+}
+-dontwarn androidx.room.paging.**
+
+# WorkManager components and database implementations
+-keep class androidx.work.impl.WorkDatabase_Impl {
+    <init>();
+}
+-keep class * extends androidx.work.ListenableWorker {
+    <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+-keep class * extends androidx.work.Worker {
+    <init>(android.content.Context, androidx.work.WorkerParameters);
+}
