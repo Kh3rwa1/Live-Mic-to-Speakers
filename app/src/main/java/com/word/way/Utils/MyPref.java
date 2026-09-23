@@ -3,82 +3,41 @@ package com.word.way.Utils;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Environment;
-import android.util.Log;
-import android.widget.Toast;
-import com.word.way.R;
 import java.io.File;
-import java.util.Set;
 
-
+/** App preferences. Ad identifiers and recording contents are never stored here. */
 public class MyPref {
-    public static final String HoldSpeakActivity = "HoldSpeakActivity";
-    public static final String LiveMicrophoneActivity = "LiveMicrophoneActivity";
-    public static final String MainActivity = "MainActivity";
-    public static final String MusicActivity = "MusicActivity";
-    public static final String MusicListActivity = "MusicListActivity";
-    public static final String MySavedAnnounceActivity = "MySavedAnnounceActivity";
-    public static final String MySavedHoldSpeakActivity = "MySavedHoldSpeakActivity";
     private static final String PREF_NAME = "MIC_TO_SPEAK";
     /** Persisted live-monitoring gain, 0..1. */
     public static final String LiveMonitoringGain = "LiveMonitoringGain";
-    public static final String RecordAudioActivity = "RecordAudioActivity";
-    public static final String RecordingListHoldSpeakActivity = "RecordingListHoldSpeakActivity";
-    public static final String RecordingListRecordAudioActivity = "RecordingListRecordAudioActivity";
-    public static final String StartActivity = "StartActivity";
-    SharedPreferences.Editor editor;
-    Context mContext;
-    SharedPreferences pref;
+    private final SharedPreferences pref;
+    private final SharedPreferences.Editor editor;
 
     public MyPref(Context context) {
-        this.mContext = context;
-        SharedPreferences sharedPreferences = context.getSharedPreferences(PREF_NAME, 0);
-        this.pref = sharedPreferences;
-        this.editor = sharedPreferences.edit();
+        this.pref = context.getSharedPreferences(PREF_NAME, 0);
+        this.editor = this.pref.edit();
     }
 
-    public static String creatsDirsforholdspeak(Context context) {
+    /** Hold-to-speak recordings folder (external app storage, internal as fallback). */
+    public static String holdToSpeakDirectory(Context context) {
+        return directory(context, "HPRecording");
+    }
+
+    /** General recordings folder (external app storage, internal as fallback). */
+    public static String recordingsDirectory(Context context) {
+        return directory(context, "Recording");
+    }
+
+    private static String directory(Context context, String name) {
         File baseDir = context.getExternalFilesDir(Environment.DIRECTORY_MUSIC);
         if (baseDir == null) {
             baseDir = context.getFilesDir();
         }
-        File file = new File(baseDir, "HPRecording");
+        File file = new File(baseDir, name);
         if (!file.exists()) {
             file.mkdirs();
         }
         return file.getAbsolutePath();
-    }
-
-    public static String creatsDirsforApp(Context context) {
-        File baseDir = context.getExternalFilesDir(Environment.DIRECTORY_MUSIC);
-        if (baseDir == null) {
-            baseDir = context.getFilesDir();
-        }
-        File file = new File(baseDir, "Recording");
-        if (!file.exists()) {
-            file.mkdirs();
-        }
-        return file.getAbsolutePath();
-    }
-
-    public void setPref(String str, Set<String> set) {
-        this.editor.putStringSet(str, set);
-        this.editor.apply();
-    }
-
-    public Set<String> getPref(String str, Set<String> set) {
-        return this.pref.getStringSet(str, set);
-    }
-
-    public Integer getPref(String str, int i) {
-        return Integer.valueOf(this.pref.getInt(str, i));
-    }
-
-    public String getPref(String str, String str2) {
-        return this.pref.getString(str, str2);
-    }
-
-    public boolean getPref(String str, boolean z) {
-        return this.pref.getBoolean(str, z);
     }
 
     public void setPref(String str, float value) {
@@ -89,5 +48,4 @@ public class MyPref {
     public float getPref(String str, float fallback) {
         return this.pref.getFloat(str, fallback);
     }
-
 }

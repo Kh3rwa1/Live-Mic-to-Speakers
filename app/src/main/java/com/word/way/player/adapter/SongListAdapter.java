@@ -52,7 +52,7 @@ public class SongListAdapter extends RecyclerView.Adapter<SongListAdapter.AlbumV
                 SongListModel audio = current();
                 if (audio == null) return;
                 context.startActivity(new Intent(context, MusicActivity.class).putExtra("SONG_URI", audio.getData())
-                        .putExtra("SONG_INDEX", getBindingAdapterPosition()).putExtra("SONG_NAME", audio.getDisplayName()));
+                        .putExtra("SONG_NAME", audio.getDisplayName()));
             });
             view.findViewById(R.id.share_recording).setOnClickListener(v -> {
                 SongListModel audio = current();

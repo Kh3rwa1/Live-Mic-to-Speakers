@@ -3,6 +3,8 @@ package com.word.way.activity;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.LinearGradient;
+import android.graphics.Shader;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -25,6 +27,7 @@ import com.word.way.Utils.ToolUi;
 import com.word.way.audio.PreviewPlayer;
 import com.word.way.audio.RecordingController;
 import com.word.way.audio.RecordingSession;
+import com.word.way.view.InteractiveWaveVisualizerView;
 import demo.ads.GoogleAds;
 import java.io.File;
 import java.util.Locale;
@@ -35,18 +38,27 @@ public class RecordAudioActivity extends AppCompatActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ImageView toggle, play;
     private TextView timer, label;
+    private TextView timerStatus, recordStatusDesc;
+    private InteractiveWaveVisualizerView visualizer;
     private com.airbnb.lottie.LottieAnimationView lottieRecordWave;
     private File lastSaved;
     private long startedAt;
     private boolean visible;
-    private final Runnable tick = new Runnable() {
+    private static final class TimerTick implements Runnable {
+        private final java.lang.ref.WeakReference<RecordAudioActivity> owner;
+        TimerTick(RecordAudioActivity activity) { owner = new java.lang.ref.WeakReference<>(activity); }
         @Override public void run() {
-            if (recording.getState() != RecordingController.State.RECORDING) return;
-            long seconds = (SystemClock.elapsedRealtime() - startedAt) / 1000;
-            timer.setText(String.format(Locale.getDefault(), "%02d:%02d:%02d", seconds / 3600, (seconds / 60) % 60, seconds % 60));
-            handler.postDelayed(this, 250);
+            RecordAudioActivity activity = owner.get();
+            if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+            if (activity.recording == null
+                    || activity.recording.getState() != RecordingController.State.RECORDING) return;
+            long seconds = (SystemClock.elapsedRealtime() - activity.startedAt) / 1000;
+            if (activity.timer != null) activity.timer.setText(String.format(Locale.getDefault(),
+                    "%02d:%02d:%02d", seconds / 3600, (seconds / 60) % 60, seconds % 60));
+            activity.handler.postDelayed(this, 250);
         }
-    };
+    }
+    private final Runnable tick = new TimerTick(this);
     private final ActivityResultLauncher<String> permission = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(), granted -> {
                 message(getString(granted ? R.string.tool_permission_record : R.string.tool_permission_denied));
@@ -59,18 +71,49 @@ public class RecordAudioActivity extends AppCompatActivity {
         GoogleAds.getInstance().admobBanner(this, findViewById(R.id.nativeLay));
         toggle = findViewById(R.id.iv_start_stop_new); play = findViewById(R.id.iv_play);
         timer = findViewById(R.id.tv_timer); label = findViewById(R.id.tv_start_stop_new);
+        timerStatus = findViewById(R.id.tv_timer_status);
+        recordStatusDesc = findViewById(R.id.tv_record_status_desc);
+        visualizer = findViewById(R.id.visualizer_record);
+        if (visualizer != null) {
+            visualizer.setColorTheme(InteractiveWaveVisualizerView.THEME_HOLD_TO_SPEAK);
+        }
+        TextView title = findViewById(R.id.tv_tittle);
+        if (title != null) {
+            // Locale-safe full-text gradient; no hardcoded English word widths.
+            title.post(() -> {
+                float textWidth = title.getPaint().measureText(title.getText().toString());
+                if (textWidth > 0) {
+                    title.getPaint().setShader(new LinearGradient(
+                            0, 0, textWidth, 0,
+                            new int[]{0xFF111827, 0xFF1A9BF0, 0xFF0B6FD6, 0xFF8FB8DD},
+                            new float[]{0.0f, 0.45f, 0.75f, 1.0f},
+                            Shader.TileMode.CLAMP));
+                    title.invalidate();
+                }
+            });
+        }
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(timer, 20, 44, 1, TypedValue.COMPLEX_UNIT_SP);
         lottieRecordWave = findViewById(R.id.lottie_record_wave);
         if (lottieRecordWave != null) lottieRecordWave.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         findViewById(R.id.iv_back).setOnClickListener(v -> finish());
+        androidx.core.widget.NestedScrollView scroller = findViewById(R.id.scroller);
+        if (scroller != null) {
+            scroller.setOverScrollMode(View.OVER_SCROLL_NEVER);
+            scroller.setVerticalScrollBarEnabled(false);
+        }
+        ImageView mic = findViewById(R.id.iv_mic);
+        if (mic != null) {
+            mic.setOnClickListener(v -> toggle.performClick());
+        }
         findViewById(R.id.iv_history).setOnClickListener(v -> startActivity(new Intent(this, MySavedAnnounceActivity.class)));
         if (state != null && state.getString("lastSaved") != null) lastSaved = new File(state.getString("lastSaved"));
+        if (state != null) startedAt = state.getLong("startedAt", 0);
         preview = new PreviewPlayer(this, new PreviewPlayer.Listener() {
             public void onChanged() { updatePreview(); }
             public void onCompleted() { preview.stop(); }
             public void onError() { message(getString(R.string.tool_play_error)); }
         });
-        recording = RecordingSession.controller(this, new File(MyPref.creatsDirsforApp(this)), new RecordingController.Listener<File>() {
+        recording = RecordingSession.controller(this, new File(MyPref.recordingsDirectory(this)), new RecordingController.Listener<File>() {
             public void onStateChanged() { updateControls(); }
             public void onFinished(File file, boolean keep) {
                 if (file != null) { lastSaved = file; message(getString(R.string.tool_saved_message)); }
@@ -97,9 +140,18 @@ public class RecordAudioActivity extends AppCompatActivity {
     private void updateControls() {
         RecordingController.State state = recording.getState();
         boolean active = recording.isActive();
-        toggle.setImageResource(active ? R.drawable.tool_stop : R.drawable.tool_record);
+        toggle.setImageResource(active ? R.drawable.tool_stop : R.drawable.ic_record_circle_white);
         toggle.setEnabled(state != RecordingController.State.STOPPING && state != RecordingController.State.CLOSED);
         toggle.setContentDescription(getString(active ? R.string.tool_stop_recording : R.string.tool_start_recording));
+        if (visualizer != null) {
+            visualizer.setRecording(active);
+        }
+        if (timerStatus != null) {
+            timerStatus.setText(active ? R.string.tool_recording_in_progress : R.string.tool_ready_to_record);
+        }
+        if (recordStatusDesc != null) {
+            recordStatusDesc.setText(active ? R.string.tool_record_status_saving_hint : R.string.tool_record_status_help);
+        }
         if (active) {
             if (lottieRecordWave != null && !lottieRecordWave.isAnimating()) {
                 lottieRecordWave.setVisibility(View.VISIBLE);
@@ -108,8 +160,8 @@ public class RecordAudioActivity extends AppCompatActivity {
             toggle.animate().scaleX(1.08f).scaleY(1.08f).setDuration(250).start();
         } else {
             if (lottieRecordWave != null) {
-                lottieRecordWave.cancelAnimation();
-                lottieRecordWave.setVisibility(View.GONE);
+                lottieRecordWave.pauseAnimation();
+                lottieRecordWave.setVisibility(View.VISIBLE);
             }
             toggle.animate().scaleX(1.0f).scaleY(1.0f).setDuration(200).start();
         }
@@ -119,7 +171,7 @@ public class RecordAudioActivity extends AppCompatActivity {
         if (feedback != null) {
             feedback.setText(state == RecordingController.State.STARTING ? R.string.tool_preparing
                     : state == RecordingController.State.STOPPING ? R.string.tool_saving
-                    : state == RecordingController.State.RECORDING ? R.string.tool_mic_active : R.string.studio_ready);
+                    : state == RecordingController.State.RECORDING ? R.string.tool_record_status_recording : R.string.studio_ready);
         }
         if (state == RecordingController.State.RECORDING && startedAt == 0) {
             startedAt = SystemClock.elapsedRealtime(); handler.post(tick);
@@ -137,8 +189,10 @@ public class RecordAudioActivity extends AppCompatActivity {
     }
     private void message(String text) { if (visible) Toast.makeText(this, text, Toast.LENGTH_LONG).show(); }
     @Override protected void onStart() { super.onStart(); visible = true; }
+    // Consent is home-screen only to avoid interrupting recording.
     @Override protected void onSaveInstanceState(Bundle state) {
         if (lastSaved != null) state.putString("lastSaved", lastSaved.getAbsolutePath());
+        if (startedAt != 0) state.putLong("startedAt", startedAt);
         super.onSaveInstanceState(state);
     }
     @Override protected void onStop() {

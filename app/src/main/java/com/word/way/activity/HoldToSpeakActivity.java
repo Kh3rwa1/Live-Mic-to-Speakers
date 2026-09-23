@@ -14,6 +14,8 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import android.graphics.LinearGradient;
+import android.graphics.Shader;
 import com.word.way.R;
 import com.word.way.Utils.EUGeneralClass;
 import com.word.way.Utils.MyPref;
@@ -21,6 +23,7 @@ import com.word.way.Utils.ToolUi;
 import com.word.way.audio.PreviewPlayer;
 import com.word.way.audio.RecordingController;
 import com.word.way.audio.RecordingSession;
+import com.word.way.view.InteractiveWaveVisualizerView;
 import demo.ads.GoogleAds;
 import java.io.File;
 import java.util.ArrayDeque;
@@ -32,6 +35,7 @@ public class HoldToSpeakActivity extends AppCompatActivity {
     private final Queue<File> queue = new ArrayDeque<>();
     private PreviewPlayer preview;
     private ImageView button, mic, play;
+    private InteractiveWaveVisualizerView visualizer;
     private com.airbnb.lottie.LottieAnimationView lottieVoiceWave;
     private boolean suppressClick, visible, held;
     private final ActivityResultLauncher<String> permission = registerForActivityResult(
@@ -46,9 +50,45 @@ public class HoldToSpeakActivity extends AppCompatActivity {
         GoogleAds.getInstance().admobBanner(this, findViewById(R.id.nativeLay));
         button = findViewById(R.id.iv_start_stop_new); mic = findViewById(R.id.iv_mic); play = findViewById(R.id.iv_play);
         lottieVoiceWave = findViewById(R.id.lottie_voice_wave);
+        visualizer = findViewById(R.id.visualizer_hold);
+        if (visualizer != null) {
+            visualizer.setColorTheme(InteractiveWaveVisualizerView.THEME_HOLD_TO_SPEAK);
+        }
+        TextView title = findViewById(R.id.tv_tittle);
+        if (title != null) {
+            title.post(() -> {
+                float textWidth = title.getPaint().measureText(title.getText().toString());
+                if (textWidth > 0) {
+                    title.getPaint().setShader(new LinearGradient(
+                            0, 0, textWidth, 0,
+                            new int[]{0xFF111827, 0xFF111827, 0xFF0B6FD6, 0xFF4A7AB5, 0xFF8FB8DD},
+                            new float[]{0.0f, 0.54f, 0.64f, 0.84f, 1.0f},
+                            Shader.TileMode.CLAMP));
+                    title.invalidate();
+                }
+            });
+        }
+        View howItWorks = findViewById(R.id.btn_how_it_works);
+        View holdGuide = findViewById(R.id.card_hold_guide);
+        View.OnClickListener showGuide = v -> new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.tool_how_it_works_title)
+                .setMessage(R.string.tool_how_it_works_message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+        if (howItWorks != null) {
+            howItWorks.setOnClickListener(showGuide);
+        }
+        if (holdGuide != null) {
+            holdGuide.setOnClickListener(showGuide);
+        }
         ToolUi.button(mic);
         if (lottieVoiceWave != null) lottieVoiceWave.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         findViewById(R.id.iv_back).setOnClickListener(v -> finish());
+        androidx.core.widget.NestedScrollView scroller = findViewById(R.id.scroller);
+        if (scroller != null) {
+            scroller.setOverScrollMode(View.OVER_SCROLL_NEVER);
+            scroller.setVerticalScrollBarEnabled(false);
+        }
         findViewById(R.id.iv_history).setOnClickListener(v -> startActivity(new Intent(this, MySavedHoldtoSpeakActivity.class)));
         if (state != null) {
             ArrayList<String> paths = state.getStringArrayList("queuedClips");
@@ -64,7 +104,7 @@ public class HoldToSpeakActivity extends AppCompatActivity {
             public void onCompleted() { preview.stop(); if (!queue.isEmpty() && visible) playNext(); }
             public void onError() { message(getString(R.string.tool_play_error)); }
         });
-        recording = RecordingSession.controller(this, new File(MyPref.creatsDirsforholdspeak(this)), new RecordingController.Listener<File>() {
+        recording = RecordingSession.controller(this, new File(MyPref.holdToSpeakDirectory(this)), new RecordingController.Listener<File>() {
             public void onStateChanged() { updateControls(); }
             public void onFinished(File file, boolean keep) {
                 if (file != null) { queue.offer(file); message(getString(R.string.tool_saved_message)); }
@@ -146,11 +186,15 @@ public class HoldToSpeakActivity extends AppCompatActivity {
     private void updateControls() {
         RecordingController.State state = recording.getState();
         boolean active = recording.isActive();
-        button.setImageResource(active ? R.drawable.tool_stop : R.drawable.tool_record);
+        button.setImageResource(active ? R.drawable.tool_stop : R.drawable.ic_mic_white);
         button.setEnabled(state != RecordingController.State.STOPPING && state != RecordingController.State.CLOSED);
         button.setContentDescription(getString(active ? R.string.tool_stop_recording : R.string.tool_hold_accessibility));
         mic.setContentDescription(getString(active ? R.string.tool_stop_recording : R.string.tool_hold_accessibility));
-        mic.setImageResource(R.drawable.hero_mic_3d);
+        mic.setImageResource(R.drawable.ic_home_hold_speaker);
+        if (visualizer != null) {
+            visualizer.setRecording(active);
+            visualizer.setAudioLevel(active ? 75 : 0);
+        }
         if (active) {
             if (lottieVoiceWave != null && !lottieVoiceWave.isAnimating()) {
                 lottieVoiceWave.setVisibility(View.VISIBLE);
@@ -168,7 +212,7 @@ public class HoldToSpeakActivity extends AppCompatActivity {
         }
         ((TextView) findViewById(R.id.tv_start_stop_new)).setText(state == RecordingController.State.STARTING ? R.string.tool_preparing
                 : state == RecordingController.State.STOPPING ? R.string.tool_saving
-                : active ? R.string.tool_hold_active : R.string.tool_hold_idle);
+                : active ? R.string.tool_hold_active : R.string.hold_to_speak_caps);
         updatePreview();
     }
     private void updatePreview() {
@@ -188,6 +232,7 @@ public class HoldToSpeakActivity extends AppCompatActivity {
     }
     private void message(String text) { if (visible) Toast.makeText(this, text, Toast.LENGTH_LONG).show(); }
     @Override protected void onStart() { super.onStart(); visible = true; }
+    // Consent is home-screen only to avoid interrupting hold-to-record.
     @Override protected void onSaveInstanceState(Bundle state) {
         ArrayList<String> paths = new ArrayList<>();
         for (File file : queue) if (file.isFile()) paths.add(file.getAbsolutePath());
@@ -195,7 +240,12 @@ public class HoldToSpeakActivity extends AppCompatActivity {
         super.onSaveInstanceState(state);
     }
     @Override protected void onStop() {
-        visible = false; held = false; recording.stop(true); preview.stop(); super.onStop();
+        visible = false; held = false; recording.stop(true); preview.stop();
+        if (visualizer != null) {
+            visualizer.setRecording(false);
+            visualizer.setAudioLevel(0);
+        }
+        super.onStop();
     }
     @Override protected void onDestroy() { recording.close(); preview.close(); super.onDestroy(); }
 }

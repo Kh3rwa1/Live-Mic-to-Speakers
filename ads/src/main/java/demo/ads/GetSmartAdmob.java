@@ -13,15 +13,15 @@ public class GetSmartAdmob {
     }
     public GetSmartAdmob execute() {
         if (ids != null) {
-            if (ids.length > 0) AdsHandler.bannerId = ids[0];
-            if (ids.length > 1) AdsHandler.nativeId = ids[1];
-            if (ids.length > 2) AdsHandler.interstitialId = ids[2];
-            if (ids.length > 3) AdsHandler.openAds = ids[3];
-            if (ids.length > 4) AdsHandler.rewardedId = ids[4];
-            if (ids.length > 5) AdsHandler.nativeAdvanceId = ids[5];
+            if (ids.length > 0) AdsHandler.setBannerId(ids[0]);
+            if (ids.length > 1) AdsHandler.setNativeId(ids[1]);
+            if (ids.length > 2) AdsHandler.setInterstitialId(ids[2]);
+            if (ids.length > 3) AdsHandler.setOpenAds(ids[3]);
+            if (ids.length > 4) AdsHandler.setRewardedId(ids[4]);
+            if (ids.length > 5) AdsHandler.setNativeAdvanceId(ids[5]);
         }
         if (AdsApplication.appOpenManager == null && AdsApplication.getInstance() != null
-                && AdsHandler.openAds != null && !AdsHandler.openAds.isEmpty() && !"0".equals(AdsHandler.openAds)) {
+                && !AdsHandler.getOpenAds().isEmpty() && !"0".equals(AdsHandler.getOpenAds())) {
             AdsApplication.appOpenManager = new AppOpenManager(AdsApplication.getInstance());
         }
         new Handler(Looper.getMainLooper()).post(() -> { if (listener != null) listener.onFinish(true); });

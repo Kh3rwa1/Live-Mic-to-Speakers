@@ -4,7 +4,8 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.SystemClock;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -43,8 +44,14 @@ public final class GoogleAds {
     public static boolean checkConnection(Context context) {
         try {
             ConnectivityManager manager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-            NetworkInfo network = manager == null ? null : manager.getActiveNetworkInfo();
-            return network != null && network.isConnected();
+            if (manager == null) return false;
+            // minSdk 24 means NetworkCapabilities is always available; deprecated NetworkInfo is gone.
+            Network active = manager.getActiveNetwork();
+            if (active == null) return false;
+            NetworkCapabilities caps = manager.getNetworkCapabilities(active);
+            // INTERNET only — VALIDATED is too strict (VPNs/captive portals/emulators
+            // report INTERNET without VALIDATED and would otherwise block all ad loads).
+            return caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
         } catch (RuntimeException error) { return false; }
     }
     private static boolean validId(String id) { return id != null && !id.trim().isEmpty() && !"0".equals(id); }
@@ -99,43 +106,88 @@ public final class GoogleAds {
             if (closed) return;
             if (!AdsHandler.isAdsOn()) { clear(); return; }
             if (!active() || loading || banner != null || nativeAd != null || !checkConnection(host)) return;
-            String id;
-            if (layout == 0) {
-                id = AdsHandler.bannerId;
-            } else if (layout == R.layout.big_ad_unified) {
-                id = validId(AdsHandler.nativeAdvanceId) ? AdsHandler.nativeAdvanceId : AdsHandler.nativeId;
-            } else {
-                id = validId(AdsHandler.nativeId) ? AdsHandler.nativeId : AdsHandler.nativeAdvanceId;
-            }
-            if (!validId(id)) return;
-            loading = true;
             long ticket = ++generation;
             if (layout == 0) {
-                AdView view = new AdView(host);
-                banner = view;
-                view.setAdSize(AdSize.BANNER); view.setAdUnitId(id);
-                container.removeAllViews(); container.addView(view);
-                view.setAdListener(new AdListener() {
-                    @Override public void onAdLoaded() {
-                        if (ticket != generation || closed) return;
-                        loading = false;
-                        if (active()) container.setVisibility(View.VISIBLE); else clear();
+                if (validId(AdsHandler.getBannerId())) {
+                    loadBanner(ticket, AdsHandler.getBannerId(), true);
+                } else {
+                    String fallbackId = validId(AdsHandler.getNativeId()) ? AdsHandler.getNativeId() : AdsHandler.getNativeAdvanceId();
+                    if (validId(fallbackId)) {
+                        loadNative(ticket, fallbackId, R.layout.small_ad_unified, false);
                     }
-                    @Override public void onAdFailedToLoad(LoadAdError error) { if (ticket == generation) clear(); }
-                });
-                view.loadAd(new AdRequest.Builder().build());
+                }
             } else {
-                new AdLoader.Builder(host.getApplicationContext(), id).forNativeAd(loaded -> {
-                    if (ticket != generation || !active()) { loaded.destroy(); if (ticket == generation) loading = false; return; }
-                    loading = false; nativeAd = loaded;
-                    NativeAdView view = (NativeAdView) LayoutInflater.from(host).inflate(layout, container, false);
-                    populate(loaded, view);
-                    container.removeAllViews(); container.addView(view); container.setVisibility(View.VISIBLE);
-                }).withAdListener(new AdListener() {
-                    @Override public void onAdFailedToLoad(LoadAdError error) { if (ticket == generation) clear(); }
-                }).build().loadAd(new AdRequest.Builder().build());
+                String id = layout == R.layout.big_ad_unified
+                        ? (validId(AdsHandler.getNativeAdvanceId()) ? AdsHandler.getNativeAdvanceId() : AdsHandler.getNativeId())
+                        : (validId(AdsHandler.getNativeId()) ? AdsHandler.getNativeId() : AdsHandler.getNativeAdvanceId());
+                if (validId(id)) {
+                    loadNative(ticket, id, layout, true);
+                } else if (validId(AdsHandler.getBannerId())) {
+                    loadBanner(ticket, AdsHandler.getBannerId(), false);
+                }
             }
             prefetchInterstitial(host.getApplicationContext());
+            prefetchRewarded(host.getApplicationContext());
+        }
+
+        private void loadBanner(long ticket, String id, boolean fallbackToNative) {
+            loading = true;
+            AdView view = new AdView(host);
+            banner = view;
+            view.setAdSize(AdSize.BANNER);
+            view.setAdUnitId(id);
+            container.removeAllViews();
+            container.addView(view);
+            view.setAdListener(new AdListener() {
+                @Override public void onAdLoaded() {
+                    if (ticket != generation || closed) return;
+                    loading = false;
+                    if (active()) container.setVisibility(View.VISIBLE); else clear();
+                }
+                @Override public void onAdFailedToLoad(LoadAdError error) {
+                    if (ticket != generation || closed) return;
+                    if (fallbackToNative) {
+                        String fallbackId = validId(AdsHandler.getNativeId()) ? AdsHandler.getNativeId() : AdsHandler.getNativeAdvanceId();
+                        if (validId(fallbackId)) {
+                            if (banner != null) { banner.destroy(); banner = null; }
+                            container.removeAllViews();
+                            loadNative(ticket, fallbackId, R.layout.small_ad_unified, false);
+                            return;
+                        }
+                    }
+                    clear();
+                }
+            });
+            view.loadAd(new AdRequest.Builder().build());
+        }
+
+        private void loadNative(long ticket, String id, int targetLayout, boolean fallbackToBanner) {
+            loading = true;
+            new AdLoader.Builder(host.getApplicationContext(), id).forNativeAd(loaded -> {
+                if (ticket != generation || !active()) {
+                    loaded.destroy();
+                    if (ticket == generation) loading = false;
+                    return;
+                }
+                loading = false;
+                nativeAd = loaded;
+                NativeAdView view = (NativeAdView) LayoutInflater.from(host).inflate(targetLayout, container, false);
+                populate(loaded, view);
+                container.removeAllViews();
+                container.addView(view);
+                container.setVisibility(View.VISIBLE);
+            }).withAdListener(new AdListener() {
+                @Override public void onAdFailedToLoad(LoadAdError error) {
+                    if (ticket != generation || closed) return;
+                    if (fallbackToBanner && validId(AdsHandler.getBannerId())) {
+                        if (nativeAd != null) { nativeAd.destroy(); nativeAd = null; }
+                        container.removeAllViews();
+                        loadBanner(ticket, AdsHandler.getBannerId(), false);
+                        return;
+                    }
+                    clear();
+                }
+            }).build().loadAd(new AdRequest.Builder().build());
         }
         private void clear() {
             generation++; loading = false;
@@ -154,9 +206,9 @@ public final class GoogleAds {
         }
     }
     private void prefetchInterstitial(Context app) {
-        if (!AdsHandler.isAdsOn() || loadingInterstitial || interstitial != null || !validId(AdsHandler.interstitialId)) return;
+        if (!AdsHandler.isAdsOn() || loadingInterstitial || interstitial != null || !validId(AdsHandler.getInterstitialId())) return;
         loadingInterstitial = true; long ticket = epoch;
-        InterstitialAd.load(app, AdsHandler.interstitialId, new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {
+        InterstitialAd.load(app, AdsHandler.getInterstitialId(), new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {
             @Override public void onAdLoaded(InterstitialAd value) {
                 if (ticket != epoch) return;
                 loadingInterstitial = false;
@@ -166,9 +218,9 @@ public final class GoogleAds {
         });
     }
     private void prefetchRewarded(Context app) {
-        if (!AdsHandler.isAdsOn() || loadingRewarded || rewarded != null || !validId(AdsHandler.rewardedId)) return;
+        if (!AdsHandler.isAdsOn() || loadingRewarded || rewarded != null || !validId(AdsHandler.getRewardedId())) return;
         loadingRewarded = true; long ticket = epoch;
-        RewardedAd.load(app, AdsHandler.rewardedId, new AdRequest.Builder().build(), new RewardedAdLoadCallback() {
+        RewardedAd.load(app, AdsHandler.getRewardedId(), new AdRequest.Builder().build(), new RewardedAdLoadCallback() {
             @Override public void onAdLoaded(RewardedAd value) {
                 if (ticket != epoch) return;
                 loadingRewarded = false;

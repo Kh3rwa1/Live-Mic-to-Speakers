@@ -71,7 +71,7 @@ public final class LibraryQualityTest {
         assertTrue("Action shorter than 48dp", action.getHeight() >= minimum);
     }
     private static File recordingFixture(Context app) throws Exception {
-        File folder = new File(MyPref.creatsDirsforApp(app));
+        File folder = new File(MyPref.recordingsDirectory(app));
         assertTrue(folder.isDirectory() || folder.mkdirs());
         File file = File.createTempFile("library-quality-long-recording-filename-", ".wav", folder);
         ByteBuffer wav = ByteBuffer.allocate(44 + 1600).order(ByteOrder.LITTLE_ENDIAN);

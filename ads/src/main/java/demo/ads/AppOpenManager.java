@@ -25,14 +25,17 @@ public class AppOpenManager implements Application.ActivityLifecycleCallbacks, D
         this.application = application;
         application.registerActivityLifecycleCallbacks(this);
         ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
-        AdConsent.observe(() -> { if (!AdsHandler.isAdsOn()) { epoch++; ad = null; loading = false; } });
+        AdConsent.observe(() -> {
+            if (!AdsHandler.isAdsOn()) { epoch++; ad = null; loading = false; }
+            else fetchAd();
+        });
     }
     public boolean isAdAvailable() { return ad != null && SystemClock.elapsedRealtime() - loadedAt < 4 * 60 * 60 * 1000L; }
     public void fetchAd() {
-        if (loading || isAdAvailable() || !AdsHandler.isAdsOn() || AdsHandler.openAds == null
-                || AdsHandler.openAds.isEmpty() || "0".equals(AdsHandler.openAds)) return;
+        if (loading || isAdAvailable() || !AdsHandler.isAdsOn()
+                || AdsHandler.getOpenAds().isEmpty() || "0".equals(AdsHandler.getOpenAds())) return;
         loading = true; long ticket = epoch;
-        AppOpenAd.load(application, AdsHandler.openAds, new AdRequest.Builder().build(), new AppOpenAd.AppOpenAdLoadCallback() {
+        AppOpenAd.load(application, AdsHandler.getOpenAds(), new AdRequest.Builder().build(), new AppOpenAd.AppOpenAdLoadCallback() {
             @Override public void onAdLoaded(AppOpenAd loaded) {
                 if (ticket != epoch) return;
                 loading = false;

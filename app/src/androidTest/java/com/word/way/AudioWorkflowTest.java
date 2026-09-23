@@ -90,7 +90,7 @@ public class AudioWorkflowTest {
     }
     @Test public void realRecorderProducesReadableM4aAndEnablesPreview() throws Exception {
         Context app = ApplicationProvider.getApplicationContext();
-        File folder = new File(MyPref.creatsDirsforApp(app));
+        File folder = new File(MyPref.recordingsDirectory(app));
         Set<String> before = fileNames(folder);
         try (ActivityScenario<RecordAudioActivity> scenario = ActivityScenario.launch(RecordAudioActivity.class)) {
             scenario.onActivity(activity -> activity.findViewById(R.id.iv_start_stop_new).performClick());
@@ -112,7 +112,7 @@ public class AudioWorkflowTest {
     }
     @Test public void holdRecordingEnablesPreviewAndSurvivesRecreation() {
         Context app = ApplicationProvider.getApplicationContext();
-        File folder = new File(MyPref.creatsDirsforholdspeak(app));
+        File folder = new File(MyPref.holdToSpeakDirectory(app));
         Set<String> before = fileNames(folder);
         try (ActivityScenario<HoldToSpeakActivity> scenario = ActivityScenario.launch(HoldToSpeakActivity.class)) {
             scenario.onActivity(activity -> activity.findViewById(R.id.iv_start_stop_new).performClick());
@@ -130,7 +130,7 @@ public class AudioWorkflowTest {
     }
     @Test public void slidingOutsideHoldControlCancelsWithoutPublishing() {
         Context app = ApplicationProvider.getApplicationContext();
-        File folder = new File(MyPref.creatsDirsforholdspeak(app));
+        File folder = new File(MyPref.holdToSpeakDirectory(app));
         Set<String> before = fileNames(folder);
         AtomicLong downTime = new AtomicLong();
         try (ActivityScenario<HoldToSpeakActivity> scenario = ActivityScenario.launch(HoldToSpeakActivity.class)) {
