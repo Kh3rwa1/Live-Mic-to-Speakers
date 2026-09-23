@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
@@ -14,26 +15,39 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import android.graphics.LinearGradient;
+import android.graphics.Shader;
 import com.word.way.R;
 import com.word.way.Utils.EUGeneralClass;
+import com.word.way.Utils.MyPref;
 import com.word.way.Utils.ToolUi;
 import com.word.way.audio.AndroidAudioSession;
 import com.word.way.audio.AudioSessionRunner;
 import com.word.way.audio.LiveAudioFailure;
+import com.word.way.view.InteractiveWaveVisualizerView;
 import demo.ads.GoogleAds;
 
 public class LiveMicrophoneActivity extends AppCompatActivity {
     private AudioSessionRunner runner;
     private ImageView mic, toggle;
     private TextView status;
+    private InteractiveWaveVisualizerView visualizer;
     private com.airbnb.lottie.LottieAnimationView lottiePulse, lottieSoundwave;
     private boolean requested, visible;
     private AlertDialog startDialog;
+    private MyPref prefs;
+    private TextView gainValue;
+    /** Monitoring gain 0..1, read by the audio worker and updated live by the slider. */
+    private volatile float liveGain = 0.8f;
     private final ActivityResultLauncher<String> microphonePermission = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(), granted -> {
                 Toast.makeText(this, granted ? R.string.quality_mic_permission_granted
                         : R.string.quality_mic_permission_denied, Toast.LENGTH_LONG).show();
                 if (!granted) ToolUi.permissionDenied(this);
+            });
+    private final ActivityResultLauncher<String> bluetoothPermission = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> {
+                // Optional: Bluetooth names degrade to system output when denied.
             });
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -45,15 +59,32 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
         status = findViewById(R.id.tv_start_stop_new);
         lottiePulse = findViewById(R.id.lottie_mic_pulse);
         lottieSoundwave = findViewById(R.id.lottie_soundwave);
+        visualizer = findViewById(R.id.visualizer_live);
+        TextView title = findViewById(R.id.tv_tittle);
+        if (title != null) {
+            title.post(() -> {
+                float textWidth = title.getPaint().measureText(title.getText().toString());
+                if (textWidth > 0) {
+                    title.getPaint().setShader(new LinearGradient(
+                            0, 0, textWidth, 0,
+                            new int[]{0xFF111827, 0xFF111827, 0xFF1A9BF0, 0xFF0B6FD6, 0xFF4A7AB5, 0xFF8FB8DD},
+                            new float[]{0.0f, 0.28f, 0.35f, 0.58f, 0.82f, 1.0f},
+                            Shader.TileMode.CLAMP));
+                    title.invalidate();
+                }
+            });
+        }
+        setupGainControl();
         ToolUi.button(mic);
         if (lottiePulse != null) lottiePulse.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         if (lottieSoundwave != null) lottieSoundwave.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         findViewById(R.id.iv_back).setOnClickListener(v -> finish());
-        View pill = findViewById(R.id.btn_live_pill);
-        if (pill != null) {
-            pill.setFocusable(false);
-            pill.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-            pill.setOnClickListener(v -> toggle.performClick());
+        View routeBtn = findViewById(R.id.iv_route_toggle);
+        if (routeBtn != null) routeBtn.setOnClickListener(v -> Toast.makeText(this, R.string.quality_safety_note, Toast.LENGTH_SHORT).show());
+        androidx.core.widget.NestedScrollView scroller = findViewById(R.id.scroller);
+        if (scroller != null) {
+            scroller.setOverScrollMode(View.OVER_SCROLL_NEVER);
+            scroller.setVerticalScrollBarEnabled(false);
         }
         View heroContainer = findViewById(R.id.layout_mic_hero);
         if (heroContainer != null) {
@@ -94,11 +125,11 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
                         if (feedback != null) feedback.setText(R.string.quality_mic_interrupted);
                         Toast.makeText(this, R.string.quality_mic_interrupted, Toast.LENGTH_LONG).show();
                     }
-                })), new AudioSessionRunner.Listener() {
+                }), () -> liveGain), new AudioSessionRunner.Listener() {
             @Override public void onStarted(long generation) {
                 runOnUiThread(() -> {
                     if (visible && runner.isCurrent(generation)) {
-                        status.setText(R.string.quality_mic_on);
+                        status.setText(R.string.status_microphone_on);
                         TextView feedback = findViewById(R.id.studio_feedback);
                         if (feedback != null) feedback.setText(R.string.tool_mic_active);
                     }
@@ -116,6 +147,15 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 microphonePermission.launch(Manifest.permission.RECORD_AUDIO); return;
             }
+            // Opportunistic Bluetooth name permission (API 31+); mic start never blocks on it.
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                try {
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        bluetoothPermission.launch(Manifest.permission.BLUETOOTH_CONNECT);
+                    }
+                } catch (RuntimeException ignored) { }
+            }
             startDialog = new AlertDialog.Builder(this).setTitle(R.string.quality_feedback_title)
                     .setMessage(R.string.quality_feedback_message)
                     .setNegativeButton(android.R.string.cancel, null)
@@ -126,6 +166,9 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
                         mic.setContentDescription(getString(R.string.quality_stop_microphone));
                         toggle.setImageResource(R.drawable.tool_stop);
                         status.setText(R.string.quality_mic_starting);
+                        if (visualizer != null) {
+                            visualizer.setRecording(true);
+                        }
                         if (lottiePulse != null) {
                             lottiePulse.setVisibility(View.VISIBLE);
                             lottiePulse.playAnimation();
@@ -142,23 +185,53 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
         });
         stopMic();
     }
+    /** Accessible monitoring-gain slider; the value persists and applies to a running session. */
+    private void setupGainControl() {
+        prefs = new MyPref(this);
+        liveGain = clampGain(prefs.getPref(MyPref.LiveMonitoringGain, liveGain));
+        gainValue = findViewById(R.id.tv_gain_value);
+        SeekBar seek = findViewById(R.id.seek_gain);
+        if (seek == null) { updateGainLabel(); return; }
+        seek.setMax(100);
+        seek.setProgress(Math.round(liveGain * 100f));
+        updateGainLabel();
+        seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+                liveGain = clampGain(progress / 100f);
+                updateGainLabel();
+                if (fromUser && prefs != null) prefs.setPref(MyPref.LiveMonitoringGain, liveGain);
+            }
+            @Override public void onStartTrackingTouch(SeekBar bar) { }
+            @Override public void onStopTrackingTouch(SeekBar bar) { }
+        });
+    }
+    private void updateGainLabel() {
+        if (gainValue != null) gainValue.setText(getString(R.string.live_gain_value, Math.round(liveGain * 100f)));
+    }
+    private static float clampGain(float gain) {
+        return Math.max(0f, Math.min(1f, gain));
+    }
     private void stopMic() {
         requested = false;
         if (runner != null) runner.stop();
         toggle.setContentDescription(getString(R.string.quality_start_microphone));
         mic.setContentDescription(getString(R.string.quality_start_microphone));
-        toggle.setImageResource(R.drawable.tool_mic);
-        mic.setImageResource(R.drawable.hero_mic_3d);
+        toggle.setImageResource(R.drawable.ic_mic_white);
+        mic.setImageResource(R.drawable.ic_home_live_mic);
         mic.animate().scaleX(1.0f).scaleY(1.0f).setDuration(250).start();
+        if (visualizer != null) {
+            visualizer.setRecording(false);
+            visualizer.setAudioLevel(0);
+        }
         if (lottiePulse != null) {
             lottiePulse.cancelAnimation();
             lottiePulse.setVisibility(View.INVISIBLE);
         }
         if (lottieSoundwave != null) {
-            lottieSoundwave.cancelAnimation();
-            lottieSoundwave.setVisibility(View.GONE);
+            lottieSoundwave.pauseAnimation();
+            lottieSoundwave.setVisibility(View.VISIBLE);
         }
-        status.setText(R.string.quality_mic_off);
+        status.setText(R.string.status_microphone_off);
         TextView feedback = findViewById(R.id.studio_feedback);
         if (feedback != null) feedback.setText(R.string.studio_ready);
         ToolUi.level(this, 0);
@@ -176,6 +249,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             case MICROPHONE_UNAVAILABLE: message = R.string.live_error_microphone; break;
             case READ_FAILED: message = R.string.live_error_input; break;
             case OUTPUT_FAILED: message = R.string.live_error_output; break;
+            case FEEDBACK_DETECTED: message = R.string.live_error_feedback; break;
             case CANCELLED: message = R.string.live_error_cancelled; break;
             default: message = R.string.quality_mic_error;
         }
@@ -184,10 +258,15 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     }
     void renderMeter(int peak, String route) {
         ToolUi.level(this, peak);
+        if (visualizer != null) {
+            visualizer.setAudioLevel(peak);
+        }
         TextView outputRoute = findViewById(R.id.studio_output_route);
         if (outputRoute != null) outputRoute.setText(getString(R.string.studio_output_route, route));
     }
     @Override protected void onResume() { super.onResume(); visible = true; }
+    // No UMP consent request here: consent is gathered on home screens so no privacy form
+    // can interrupt a live microphone session. Banners still render once consent allows ads.
     @Override protected void onPause() {
         visible = false;
         if (startDialog != null) startDialog.dismiss();

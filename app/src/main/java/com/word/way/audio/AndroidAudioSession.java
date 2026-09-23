@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
 import static com.word.way.audio.LiveAudioFailure.Reason.*;
 
 /** All audio resources belong to one worker invocation, never to an Activity.
@@ -34,6 +35,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private final AudioManager manager;
     private final Meter meter;
     private final Runnable interrupted;
+    private final DoubleSupplier userGain;
     private final boolean debug;
     private final AudioStopSignal signal = new AudioStopSignal();
     private final AudioManager.OnAudioFocusChangeListener focusListener;
@@ -52,6 +54,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     };
     private AcousticEchoCanceler aec;
     private NoiseSuppressor ns;
+    private LiveGainProcessor gain;
     private short[] buffer;
     private int sampleRate;
     private int framesPerBuffer;
@@ -62,10 +65,15 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private boolean hasFocus;
 
     public AndroidAudioSession(Context context, Meter meter, Runnable interrupted) {
+        this(context, meter, interrupted, () -> 1f);
+    }
+    /** {@code userGain} supplies the user's monitoring gain (0..1); it may be updated live. */
+    public AndroidAudioSession(Context context, Meter meter, Runnable interrupted, DoubleSupplier userGain) {
         this.context = context.getApplicationContext();
         this.manager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         this.meter = meter;
         this.interrupted = interrupted;
+        this.userGain = userGain == null ? () -> 1f : userGain;
         this.debug = (this.context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         this.focusListener = change -> { if (change < 0) interrupt(); };
     }
@@ -119,6 +127,8 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
                 recordBufferBytes = recBytes;
                 trackBufferBytes = playBytes;
                 buffer = new short[AudioBufferSizing.scratchSamples(recBytes, playBytes, BYTES_PER_SAMPLE)];
+                // A fresh processor per session restarts the gain ramp and clears any mute.
+                gain = new LiveGainProcessor(rate);
                 break;
             } catch (SecurityException error) {
                 releaseDevices();
@@ -193,6 +203,11 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         if (read < 0) throw new LiveAudioFailure(READ_FAILED, "Microphone read failed (" + read + ")");
         if (read == 0) return 0;
         meterIfDue(read);
+        if (gain != null) {
+            gain.setUserGain((float) userGain.getAsDouble());
+            if (gain.process(buffer, read))
+                throw new LiveAudioFailure(FEEDBACK_DETECTED, "Acoustic feedback detected");
+        }
         if (!signal.isActive()) return 0;
         int written = 0;
         while (written < read && signal.isActive()) {

@@ -3,166 +3,360 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@drawable/bg_pastel_mesh">
+    android:background="@drawable/bg_pastel_mesh"
+    android:orientation="vertical">
 
     <!-- Top Navigation Bar -->
-    <LinearLayout
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="24dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="24dp"
-        android:paddingBottom="8dp">
+        android:paddingStart="20dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="4dp">
 
         <ImageButton
             android:id="@+id/iv_back"
             style="@style/ToolControlCircleBack"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:contentDescription="@string/tool_back"
             android:src="@drawable/tool_back"
-            app:tint="@color/quality_text"
-            android:contentDescription="@string/tool_back" />
-    </LinearLayout>
+            app:tint="@color/quality_text" />
+    </RelativeLayout>
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroller"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        android:scrollbars="none">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp"
-            android:paddingBottom="24dp">
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="12dp">
 
+            <!-- Super Header Kicker: "LIVE MODE" -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="@font/poppins_bold"
+                android:letterSpacing="0.12"
+                android:text="@string/kicker_live_mode"
+                android:textColor="#1A9BF0"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <!-- Title: Live Microphone -->
             <TextView
                 android:id="@+id/tv_tittle"
                 style="@style/ToolTitle"
-                android:text="@string/quality_live_title" />
+                android:layout_marginTop="2dp"
+                android:text="@string/quality_live_screen_title"
+                android:textColor="@color/quality_text"
+                android:textSize="28sp"
+                android:textStyle="bold" />
 
-            <TextView
-                style="@style/ToolBody"
-                android:text="@string/tool_live_help" />
-
-            <!-- Hero 3D Pastel Microphone with Lottie Pulse -->
-            <!-- Hero 3D Pastel Microphone with Lottie Pulse -->
+            <!-- Central Hero Stage with Mint Glowing Backdrop + Pulse + 3D Mic -->
             <FrameLayout
                 android:id="@+id/layout_mic_hero"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="8dp"
                 android:layout_marginBottom="4dp"
                 android:clickable="true"
-                android:focusable="true">
+                android:focusable="false"
+                android:importantForAccessibility="no">
 
+                <!-- Glowing Mint Circular Stage -->
+                <View
+                    android:layout_width="220dp"
+                    android:layout_height="220dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_hero_stage_mint"
+                    android:importantForAccessibility="no" />
+
+                <!-- Concentric Pulse Ripple Lottie Animation -->
                 <com.airbnb.lottie.LottieAnimationView
                     android:id="@+id/lottie_mic_pulse"
-                    android:layout_width="260dp"
-                    android:layout_height="260dp"
+                    android:layout_width="220dp"
+                    android:layout_height="220dp"
                     android:layout_gravity="center"
+                    android:importantForAccessibility="no"
                     app:lottie_fileName="lottie_pulse_mic.json"
                     app:lottie_loop="true"
                     app:lottie_autoPlay="false"
                     android:visibility="invisible" />
 
+                <!-- Real Interactive Soundwave Visualizer Canvas -->
+                <com.word.way.view.InteractiveWaveVisualizerView
+                    android:id="@+id/visualizer_live"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:visibility="gone" />
+
+                <!-- Mint Animated Lottie Soundwave Waveform -->
+                <com.airbnb.lottie.LottieAnimationView
+                    android:id="@+id/lottie_soundwave"
+                    android:layout_width="190dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    app:lottie_fileName="lottie_wave_live.json"
+                    app:lottie_loop="true"
+                    app:lottie_autoPlay="false"
+                    android:visibility="invisible" />
+
+                <!-- Center 3D Studio Mic -->
                 <ImageView
                     android:id="@+id/iv_mic"
-                    android:layout_width="160dp"
-                    android:layout_height="180dp"
+                    android:layout_width="145dp"
+                    android:layout_height="145dp"
                     android:layout_gravity="center"
                     android:clickable="true"
-                    android:focusable="true"
                     android:contentDescription="@string/quality_start_microphone"
+                    android:focusable="true"
                     android:scaleType="fitCenter"
-                    android:src="@drawable/hero_mic_3d" />
+                    android:src="@drawable/ic_home_live_mic" />
             </FrameLayout>
 
-            <!-- Lottie Live Soundwave Visualizer -->
-            <com.airbnb.lottie.LottieAnimationView
-                android:id="@+id/lottie_soundwave"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginStart="24dp"
-                android:layout_marginEnd="24dp"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="6dp"
-                app:lottie_fileName="lottie_wave_live.json"
-                app:lottie_loop="true"
-                app:lottie_autoPlay="false"
-                android:visibility="gone"
-                android:importantForAccessibility="no" />
-
-            <!-- Peach Pill Action Button -->
+            <!-- Floating Status Pill: "● Microphone on |||" -->
             <LinearLayout
-                android:id="@+id/btn_live_pill"
-                android:layout_width="match_parent"
+                android:id="@+id/ll_mic_status_pill"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:minHeight="60dp"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="24dp"
-                android:background="@drawable/btn_pill_peach"
-                android:elevation="6dp"
-                android:gravity="center"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/bg_status_pill_white"
+                android:elevation="2dp"
+                android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp">
+                android:paddingStart="14dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="6dp">
 
-                <ImageButton
-                    android:id="@+id/iv_start_stop_new"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/quality_start_microphone"
-                    android:padding="12dp"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/tool_mic"
-                    app:tint="@color/quality_text"
-                    android:clickable="true"
-                    android:focusable="true" />
+                <ImageView
+                    android:id="@+id/iv_status_dot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:src="@drawable/ic_status_dot_mint"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/tv_start_stop_new"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:fontFamily="@font/poppins_bold"
-                    android:text="@string/quality_mic_off"
+                    android:fontFamily="@font/poppins_semibold"
+                    android:text="@string/status_microphone_on"
                     android:textColor="@color/quality_text"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:textSize="12.5sp"
+                    android:accessibilityLiveRegion="polite"
+                    android:includeFontPadding="false" />
+
+                <ImageView
+                    android:id="@+id/iv_status_bars"
+                    android:layout_width="16dp"
+                    android:layout_height="14dp"
+                    android:layout_marginStart="8dp"
+                    android:src="@drawable/ic_mini_equalizer_mint"
+                    android:importantForAccessibility="no" />
+            </LinearLayout>
+
+            <!-- Input Level Segmented Meter Card -->
+            <LinearLayout
+                android:id="@+id/layout_input_level"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="14dp"
+                android:layout_marginBottom="14dp"
+                android:background="@drawable/bg_timer_card_capsule"
+                android:elevation="2dp"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="6dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/poppins_bold"
+                        android:text="@string/label_input_level"
+                        android:textColor="@color/quality_text"
+                        android:textSize="12sp"
+                        android:includeFontPadding="false" />
+
+                    <TextView
+                        android:id="@+id/tv_input_level_percent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/poppins_bold"
+                        android:text="@string/label_input_level_sample"
+                        android:textColor="@color/quality_text"
+                        android:textSize="12sp"
+                        android:includeFontPadding="false" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/iv_meter_segmented"
+                    android:layout_width="match_parent"
+                    android:layout_height="14dp"
+                    android:scaleType="fitXY"
+                    android:src="@drawable/ic_meter_segmented_mint"
+                    android:importantForAccessibility="no" />
+            </LinearLayout>
+
+            <!-- Monitoring Gain Control -->
+            <LinearLayout
+                android:id="@+id/layout_gain"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="14dp"
+                android:layout_marginBottom="14dp"
+                android:background="@drawable/bg_timer_card_capsule"
+                android:elevation="2dp"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="8dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="2dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/poppins_bold"
+                        android:includeFontPadding="false"
+                        android:text="@string/live_gain_label"
+                        android:textColor="@color/quality_text"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tv_gain_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/poppins_bold"
+                        android:includeFontPadding="false"
+                        android:textColor="@color/quality_text"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <SeekBar
+                    android:id="@+id/seek_gain"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/live_gain_label"
+                    android:minHeight="48dp" />
+            </LinearLayout>
+
+            <!-- Primary Action Mint Circle Button (76dp) -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="12dp">
+
+                <ImageButton
+                    android:id="@+id/iv_start_stop_new"
+                    android:layout_width="76dp"
+                    android:layout_height="76dp"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/btn_circle_mic_mint"
+                    android:clickable="true"
+                    android:contentDescription="@string/quality_start_microphone"
+                    android:elevation="4dp"
+                    android:focusable="true"
+                    android:padding="20dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_mic_white" />
+            </FrameLayout>
+
+            <!-- Bottom Dock Controls Row (Headphones and Equalizer) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="6dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <!-- Headphones Circle Button -->
+                <ImageButton
+                    android:id="@+id/iv_route_toggle"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:background="@drawable/btn_circle_dock_control"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:elevation="2dp"
+                    android:padding="14dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_headphones_dark"
+                    android:contentDescription="@string/quality_safety_title" />
             </LinearLayout>
 
             <TextView
                 android:id="@+id/studio_feedback"
                 style="@style/ToolBody"
-                android:gravity="center"
-                android:accessibilityLiveRegion="polite"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
                 android:text="@string/studio_ready"
                 android:textColor="@color/quality_secondary"
-                android:textSize="14sp" />
-
-            <include layout="@layout/studio_input_meter" />
+                android:textSize="12sp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/studio_output_route"
                 style="@style/StudioNotice"
-                android:gravity="center"
-                android:text="@string/studio_output_idle" />
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="@string/studio_output_idle"
+                android:visibility="gone" />
 
-            <TextView
-                style="@style/ToolBody"
-                android:gravity="center"
-                android:text="@string/tool_foreground_note"
-                android:textColor="@color/quality_secondary"
-                android:textSize="14sp" />
+            <include
+                layout="@layout/studio_input_meter"
+                android:visibility="gone" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Collapsible Ad Container at the Bottom -->
     <LinearLayout
         android:id="@+id/nativeLay"
         android:layout_width="match_parent"

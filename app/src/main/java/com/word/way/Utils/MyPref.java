@@ -19,6 +19,8 @@ public class MyPref {
     public static final String MySavedAnnounceActivity = "MySavedAnnounceActivity";
     public static final String MySavedHoldSpeakActivity = "MySavedHoldSpeakActivity";
     private static final String PREF_NAME = "MIC_TO_SPEAK";
+    /** Persisted live-monitoring gain, 0..1. */
+    public static final String LiveMonitoringGain = "LiveMonitoringGain";
     public static final String RecordAudioActivity = "RecordAudioActivity";
     public static final String RecordingListHoldSpeakActivity = "RecordingListHoldSpeakActivity";
     public static final String RecordingListRecordAudioActivity = "RecordingListRecordAudioActivity";
@@ -77,6 +79,15 @@ public class MyPref {
 
     public boolean getPref(String str, boolean z) {
         return this.pref.getBoolean(str, z);
+    }
+
+    public void setPref(String str, float value) {
+        this.editor.putFloat(str, value);
+        this.editor.apply();
+    }
+
+    public float getPref(String str, float fallback) {
+        return this.pref.getFloat(str, fallback);
     }
 
 }

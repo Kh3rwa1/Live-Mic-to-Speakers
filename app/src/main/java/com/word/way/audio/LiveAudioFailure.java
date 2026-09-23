@@ -8,7 +8,7 @@ public final class LiveAudioFailure extends IOException {
     private static final long serialVersionUID = 1L;
     public enum Reason {
         PERMISSION, SERVICE_UNAVAILABLE, FOCUS_UNAVAILABLE, UNSUPPORTED_CONFIGURATION,
-        MICROPHONE_UNAVAILABLE, READ_FAILED, OUTPUT_FAILED, CANCELLED, UNKNOWN
+        MICROPHONE_UNAVAILABLE, READ_FAILED, OUTPUT_FAILED, CANCELLED, FEEDBACK_DETECTED, UNKNOWN
     }
     private final Reason reason;
     public LiveAudioFailure(Reason reason, String detail) { this(reason, detail, null); }
