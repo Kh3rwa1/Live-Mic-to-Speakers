@@ -15,11 +15,20 @@ import com.word.way.player.SongListModel;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Named, visible play/share actions; long-press sharing remains available for existing users. */
+/** Named, visible play/share/rename/delete actions; long-press sharing remains for existing users. */
 public class SongListAdapter extends RecyclerView.Adapter<SongListAdapter.AlbumViewHolder> {
+    /** Host callbacks for destructive/renaming actions, which own dialogs and background I/O. */
+    public interface Actions {
+        void onRename(SongListModel audio);
+        void onDelete(SongListModel audio);
+    }
     public final Context context;
     public List<SongListModel> songListModelList;
-    public SongListAdapter(Context context, List<SongListModel> list) { this.context = context; songListModelList = new ArrayList<>(list); }
+    private final Actions actions;
+    public SongListAdapter(Context context, List<SongListModel> list) { this(context, list, null); }
+    public SongListAdapter(Context context, List<SongListModel> list, Actions actions) {
+        this.context = context; songListModelList = new ArrayList<>(list); this.actions = actions;
+    }
     public void filterList(ArrayList<SongListModel> list) { songListModelList = new ArrayList<>(list); notifyDataSetChanged(); }
     @Override public int getItemCount() { return songListModelList.size(); }
     @Override public AlbumViewHolder onCreateViewHolder(ViewGroup parent, int type) {
@@ -31,6 +40,8 @@ public class SongListAdapter extends RecyclerView.Adapter<SongListAdapter.AlbumV
         holder.duration.setText(context.getString(R.string.library_duration, audio.getDuration()));
         holder.itemView.findViewById(R.id.play).setContentDescription(context.getString(R.string.library_play_named, audio.getDisplayName()));
         holder.itemView.findViewById(R.id.share_recording).setContentDescription(context.getString(R.string.library_share_named, audio.getDisplayName()));
+        holder.itemView.findViewById(R.id.rename_recording).setContentDescription(context.getString(R.string.library_rename_named, audio.getDisplayName()));
+        holder.itemView.findViewById(R.id.delete_recording).setContentDescription(context.getString(R.string.library_delete_named, audio.getDisplayName()));
     }
     public final class AlbumViewHolder extends RecyclerView.ViewHolder {
         final TextView name, duration;
@@ -46,6 +57,14 @@ public class SongListAdapter extends RecyclerView.Adapter<SongListAdapter.AlbumV
             view.findViewById(R.id.share_recording).setOnClickListener(v -> {
                 SongListModel audio = current();
                 if (audio != null) RecordingShare.share(context, audio.getData());
+            });
+            view.findViewById(R.id.rename_recording).setOnClickListener(v -> {
+                SongListModel audio = current();
+                if (audio != null && actions != null) actions.onRename(audio);
+            });
+            view.findViewById(R.id.delete_recording).setOnClickListener(v -> {
+                SongListModel audio = current();
+                if (audio != null && actions != null) actions.onDelete(audio);
             });
             view.setOnLongClickListener(v -> {
                 SongListModel audio = current();

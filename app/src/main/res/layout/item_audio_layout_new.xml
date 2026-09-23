@@ -13,4 +13,11 @@
         <Button android:id="@+id/share_recording" style="@style/LibraryButton" android:layout_width="0dp"
             android:layout_weight="1" android:layout_marginStart="12dp" android:text="@string/library_share"/>
     </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:layout_marginTop="12dp" android:baselineAligned="false">
+        <Button android:id="@+id/rename_recording" style="@style/LibraryButton" android:layout_width="0dp"
+            android:layout_weight="1" android:text="@string/library_rename"/>
+        <Button android:id="@+id/delete_recording" style="@style/LibraryButton" android:layout_width="0dp"
+            android:layout_weight="1" android:layout_marginStart="12dp" android:text="@string/library_delete"/>
+    </LinearLayout>
 </LinearLayout>

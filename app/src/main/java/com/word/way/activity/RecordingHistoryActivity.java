@@ -2,10 +2,16 @@ package com.word.way.activity;
 
 import android.media.MediaMetadataRetriever;
 import com.word.way.audio.RecordingChanges;
+import com.word.way.audio.RecordingNames;
+import com.word.way.audio.RecordingRecovery;
 import android.os.Bundle;
 import android.os.Environment;
+import android.text.InputType;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.core.view.ViewCompat;
@@ -31,7 +37,7 @@ import java.util.concurrent.Future;
 import demo.ads.GoogleAds;
 
 /** Shared, cancellable history loading with explicit loading/empty/search/error states. */
-public abstract class RecordingHistoryActivity extends AppCompatActivity {
+public abstract class RecordingHistoryActivity extends AppCompatActivity implements SongListAdapter.Actions {
     private final ExecutorService loader = Executors.newSingleThreadExecutor();
     private Future<?> pending;
     private int generation;
@@ -50,7 +56,7 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity {
         findViewById(R.id.iv_back).setOnClickListener(v -> finish());
         ViewCompat.setAccessibilityHeading(findViewById(R.id.tv_tittle), true);
         RecyclerView list = findViewById(R.id.rvSongList);
-        adapter = new SongListAdapter(this, new ArrayList<>());
+        adapter = new SongListAdapter(this, new ArrayList<>(), this);
         list.setLayoutManager(new LinearLayoutManager(this)); list.setAdapter(adapter);
         if (state != null) query = state.getString("historyQuery", "");
         search = findViewById(R.id.search);
@@ -64,6 +70,73 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity {
         findViewById(R.id.library_clear).setOnClickListener(v -> search.setQuery("", false));
         RecordingChanges.revisions().observe(this, revision -> { if (resumed) reload(); });
         renderState();
+    }
+    /** True when the platform can read the file as audio; used to validate recovered recordings. */
+    private static boolean isPlayable(File file) {
+        MediaMetadataRetriever metadata = new MediaMetadataRetriever();
+        try {
+            metadata.setDataSource(file.getAbsolutePath());
+            return metadata.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION) != null;
+        } catch (RuntimeException error) {
+            return false;
+        } finally {
+            try { metadata.release(); } catch (Exception ignored) { }
+        }
+    }
+    @Override public void onRename(SongListModel audio) {
+        if (audio == null) return;
+        EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.setText(audio.getDisplayName());
+        input.setHint(R.string.library_rename_hint);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.library_rename_title)
+                .setView(input)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.library_rename_confirm,
+                        (dialog, which) -> performRename(audio, input.getText().toString()))
+                .show();
+    }
+    @Override public void onDelete(SongListModel audio) {
+        if (audio == null) return;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.library_delete_title)
+                .setMessage(getString(R.string.library_delete_message, audio.getDisplayName()))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.library_delete_confirm, (dialog, which) -> performDelete(audio))
+                .show();
+    }
+    private void performRename(SongListModel audio, String requested) {
+        String name = requested == null ? "" : requested.trim();
+        if (name.isEmpty()) { Toast.makeText(this, R.string.library_rename_empty, Toast.LENGTH_SHORT).show(); return; }
+        File source = new File(audio.getData());
+        loader.execute(() -> {
+            boolean success = false;
+            try {
+                File target = RecordingNames.renamedTarget(source, name);
+                success = target != null && source.renameTo(target);
+            } catch (RuntimeException ignored) { }
+            final boolean renamed = success;
+            runOnUiThread(() -> {
+                if (isDestroyed()) return;
+                if (renamed) { RecordingChanges.notifySaved(); reload(); }
+                else Toast.makeText(this, R.string.library_rename_failed, Toast.LENGTH_LONG).show();
+            });
+        });
+    }
+    private void performDelete(SongListModel audio) {
+        File target = new File(audio.getData());
+        loader.execute(() -> {
+            boolean success = false;
+            try { success = target.isFile() && target.delete(); }
+            catch (RuntimeException ignored) { }
+            final boolean deleted = success;
+            runOnUiThread(() -> {
+                if (isDestroyed()) return;
+                if (deleted) { RecordingChanges.notifySaved(); reload(); }
+                else Toast.makeText(this, R.string.library_delete_failed, Toast.LENGTH_LONG).show();
+            });
+        });
     }
     public static String convertMillieToHMmSs(long millis) {
         long seconds = Math.max(0, millis) / 1000;
@@ -138,6 +211,7 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity {
         state.putString("historyQuery", query); super.onSaveInstanceState(state);
     }
     @Override protected void onResume() { super.onResume(); resumed = true; reload(); }
+    // Consent stays on home screens; history banners still render once consent allows ads.
     @Override protected void onPause() {
         resumed = false; generation++;
         if (pending != null) pending.cancel(true);
@@ -149,6 +223,11 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity {
         if (pending != null) pending.cancel(true);
         loading = true; failed = false; renderState();
         pending = loader.submit(() -> {
+            // Recover recordings left as .pending by an interrupted save before listing history.
+            try {
+                if (RecordingRecovery.recover(recordingsDirectory(), null, System.currentTimeMillis(),
+                        RecordingHistoryActivity::isPlayable) > 0) RecordingChanges.notifySaved();
+            } catch (RuntimeException ignored) { }
             List<SongListModel> found;
             boolean failure;
             try { found = getMusicPlayer(); failure = false; }

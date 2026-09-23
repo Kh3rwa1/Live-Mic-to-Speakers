@@ -22,7 +22,7 @@ public final class RecordingSession implements AutoCloseable {
     private Consumer<Exception> errors = error -> { };
     private File file;
     private long startedAt;
-    private boolean recording;
+    private volatile boolean recording;
     public boolean isRecording() { return recording; }
 
     public static RecordingController<File> controller(Context context, File directory,
@@ -40,7 +40,13 @@ public final class RecordingSession implements AutoCloseable {
     }
     private int readAmplitude() throws IOException {
         if (captureError != null) throw captureError;
-        return recording && recorder != null ? recorder.getMaxAmplitude() : 0;
+        if (!recording || recorder == null) return 0;
+        try {
+            return Math.max(0, recorder.getMaxAmplitude());
+        } catch (RuntimeException transientRead) {
+            // Teardown races surface here; a meter read must never kill a recording.
+            return 0;
+        }
     }
     public void start(Context context, File directory) throws IOException { start(context, directory, () -> true); }
     private void start(Context context, File directory, BooleanSupplier wanted) throws IOException {
@@ -49,7 +55,7 @@ public final class RecordingSession implements AutoCloseable {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
             throw new IOException("Microphone permission required");
         if (!directory.isDirectory() && !directory.mkdirs()) throw new IOException("Cannot create recordings folder");
-        file = File.createTempFile("Rec_", ".pending", directory);
+        file = RecordingFiles.newPendingFile(directory, System.currentTimeMillis());
         captureError = null;
         try {
             recorder = Build.VERSION.SDK_INT >= 31 ? new MediaRecorder(context) : new MediaRecorder();
