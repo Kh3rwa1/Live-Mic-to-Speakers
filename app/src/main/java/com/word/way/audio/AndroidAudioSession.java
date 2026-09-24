@@ -57,6 +57,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private LiveGainProcessor gain;
     private short[] buffer;
     private int sampleRate;
+    private int nativeRate;
     private int framesPerBuffer;
     private int recordBufferBytes;
     private int trackBufferBytes;
@@ -105,7 +106,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         if (!hasFocus) throw new LiveAudioFailure(FOCUS_UNAVAILABLE, "Audio focus request denied");
         routeGuard = AudioRouteGuard.open(context, this::interrupt);
         // Native output rate/burst first so the input and output run on the device's own clock.
-        int nativeRate = integerProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
+        nativeRate = integerProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
         int nativeBurst = integerProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
         Exception failure = null;
         for (int rate : AudioBufferSizing.candidateRates(nativeRate)) {
@@ -160,9 +161,13 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         catch (RuntimeException error) { throw new LiveAudioFailure(OUTPUT_FAILED, "Audio output could not start", error); }
         if (input.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING)
             throw new LiveAudioFailure(MICROPHONE_UNAVAILABLE, "Microphone could not start");
-        if (debug) Log.d(TAG, "started rate=" + sampleRate + " nativeRate=" + nativeRate
-                + " framesPerBuffer=" + framesPerBuffer + " recordBuffer=" + recordBufferBytes
-                + " trackBuffer=" + trackBufferBytes + " lowLatency=" + (Build.VERSION.SDK_INT >= 26));
+        if (debug) {
+            Log.d(TAG, "started rate=" + sampleRate + " nativeRate=" + nativeRate
+                    + " framesPerBuffer=" + framesPerBuffer + " recordBuffer=" + recordBufferBytes
+                    + " trackBuffer=" + trackBufferBytes + " lowLatency=" + (Build.VERSION.SDK_INT >= 26));
+            AudioDiagnostics.update(new AudioDiagnostics(sampleRate, nativeRate, framesPerBuffer,
+                    recordBufferBytes, trackBufferBytes, 0, "Initializing", Build.VERSION.SDK_INT >= 26, (float) userGain.getAsDouble()));
+        }
     }
     /** API 26+ requests the platform low-latency output path; 24-25 keep the legacy constructor. */
     private AudioTrack createOutput(AudioAttributes attributes, int rate, int bufferBytes) {
@@ -236,6 +241,14 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
             route = context.getString(com.word.way.R.string.library_system_output);
         }
         meter.update(Math.min(100, peak * 100 / 32768), route);
+        if (debug) {
+            int underruns = 0;
+            if (output != null) {
+                try { underruns = output.getUnderrunCount(); } catch (RuntimeException ignored) { }
+            }
+            AudioDiagnostics.update(new AudioDiagnostics(sampleRate, nativeRate, framesPerBuffer,
+                    recordBufferBytes, trackBufferBytes, underruns, route, Build.VERSION.SDK_INT >= 26, (float) userGain.getAsDouble()));
+        }
     }
     /** Debug-only latency evidence: sample rate, burst and cumulative underruns. */
     private void logUnderrunsIfDue(AudioTrack sink) {

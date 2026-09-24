@@ -39,10 +39,17 @@ jobs:
             echo 'Production gate unexpectedly accepted a demo configuration'; exit 1
           fi
           grep -q 'Production release blocked' production-demo-gate.log || { tail -n 100 production-demo-gate.log; exit 1; }
+          grep -q 'release is signed with the debug key' production-demo-gate.log || { tail -n 100 production-demo-gate.log; exit 1; }
           if bash ./gradlew --no-daemon :app:verifyProductionRelease -PproductionRelease=true > production-missing-gate.log 2>&1; then
             echo 'Production gate unexpectedly accepted missing settings'; exit 1
           fi
           grep -q 'Configure a non-test LIVE_MIC_ADMOB_APP_ID' production-missing-gate.log || { tail -n 100 production-missing-gate.log; exit 1; }
+          grep -q 'release is signed with the debug key' production-missing-gate.log || { tail -n 100 production-missing-gate.log; exit 1; }
+          if bash ./gradlew --no-daemon :app:bundleRelease -PproductionRelease=false > production-bundle-gate.log 2>&1; then
+            echo 'bundleRelease unexpectedly accepted a demo configuration'; exit 1
+          fi
+          grep -q 'Production release blocked' production-bundle-gate.log || { tail -n 100 production-bundle-gate.log; exit 1; }
+          grep -q 'release is signed with the debug key' production-bundle-gate.log || { tail -n 100 production-bundle-gate.log; exit 1; }
       - name: App and ads unit tests, lint and debug/release builds
         run: |
           set -o pipefail

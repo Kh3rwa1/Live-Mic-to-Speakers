@@ -18,6 +18,8 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Signed with the debug keystore for CI and local testing only.
+            // Production builds must opt in via -PproductionRelease=true with valid signing credentials.
             signingConfig signingConfigs.debug
         }
     }

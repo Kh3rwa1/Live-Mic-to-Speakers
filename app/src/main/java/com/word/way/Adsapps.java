@@ -7,7 +7,6 @@ public class Adsapps extends AdsApplication {
     @Override public void onCreate() {
         super.onCreate();
         AdsHandler.getInstance(this);
-        AdsHandler.setAdsOn(true);
         // Committed IDs are the real production IDs (user-confirmed). Production builds may
         // override them via generated production resources; these are the fallback.
         if (AdsHandler.getBannerId().isEmpty()) {

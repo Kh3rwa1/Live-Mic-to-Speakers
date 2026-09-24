@@ -49,13 +49,14 @@ public final class RecordingSession implements AutoCloseable {
         }
     }
     public void start(Context context, File directory) throws IOException { start(context, directory, () -> true); }
-    private void start(Context context, File directory, BooleanSupplier wanted) throws IOException {
+    void start(Context context, File directory, BooleanSupplier wanted) throws IOException {
         if (recorder != null) throw new IllegalStateException("A recording is already active");
         if (!wanted.getAsBoolean()) throw new InterruptedIOException("Recording cancelled");
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
             throw new IOException("Microphone permission required");
         if (!directory.isDirectory() && !directory.mkdirs()) throw new IOException("Cannot create recordings folder");
         file = RecordingFiles.newPendingFile(directory, System.currentTimeMillis());
+        ActiveRecordings.register(file);
         captureError = null;
         try {
             recorder = Build.VERSION.SDK_INT >= 31 ? new MediaRecorder(context) : new MediaRecorder();
@@ -78,7 +79,11 @@ public final class RecordingSession implements AutoCloseable {
             startedAt = SystemClock.elapsedRealtime();
             recording = true;
         } catch (IOException | RuntimeException error) {
-            release(); discard(file); file = null;
+            File pending = file;
+            release();
+            discard(pending);
+            file = null;
+            ActiveRecordings.unregister(pending);
             throw new IOException("Could not start recording. Check microphone access and free storage.", error);
         }
     }
@@ -88,23 +93,32 @@ public final class RecordingSession implements AutoCloseable {
         long duration = recording ? SystemClock.elapsedRealtime() - startedAt : 0;
         boolean stopped = false;
         RuntimeException failure = null;
-        try { if (recording) { recorder.stop(); stopped = true; } }
-        catch (RuntimeException error) { failure = error; }
-        finally { release(); file = null; }
-        if (captureError != null) {
-            discard(result);
-            if (keep) throw captureError;
-            return null;
+        try {
+            if (recording) { recorder.stop(); stopped = true; }
+        } catch (RuntimeException error) {
+            failure = error;
+        } finally {
+            release();
+            file = null;
         }
-        if (!RecordingRules.keep(keep, stopped, duration, result == null ? 0 : result.length())) {
-            discard(result);
-            if (failure != null && keep && duration >= RecordingRules.MIN_DURATION_MS)
-                throw new IOException("Recording could not be finalized; incomplete file removed.", failure);
-            return null;
+        try {
+            if (captureError != null) {
+                discard(result);
+                if (keep) throw captureError;
+                return null;
+            }
+            if (!RecordingRules.keep(keep, stopped, duration, result == null ? 0 : result.length())) {
+                discard(result);
+                if (failure != null && keep && duration >= RecordingRules.MIN_DURATION_MS)
+                    throw new IOException("Recording could not be finalized; incomplete file removed.", failure);
+                return null;
+            }
+            File published = RecordingFiles.publish(result);
+            RecordingChanges.notifySaved();
+            return published;
+        } finally {
+            ActiveRecordings.unregister(result);
         }
-        File published = RecordingFiles.publish(result);
-        RecordingChanges.notifySaved();
-        return published;
     }
     private static void discard(File file) {
         if (file != null && file.exists() && !file.delete()) android.util.Log.w("RecordingSession", "Could not remove incomplete recording");

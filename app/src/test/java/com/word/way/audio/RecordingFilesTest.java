@@ -90,7 +90,8 @@ public class RecordingFilesTest {
             assertFalse("Valid pending must be published", valid.exists());
             assertTrue(new File(directory, "Rec_valid.m4a").isFile());
             assertFalse("Empty pending must be deleted", empty.exists());
-            assertFalse("Unreadable pending must be deleted", invalid.exists());
+            assertFalse("Unreadable pending must be deleted or moved", invalid.exists());
+            assertTrue("Unreadable pending must be quarantined as .unrecovered", new File(directory, "Rec_invalid.unrecovered").isFile());
             assertFalse("Invalid file must not be published", new File(directory, "Rec_invalid.m4a").exists());
         } finally {
             for (File file : directory.listFiles()) file.delete();

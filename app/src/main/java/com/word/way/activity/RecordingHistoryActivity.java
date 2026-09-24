@@ -1,7 +1,13 @@
 package com.word.way.activity;
 
+import android.content.ActivityNotFoundException;
+import android.content.ClipData;
+import android.content.Intent;
 import android.media.MediaMetadataRetriever;
+import android.net.Uri;
+import androidx.core.content.FileProvider;
 import com.word.way.audio.RecordingChanges;
+import com.word.way.audio.RecordingFiles;
 import com.word.way.audio.RecordingNames;
 import com.word.way.audio.RecordingRecovery;
 import android.os.Bundle;
@@ -142,9 +148,7 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity impleme
         });
     }
     public static String formatDuration(long millis) {
-        long seconds = Math.max(0, millis) / 1000;
-        return seconds >= 3600 ? String.format(Locale.getDefault(), "%02d:%02d:%02d", seconds / 3600, (seconds / 60) % 60, seconds % 60)
-                : String.format(Locale.getDefault(), "%02d:%02d", seconds / 60, seconds % 60);
+        return com.word.way.util.TimeFormat.formatDuration(millis);
     }
     @Deprecated
     public static String convertMillieToHMmSs(long millis) {
@@ -230,11 +234,43 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity impleme
         if (pending != null) pending.cancel(true);
         loading = true; failed = false; renderState();
         pending = loader.submit(() -> {
+            File dir = recordingsDirectory();
+            try {
+                RecordingFiles.sweepEmptyPending(dir);
+            } catch (RuntimeException ignored) { }
             // Recover recordings left as .pending by an interrupted save before listing history.
             try {
-                if (RecordingRecovery.recover(recordingsDirectory(), null, System.currentTimeMillis(),
+                if (RecordingRecovery.recover(dir, null, System.currentTimeMillis(),
                         RecordingHistoryActivity::isPlayable) > 0) RecordingChanges.notifySaved();
             } catch (RuntimeException ignored) { }
+
+            int unrecoveredCount = 0;
+            File unrecoveredSample = null;
+            boolean canShareUnrecovered = false;
+            if (dir != null && dir.isDirectory()) {
+                File[] unrecoveredFiles = dir.listFiles((d, name) -> name.endsWith(RecordingRecovery.UNRECOVERED_SUFFIX));
+                if (unrecoveredFiles != null) {
+                    unrecoveredCount = unrecoveredFiles.length;
+                    for (File f : unrecoveredFiles) {
+                        if (f.isFile() && f.length() > 0) {
+                            unrecoveredSample = f;
+                            break;
+                        }
+                    }
+                }
+                if (unrecoveredSample != null) {
+                    try {
+                        FileProvider.getUriForFile(RecordingHistoryActivity.this, getPackageName() + ".provider", unrecoveredSample);
+                        canShareUnrecovered = true;
+                    } catch (IllegalArgumentException | SecurityException notCovered) {
+                        canShareUnrecovered = false;
+                    }
+                }
+            }
+            final int unrecoveredTotal = unrecoveredCount;
+            final boolean shareEnabled = canShareUnrecovered;
+            final File unrecoveredShareFile = unrecoveredSample;
+
             List<SongListModel> found;
             boolean failure;
             try { found = getMusicPlayer(); failure = false; }
@@ -244,9 +280,74 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity impleme
             runOnUiThread(() -> {
                 if (!isDestroyed() && resumed && ticket == generation) {
                     rows = result; loading = false; failed = unavailable; filter(query);
+                    renderUnrecoveredBanner(unrecoveredTotal, shareEnabled, unrecoveredShareFile);
                 }
             });
         });
+    }
+
+    private void renderUnrecoveredBanner(int count, boolean shareAvailable, File shareFile) {
+        if (binding == null) return;
+        if (count <= 0) {
+            binding.unrecoveredBanner.setVisibility(View.GONE);
+            return;
+        }
+        binding.unrecoveredBanner.setVisibility(View.VISIBLE);
+        binding.unrecoveredTitle.setText(getResources().getQuantityString(R.plurals.unrecovered_notice, count, count));
+        if (shareAvailable && shareFile != null) {
+            binding.unrecoveredShare.setVisibility(View.VISIBLE);
+            binding.unrecoveredShare.setOnClickListener(v -> shareUnrecovered(shareFile));
+        } else {
+            binding.unrecoveredShare.setVisibility(View.GONE);
+        }
+        binding.unrecoveredDelete.setOnClickListener(v -> confirmDeleteUnrecovered());
+    }
+
+    private void confirmDeleteUnrecovered() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.unrecovered_delete_dialog_title)
+                .setMessage(R.string.unrecovered_delete_dialog_message)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.unrecovered_delete_dialog_confirm, (dialog, which) -> deleteUnrecoveredFiles())
+                .show();
+    }
+
+    private void deleteUnrecoveredFiles() {
+        loader.execute(() -> {
+            File dir = recordingsDirectory();
+            if (dir != null && dir.isDirectory()) {
+                File[] unrecovered = dir.listFiles((d, name) -> name.endsWith(RecordingRecovery.UNRECOVERED_SUFFIX));
+                if (unrecovered != null) {
+                    for (File f : unrecovered) {
+                        try {
+                            //noinspection ResultOfMethodCallIgnored
+                            f.delete();
+                        } catch (SecurityException ignored) { }
+                    }
+                }
+            }
+            runOnUiThread(() -> {
+                if (isDestroyed()) return;
+                reload();
+            });
+        });
+    }
+
+    private void shareUnrecovered(File file) {
+        if (file == null || !file.isFile()) return;
+        try {
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
+            Intent send = new Intent(Intent.ACTION_SEND)
+                    .setType("application/octet-stream")
+                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            send.setClipData(ClipData.newUri(getContentResolver(), getString(R.string.unrecovered_share_title), uri));
+            startActivity(Intent.createChooser(send, getString(R.string.unrecovered_share_title)));
+        } catch (ActivityNotFoundException error) {
+            Toast.makeText(this, R.string.library_share_unavailable, Toast.LENGTH_LONG).show();
+        } catch (IllegalArgumentException | SecurityException error) {
+            Toast.makeText(this, R.string.library_share_restricted, Toast.LENGTH_LONG).show();
+        }
     }
     @Override protected void onDestroy() {
         generation++; if (pending != null) pending.cancel(true); loader.shutdownNow(); super.onDestroy();

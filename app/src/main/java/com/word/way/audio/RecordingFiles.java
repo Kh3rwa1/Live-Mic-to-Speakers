@@ -74,16 +74,29 @@ public final class RecordingFiles {
             throw copyFailed;
         }
     }
-    /** Removes stale .pending files older than a day; call on app start. Returns removed count. */
-    public static int sweepStalePending(File directory) {
+    /**
+     * Removes zero-length {@code .pending} files older than 24 hours left by aborted recordings.
+     * Non-empty pending files are preserved for recovery or user investigation.
+     *
+     * @param directory the recordings directory to inspect
+     * @return the number of empty pending files removed
+     */
+    public static int sweepEmptyPending(File directory) {
+        return sweepEmptyPending(directory, System.currentTimeMillis());
+    }
+
+    /** Overload taking explicit current time in milliseconds, for testing. */
+    public static int sweepEmptyPending(File directory, long now) {
         if (directory == null || !directory.isDirectory()) return 0;
-        File[] stale = directory.listFiles((dir, n) -> n.endsWith(PENDING_SUFFIX));
-        if (stale == null) return 0;
-        long cutoff = System.currentTimeMillis() - 24L * 60L * 60L * 1000L;
+        File[] candidates = directory.listFiles((dir, n) -> n.endsWith(PENDING_SUFFIX));
+        if (candidates == null) return 0;
+        long cutoff = now - 24L * 60L * 60L * 1000L;
         int removed = 0;
-        for (File file : stale) {
+        for (File file : candidates) {
             try {
-                if (file.lastModified() < cutoff && file.delete()) removed++;
+                if (file.length() == 0 && file.lastModified() < cutoff && file.delete()) {
+                    removed++;
+                }
             } catch (SecurityException ignored) { }
         }
         return removed;

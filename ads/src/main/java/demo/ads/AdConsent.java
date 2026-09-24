@@ -2,6 +2,7 @@ package demo.ads;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.Toast;
@@ -15,6 +16,7 @@ import com.google.android.ump.ConsentRequestParameters;
 import com.google.android.ump.UserMessagingPlatform;
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /** UMP is the source of consent truth. No SDK initialization or requests before consent allows it. */
@@ -61,12 +63,15 @@ public final class AdConsent {
         gate.consentResolved(allowed);
         if (allowed && !initializing) {
             initializing = true;
-            RequestConfiguration configuration = MobileAds.getRequestConfiguration().toBuilder()
-                    .setTestDeviceIds(Arrays.asList(
-                            AdRequest.DEVICE_ID_EMULATOR,
-                            "F96C3A5E789445DD5896009229E43316"
-                    )).build();
-            MobileAds.setRequestConfiguration(configuration);
+            boolean isDebug = BuildConfig.DEBUG
+                    && (app.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+            List<String> testDeviceIds = AdTestDevices.forBuild(isDebug, BuildConfig.TEST_DEVICE_IDS);
+            if (!testDeviceIds.isEmpty()) {
+                RequestConfiguration configuration = MobileAds.getRequestConfiguration().toBuilder()
+                        .setTestDeviceIds(testDeviceIds)
+                        .build();
+                MobileAds.setRequestConfiguration(configuration);
+            }
             MobileAds.initialize(app, result -> main.post(() -> {
                 gate.sdkInitialized(); notifyAdsChanged();
             }));

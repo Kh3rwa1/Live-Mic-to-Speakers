@@ -33,4 +33,16 @@
     <string name="share_app">Share App</string>
     <string name="watermark_label_prefix">AdMob - </string>
     <string name="yes">Rate Now</string>
+
+    <plurals name="unrecovered_notice">
+        <item quantity="one">%1$d recording couldn\'t be recovered</item>
+        <item quantity="other">%1$d recordings couldn\'t be recovered</item>
+    </plurals>
+    <string name="unrecovered_delete_action">Delete</string>
+    <string name="unrecovered_share_action">Share for support</string>
+    <string name="unrecovered_delete_dialog_title">Delete unrecovered recordings?</string>
+    <string name="unrecovered_delete_dialog_message">These recordings were interrupted and cannot be played. Delete them permanently?</string>
+    <string name="unrecovered_delete_dialog_confirm">Delete</string>
+    <string name="unrecovered_share_title">Share unrecovered recording</string>
+    <string name="safety_dont_show_again">Don\'t show again</string>
 </resources>

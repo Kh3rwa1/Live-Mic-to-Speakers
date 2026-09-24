@@ -14,7 +14,7 @@ public class SplashActivity extends AppCompatActivity {
     private ActivitySplashBinding binding;
     private boolean navigated;
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private final Runnable timeout = this::HomeScreen;
+    private final Runnable timeout = this::navigateHome;
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         binding = ActivitySplashBinding.inflate(getLayoutInflater());
@@ -24,16 +24,16 @@ public class SplashActivity extends AppCompatActivity {
                 getString(R.string.native_advance_admob)},
                 success -> { }).execute();
         int rawId = getResources().getIdentifier("splash_video", "raw", getPackageName());
-        if (rawId == 0 || binding.splashVideo == null) { showFallback(); HomeScreen(); return; }
+        if (rawId == 0 || binding.splashVideo == null) { showFallback(); navigateHome(); return; }
         try {
             binding.splashVideo.setVideoURI(android.net.Uri.parse("android.resource://" + getPackageName() + "/" + rawId));
-        } catch (RuntimeException missing) { showFallback(); HomeScreen(); return; }
+        } catch (RuntimeException missing) { showFallback(); navigateHome(); return; }
         binding.splashVideo.setOnPreparedListener(player -> {
             player.setLooping(false);
-            try { binding.splashVideo.start(); } catch (RuntimeException error) { HomeScreen(); }
+            try { binding.splashVideo.start(); } catch (RuntimeException error) { navigateHome(); }
         });
-        binding.splashVideo.setOnCompletionListener(player -> HomeScreen());
-        binding.splashVideo.setOnErrorListener((player, what, extra) -> { HomeScreen(); return true; });
+        binding.splashVideo.setOnCompletionListener(player -> navigateHome());
+        binding.splashVideo.setOnErrorListener((player, what, extra) -> { navigateHome(); return true; });
         handler.postDelayed(timeout, MAX_SPLASH_MS);
     }
     private void showFallback() {
@@ -47,7 +47,7 @@ public class SplashActivity extends AppCompatActivity {
     @Override protected void onPostResume() {
         super.onPostResume();
         if (navigated) return;
-        if (binding.splashVideo == null) { HomeScreen(); return; }
+        if (binding.splashVideo == null) { navigateHome(); return; }
         // Re-arm the safety timeout after any backgrounding; completion/error navigate sooner.
         handler.removeCallbacks(timeout);
         handler.postDelayed(timeout, MAX_SPLASH_MS);
@@ -57,10 +57,14 @@ public class SplashActivity extends AppCompatActivity {
         try { if (binding.splashVideo != null) binding.splashVideo.suspend(); } catch (RuntimeException ignored) { }
         super.onDestroy();
     }
-    public void HomeScreen() {
+    public void navigateHome() {
         if (navigated || isFinishing() || isDestroyed()) return;
         navigated = true;
         startActivity(new Intent(this, MainActivity.class));
         finish();
+    }
+    @Deprecated
+    public void HomeScreen() {
+        navigateHome();
     }
 }

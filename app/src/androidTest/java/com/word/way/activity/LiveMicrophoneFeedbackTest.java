@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import com.word.way.R;
 import com.word.way.audio.LiveAudioFailure;
 import demo.ads.AdsHandler;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -15,9 +16,17 @@ import static org.junit.Assert.*;
 
 @RunWith(AndroidJUnit4.class)
 public final class LiveMicrophoneFeedbackTest {
+    private boolean previousAds;
+
     @Before public void disableAds() {
         Context app = ApplicationProvider.getApplicationContext();
-        AdsHandler.getInstance(app); AdsHandler.setAdsOn(false);
+        AdsHandler.getInstance(app);
+        previousAds = AdsHandler.isEnabledByUser();
+        AdsHandler.setAdsOn(false);
+    }
+
+    @After public void restoreAds() {
+        AdsHandler.setAdsOn(previousAds);
     }
     @Test public void eachFailureHasPersistentRecoveryWithoutStartingCapture() {
         LiveAudioFailure.Reason[] reasons = {LiveAudioFailure.Reason.PERMISSION, LiveAudioFailure.Reason.SERVICE_UNAVAILABLE,

@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -39,8 +40,17 @@ import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public class AudioWorkflowTest {
     @Rule public GrantPermissionRule microphone = GrantPermissionRule.grant(Manifest.permission.RECORD_AUDIO);
+    private boolean previousAds;
+
     @Before public void disableAds() {
-        Context app = ApplicationProvider.getApplicationContext(); AdsHandler.getInstance(app); AdsHandler.setAdsOn(false);
+        Context app = ApplicationProvider.getApplicationContext();
+        AdsHandler.getInstance(app);
+        previousAds = AdsHandler.isEnabledByUser();
+        AdsHandler.setAdsOn(false);
+    }
+
+    @After public void restoreAds() {
+        AdsHandler.setAdsOn(previousAds);
     }
     private static void awaitLabel(ActivityScenario<RecordAudioActivity> scenario, String expected) {
         long deadline = SystemClock.elapsedRealtime() + 10_000;
