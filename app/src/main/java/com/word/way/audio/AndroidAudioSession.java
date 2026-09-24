@@ -67,6 +67,8 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
 
     private OutputBufferTuner bufferTuner;
     private long lastBufferTuningCheck;
+    private DriftController driftController;
+    private long lastDriftCheck;
 
     // Diagnostics telemetry (updated on worker at most every 500 ms)
     private boolean featureLowLatency;
@@ -226,6 +228,8 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
                             + " capacity=" + capacity + " burst=" + burst);
                 }
             } catch (RuntimeException ignored) { }
+            driftController = new DriftController(burst, sampleRate, initialTarget, sessionStartTime);
+            lastDriftCheck = sessionStartTime;
         }
 
         if (input.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING)
@@ -278,6 +282,24 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         int read = source.read(buffer, 0, toRead);
         if (read < 0) throw new LiveAudioFailure(READ_FAILED, "Microphone read failed (" + read + ")");
         if (read == 0) return 0;
+
+        long now = SystemClock.elapsedRealtime();
+        if (driftController != null && now - lastDriftCheck >= 50) {
+            lastDriftCheck = now;
+            int rawHead = 0;
+            try { rawHead = sink.getPlaybackHeadPosition(); } catch (RuntimeException ignored) { }
+            int drop = driftController.evaluate(totalFramesWritten, rawHead, now);
+            if (drop > 0 && read > drop) {
+                int crossfade = Math.min(drop / 2, 48);
+                read = DriftController.applyCrossfadeDrop(buffer, read, drop, crossfade);
+                driftCorrectionsCount++;
+                if (debug) {
+                    Log.d(TAG, "Drift corrected: dropped " + drop + " frames with " + crossfade
+                            + " crossfade, totalCorrections=" + driftCorrectionsCount);
+                }
+            }
+        }
+
         meterIfDue(read);
         if (gain != null) {
             gain.setUserGain((float) userGain.getAsDouble());
@@ -393,6 +415,9 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
             try {
                 int actual = sink.setBufferSizeInFrames(newTarget);
                 bufferTuner.recordActualSize(actual);
+                if (driftController != null) {
+                    driftController.setTargetQueueDepthFrames(bufferTuner.getCurrentTargetFrames());
+                }
                 if (debug) {
                     Log.d(TAG, "Output buffer adapted on underrun: target=" + newTarget
                             + " actual=" + actual + " underruns=" + underruns);
@@ -405,8 +430,13 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         return bufferTuner;
     }
 
+    DriftController getDriftController() {
+        return driftController;
+    }
+
     private void releaseDevices() {
         bufferTuner = null;
+        driftController = null;
         runningPeak = 0;
         if (input != null) { try { input.release(); } catch (RuntimeException ignored) { } input = null; }
         if (output != null) {
