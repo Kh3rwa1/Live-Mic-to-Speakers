@@ -101,4 +101,13 @@
     <string name="btn_recording_settings_pill">Recording settings</string>
     <string name="bluetooth_rationale_title">Nearby devices permission</string>
     <string name="bluetooth_rationale_message">Permission to find nearby devices is used to display Bluetooth speaker names and route audio to them. Live microphone will continue to work even if this is skipped.</string>
+    <string name="settings_audio_profile_title">Audio Input Profile</string>
+    <string name="settings_audio_profile_desc">Choose latency and audio processing trade-offs</string>
+    <string name="settings_profile_low_latency_title">Low latency (Recommended)</string>
+    <string name="settings_profile_low_latency_desc">Fastest response. Raw audio without filter delays. Best for headphones.</string>
+    <string name="settings_profile_balanced_title">Balanced</string>
+    <string name="settings_profile_balanced_desc">Standard mic with noise suppression enabled. Slight filtering delay.</string>
+    <string name="settings_profile_noisy_title">Noisy room / Call-style</string>
+    <string name="settings_profile_noisy_desc">Voice communication with echo cancellation and noise suppression. Highest latency.</string>
+    <string name="settings_profile_updated_note">Audio profile updated. Changes apply to the next live session.</string>
 </resources>

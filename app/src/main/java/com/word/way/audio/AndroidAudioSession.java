@@ -120,45 +120,68 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         // Native output rate/burst first so the input and output run on the device's own clock.
         nativeRate = integerProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
         int nativeBurst = integerProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
+        com.word.way.util.MyPref prefs = new com.word.way.util.MyPref(context);
+        int inputProfile = prefs.getInt(com.word.way.util.MyPref.KEY_INPUT_PROFILE, com.word.way.util.MyPref.PROFILE_LOW_LATENCY);
+        int[] candidateSources = InputProfilePolicy.candidateSources(Build.VERSION.SDK_INT, inputProfile);
+        int actualSource = -1;
         Exception failure = null;
         for (int rate : AudioBufferSizing.candidateRates(nativeRate)) {
             checkWanted(stillWanted);
-            try {
-                int recMin = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-                int playMin = AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
-                if (recMin <= 0 || playMin <= 0) continue;
-                int recBytes = AudioBufferSizing.bufferBytes(recMin, nativeBurst, CHANNELS, BYTES_PER_SAMPLE);
-                int playBytes = AudioBufferSizing.bufferBytes(playMin, nativeBurst, CHANNELS, BYTES_PER_SAMPLE);
-                input = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, rate,
-                        AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, recBytes);
-                output = createOutput(attributes, rate, playBytes);
-                if (input.getState() != AudioRecord.STATE_INITIALIZED || output.getState() != AudioTrack.STATE_INITIALIZED)
-                    throw new IOException("Unsupported audio configuration");
-                output.addOnRoutingChangedListener(routing, new Handler(Looper.getMainLooper()));
-                sampleRate = rate;
-                framesPerBuffer = nativeBurst;
-                recordBufferBytes = recBytes;
-                trackBufferBytes = playBytes;
-                buffer = new short[AudioBufferSizing.scratchSamples(recBytes, playBytes, BYTES_PER_SAMPLE)];
-                // A fresh processor per session restarts the gain ramp and clears any mute.
-                gain = new LiveGainProcessor(rate);
+            int recMin = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+            int playMin = AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
+            if (recMin <= 0 || playMin <= 0) continue;
+            int recBytes = AudioBufferSizing.bufferBytes(recMin, nativeBurst, CHANNELS, BYTES_PER_SAMPLE);
+            int playBytes = AudioBufferSizing.bufferBytes(playMin, nativeBurst, CHANNELS, BYTES_PER_SAMPLE);
+
+            for (int source : candidateSources) {
+                checkWanted(stillWanted);
+                try {
+                    AudioRecord rec = new AudioRecord(source, rate,
+                            AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, recBytes);
+                    if (rec.getState() != AudioRecord.STATE_INITIALIZED) {
+                        rec.release();
+                        continue;
+                    }
+                    AudioTrack trk = createOutput(attributes, rate, playBytes);
+                    if (trk.getState() != AudioTrack.STATE_INITIALIZED) {
+                        rec.release();
+                        trk.release();
+                        continue;
+                    }
+                    input = rec;
+                    output = trk;
+                    actualSource = source;
+                    output.addOnRoutingChangedListener(routing, new Handler(Looper.getMainLooper()));
+                    sampleRate = rate;
+                    framesPerBuffer = nativeBurst;
+                    recordBufferBytes = recBytes;
+                    trackBufferBytes = playBytes;
+                    buffer = new short[AudioBufferSizing.scratchSamples(recBytes, playBytes, BYTES_PER_SAMPLE)];
+                    // A fresh processor per session restarts the gain ramp and clears any mute.
+                    gain = new LiveGainProcessor(rate);
+                    break;
+                } catch (SecurityException error) {
+                    releaseDevices();
+                    throw new LiveAudioFailure(PERMISSION, "Microphone access changed during preparation", error);
+                } catch (Exception error) {
+                    failure = error;
+                    releaseDevices();
+                }
+            }
+            if (input != null && output != null) {
                 break;
-            } catch (SecurityException error) {
-                releaseDevices();
-                throw new LiveAudioFailure(PERMISSION, "Microphone access changed during preparation", error);
-            } catch (Exception error) {
-                failure = error;
-                releaseDevices();
             }
         }
         if (buffer == null) throw new LiveAudioFailure(UNSUPPORTED_CONFIGURATION,
                 "No supported microphone/output configuration", failure);
+        boolean enableAec = InputProfilePolicy.isAecRequested(inputProfile);
+        boolean enableNs = InputProfilePolicy.isNsRequested(inputProfile);
         try {
-            if (AcousticEchoCanceler.isAvailable()) {
+            if (enableAec && AcousticEchoCanceler.isAvailable()) {
                 aec = AcousticEchoCanceler.create(input.getAudioSessionId());
                 if (aec != null) aec.setEnabled(true);
             }
-            if (NoiseSuppressor.isAvailable()) {
+            if (enableNs && NoiseSuppressor.isAvailable()) {
                 ns = NoiseSuppressor.create(input.getAudioSessionId());
                 if (ns != null) ns.setEnabled(true);
             }
@@ -174,7 +197,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         PackageManager pm = context.getPackageManager();
         featureLowLatency = pm != null && pm.hasSystemFeature(PackageManager.FEATURE_AUDIO_LOW_LATENCY);
         featureAudioPro = pm != null && pm.hasSystemFeature(PackageManager.FEATURE_AUDIO_PRO);
-        audioSourceName = "VOICE_COMMUNICATION (7)";
+        audioSourceName = InputProfilePolicy.sourceName(actualSource);
         sessionStartTime = SystemClock.elapsedRealtime();
         lastDiagnosticsUpdate = 0L;
         totalFramesWritten = 0L;

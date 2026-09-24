@@ -202,6 +202,147 @@
                 android:src="@drawable/ic_chevron_right_indigo" />
         </LinearLayout>
 
+        <!-- Card: Audio Input Profile -->
+        <LinearLayout
+            android:id="@+id/card_audio_profile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/bg_card_white_elevated"
+            android:elevation="2dp"
+            android:orientation="vertical"
+            android:paddingStart="14dp"
+            android:paddingTop="14dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:background="@drawable/bg_squircle_lavender_soft">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="center"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_mic_white"
+                        app:tint="@color/quality_accent" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/poppins_semibold"
+                        android:text="@string/settings_audio_profile_title"
+                        android:textColor="@color/quality_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/poppins_regular"
+                        android:text="@string/settings_audio_profile_desc"
+                        android:textColor="@color/quality_secondary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <RadioGroup
+                android:id="@+id/rg_audio_profile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical">
+
+                <RadioButton
+                    android:id="@+id/rb_profile_low_latency"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:buttonTint="@color/quality_accent"
+                    android:contentDescription="@string/settings_profile_low_latency_title"
+                    android:text="@string/settings_profile_low_latency_title"
+                    android:textColor="@color/quality_text"
+                    android:textSize="14sp"
+                    android:fontFamily="@font/poppins_semibold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="32dp"
+                    android:layout_marginBottom="8dp"
+                    android:fontFamily="@font/poppins_regular"
+                    android:text="@string/settings_profile_low_latency_desc"
+                    android:textColor="@color/quality_secondary"
+                    android:textSize="12sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_profile_balanced"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:buttonTint="@color/quality_accent"
+                    android:contentDescription="@string/settings_profile_balanced_title"
+                    android:text="@string/settings_profile_balanced_title"
+                    android:textColor="@color/quality_text"
+                    android:textSize="14sp"
+                    android:fontFamily="@font/poppins_semibold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="32dp"
+                    android:layout_marginBottom="8dp"
+                    android:fontFamily="@font/poppins_regular"
+                    android:text="@string/settings_profile_balanced_desc"
+                    android:textColor="@color/quality_secondary"
+                    android:textSize="12sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_profile_noisy"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:buttonTint="@color/quality_accent"
+                    android:contentDescription="@string/settings_profile_noisy_title"
+                    android:text="@string/settings_profile_noisy_title"
+                    android:textColor="@color/quality_text"
+                    android:textSize="14sp"
+                    android:fontFamily="@font/poppins_semibold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="32dp"
+                    android:layout_marginBottom="4dp"
+                    android:fontFamily="@font/poppins_regular"
+                    android:text="@string/settings_profile_noisy_desc"
+                    android:textColor="@color/quality_secondary"
+                    android:textSize="12sp" />
+            </RadioGroup>
+        </LinearLayout>
+
         <!-- Card 3: Share App -->
         <LinearLayout
             android:id="@+id/rl_share_app"
