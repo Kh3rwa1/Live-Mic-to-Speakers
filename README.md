@@ -41,8 +41,12 @@ recorder and settings.
 
 - **Start at low speaker volume** and keep the microphone away from the speaker. Acoustic feedback
   can become very loud very quickly.
-- **Headphones are safer.** Live monitoring detects runaway feedback and stops automatically, but it
-  cannot prevent every case.
+- **Headphones are safer.** Live monitoring automatically stops when a sustained loud, tonal acoustic
+  feedback loop is detected for approximately one second, releasing the audio hardware and requiring a deliberate
+  user restart.
+- **What feedback detection cannot do:** It cannot prevent the first second of loud feedback while
+  the condition is being verified, it may not catch every acoustic scenario (such as highly distorted,
+  multi-frequency or intermittent howl), and it does not replace keeping volume low and using headphones.
 - Disconnecting the output stops monitoring; you must start it again deliberately.
 - The input meter is a relative indicator, not a calibrated sound-pressure meter.
 
