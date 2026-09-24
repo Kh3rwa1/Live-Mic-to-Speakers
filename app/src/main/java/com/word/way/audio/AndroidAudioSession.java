@@ -262,17 +262,20 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
             return 0;
         }
     }
+    private int runningPeak;
+
     /**
-     * Blocking read/write pump. The record device paces this loop, so the worker no longer sleeps
-     * or busy-waits. One read returns within roughly one buffer duration, which bounds how long
-     * {@link #close()} can wait after a stop request without ever blocking the UI thread.
+     * Blocking read/write pump. The record device paces this loop in burst-sized chunks (e.g. 192
+     * frames = 4 ms), bounding input latency and ensuring close() returns promptly.
      */
     @Override public int pump() throws IOException {
         if (!signal.isActive()) return 0;
         final AudioRecord source = input;
         final AudioTrack sink = output;
         if (source == null || sink == null) return 0;
-        int read = source.read(buffer, 0, buffer.length);
+        int burst = (framesPerBuffer > 0) ? framesPerBuffer : 192;
+        int toRead = Math.min(burst, buffer.length);
+        int read = source.read(buffer, 0, toRead);
         if (read < 0) throw new LiveAudioFailure(READ_FAILED, "Microphone read failed (" + read + ")");
         if (read == 0) return 0;
         meterIfDue(read);
@@ -295,11 +298,15 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         return written;
     }
     private void meterIfDue(int read) {
+        for (int i = 0; i < read; i++) {
+            int abs = Math.abs((int) buffer[i]);
+            if (abs > runningPeak) runningPeak = abs;
+        }
         long now = SystemClock.elapsedRealtime();
         if (now - lastMeter < 150) return;
         lastMeter = now;
-        int peak = 0;
-        for (int i = 0; i < read; i++) peak = Math.max(peak, Math.abs((int) buffer[i]));
+        int peak = runningPeak;
+        runningPeak = 0;
         String route;
         try {
             AudioDeviceInfo device = output.getRoutedDevice();
@@ -400,6 +407,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
 
     private void releaseDevices() {
         bufferTuner = null;
+        runningPeak = 0;
         if (input != null) { try { input.release(); } catch (RuntimeException ignored) { } input = null; }
         if (output != null) {
             try { output.removeOnRoutingChangedListener(routing); } catch (RuntimeException ignored) { }
