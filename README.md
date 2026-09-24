@@ -17,8 +17,10 @@ locally; recordings stay in the app's own folders and are removed when you unins
 - **Recorder** — standalone AAC (`.m4a`) recording with a live level meter.
 - **Audio library** — search, sort, preview, play and share; rename or delete saved recordings with
   a confirmation step.
-- **Crash-safe saves** — a clip is only listed once it is finalized, and unfinished saves are
-  recovered the next time the library opens.
+- **Crash-safe saves** — in-flight recordings are tracked in a process-wide active registry during capture.
+  When the audio library opens, finalized `.pending` clips are safely published, empty abandoned
+  files older than 24 hours are removed, and unreadable recordings are quarantined as `.unrecovered`
+  files rather than deleted, allowing users to review, permanently delete, or share them for support.
 - **Privacy-minded ads** — ad measurement is deferred until consent allows it, and missing or
   offline ads never block navigation.
 

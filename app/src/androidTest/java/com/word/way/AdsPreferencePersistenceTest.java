@@ -44,7 +44,7 @@ public class AdsPreferencePersistenceTest {
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(activity -> {
                 assertFalse("Ads must remain disabled in first launch", AdsHandler.isEnabledByUser());
-                View banner = activity.findViewById(R.id.native_lay);
+                View banner = activity.findViewById(R.id.nativeLay);
                 if (banner != null) {
                     assertEquals("Ad placement view must not be visible when ads disabled",
                             View.GONE, banner.getVisibility());
@@ -58,7 +58,7 @@ public class AdsPreferencePersistenceTest {
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(activity -> {
                 assertFalse("Ads must remain disabled after relaunch", AdsHandler.isEnabledByUser());
-                View banner = activity.findViewById(R.id.native_lay);
+                View banner = activity.findViewById(R.id.nativeLay);
                 if (banner != null) {
                     assertEquals("Ad placement view must not be visible when ads disabled on relaunch",
                             View.GONE, banner.getVisibility());
