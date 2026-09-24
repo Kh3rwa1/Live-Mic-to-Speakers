@@ -40,6 +40,24 @@ for name in ['RecordAudioActivity', 'HoldToSpeakActivity', 'LiveMicrophoneActivi
     text = (source / (name + '.java')).read_text()
     if re.search(r'\.set(?:Text|ContentDescription)\("', text):
         problems.append(f'{name}: hard-coded UI label')
+
+def check_test_device_ids(repo_root):
+    found = []
+    main_dirs = [repo_root / 'app/src/main/java', repo_root / 'ads/src/main/java']
+    hex32_pattern = re.compile(r'setTestDeviceIds\s*\([^)]*["\'][0-9A-F]{32}["\']', re.DOTALL)
+    for src_dir in main_dirs:
+        if not src_dir.exists():
+            continue
+        for java_file in src_dir.rglob('*.java'):
+            content = java_file.read_text(encoding='utf-8')
+            if 'F96C3A5E789445DD5896009229E43316' in content:
+                found.append(f'{java_file.name}: hardcoded test device ID literal F96C3A5E789445DD5896009229E43316')
+            if hex32_pattern.search(content):
+                found.append(f'{java_file.name}: hardcoded 32-character hex test device ID near setTestDeviceIds')
+    return found
+
+problems.extend(check_test_device_ids(root))
+
 if problems:
     raise SystemExit('\n'.join(problems))
-print('Quality contract passed: resource-based labels, scalable text, named controls, scrollable layouts, collapsible ad space.')
+print('Quality contract passed: resource-based labels, scalable text, named controls, scrollable layouts, collapsible ad space, no hardcoded test devices.')

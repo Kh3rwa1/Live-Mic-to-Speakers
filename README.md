@@ -62,6 +62,7 @@ recorder and settings.
 - `python3 -m unittest discover -s tools/tests -v`
 - `bash ./gradlew :app:writeDependencyInventory`
 - `python3 tools/check_dependency_policy.py app/build/reports/runtime-dependencies.json`
+- **AdMob Test Device IDs:** Test device IDs are only activated in debuggable builds and are never packaged into release builds. To register your physical test device for debug runs, add `LIVE_MIC_TEST_DEVICE_IDS=<device_id_1>,<device_id_2>` to `local.properties` or pass `-PLIVE_MIC_TEST_DEVICE_IDS=<device_id>` on the command line. `AdRequest.DEVICE_ID_EMULATOR` is included automatically in debug builds.
 
 GitHub Actions builds debug/release, runs lint and JVM regression checks, and runs Android tests on API 24, 34, 36 and 37, including APIs 36 and 37 at 200% font scale. Native screenshots are uploaded with the device-test reports for visual review. Inspect the checks on the pull request: a configured workflow is not proof that the final commit passed. A successful build also uploads `live-mic-debug-apk` for installation testing. Default release output uses demo ad configuration and is not a signed, device-verified production build.
 

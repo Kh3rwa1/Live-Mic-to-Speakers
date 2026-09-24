@@ -9,10 +9,25 @@ android {
         minSdk 24
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
+    buildFeatures {
+        buildConfig true
+    }
     buildTypes {
+        debug {
+            def localProperties = new Properties()
+            def localFile = rootProject.file('local.properties')
+            if (localFile.exists()) {
+                localFile.withInputStream { localProperties.load(it) }
+            }
+            def testDevices = providers.gradleProperty('LIVE_MIC_TEST_DEVICE_IDS')
+                    .orElse(providers.environmentVariable('LIVE_MIC_TEST_DEVICE_IDS'))
+                    .getOrElse(localProperties.getProperty('LIVE_MIC_TEST_DEVICE_IDS', ''))
+            buildConfigField 'String', 'TEST_DEVICE_IDS', "\"${testDevices}\""
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField 'String', 'TEST_DEVICE_IDS', '""'
         }
     }
     compileOptions {
