@@ -1,5 +1,6 @@
 package com.word.way.audio;
 
+import android.media.AudioAttributes;
 import android.media.MediaRecorder;
 
 /**
@@ -12,6 +13,22 @@ public final class InputProfilePolicy {
     public static final int PROFILE_NOISY_ROOM = 2;
 
     private InputProfilePolicy() { }
+
+    /**
+     * Determines AudioAttributes usage based on input profile.
+     *
+     * <p>{@link AudioAttributes#USAGE_MEDIA} with {@link AudioAttributes#CONTENT_TYPE_SPEECH}
+     * is used for {@link #PROFILE_LOW_LATENCY} and {@link #PROFILE_BALANCED} to qualify for
+     * platform fast-track mixer without telephony DSP delay.
+     *
+     * <p>{@link AudioAttributes#USAGE_VOICE_COMMUNICATION} is used for {@link #PROFILE_NOISY_ROOM}
+     * because call-style processing and telephony AEC match the VOICE_COMMUNICATION input source.
+     */
+    public static int outputUsage(int profile) {
+        return profile == PROFILE_NOISY_ROOM
+                ? AudioAttributes.USAGE_VOICE_COMMUNICATION
+                : AudioAttributes.USAGE_MEDIA;
+    }
 
     /**
      * Ordered candidate audio sources based on API level and user profile preference.

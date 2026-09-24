@@ -109,7 +109,10 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) throw new LiveAudioFailure(PERMISSION, "Microphone permission required");
         if (manager == null) throw new LiveAudioFailure(SERVICE_UNAVAILABLE, "Audio service unavailable");
-        AudioAttributes attributes = new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
+        com.word.way.util.MyPref prefs = new com.word.way.util.MyPref(context);
+        int inputProfile = prefs.getInt(com.word.way.util.MyPref.KEY_INPUT_PROFILE, com.word.way.util.MyPref.PROFILE_LOW_LATENCY);
+        int usage = InputProfilePolicy.outputUsage(inputProfile);
+        AudioAttributes attributes = new AudioAttributes.Builder().setUsage(usage)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build();
         if (Build.VERSION.SDK_INT >= 26) {
             focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
@@ -125,8 +128,6 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         // Native output rate/burst first so the input and output run on the device's own clock.
         nativeRate = integerProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
         int nativeBurst = integerProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
-        com.word.way.util.MyPref prefs = new com.word.way.util.MyPref(context);
-        int inputProfile = prefs.getInt(com.word.way.util.MyPref.KEY_INPUT_PROFILE, com.word.way.util.MyPref.PROFILE_LOW_LATENCY);
         int[] candidateSources = InputProfilePolicy.candidateSources(Build.VERSION.SDK_INT, inputProfile);
         int actualSource = -1;
         Exception failure = null;
@@ -191,14 +192,6 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
                 if (ns != null) ns.setEnabled(true);
             }
         } catch (RuntimeException ignored) { /* Optional hardware processing. */ }
-        // Keep cancellation checks on both sides of platform start calls.
-        checkWanted(stillWanted);
-        try { input.startRecording(); }
-        catch (SecurityException error) { throw new LiveAudioFailure(PERMISSION, "Microphone access denied", error); }
-        catch (RuntimeException error) { throw new LiveAudioFailure(MICROPHONE_UNAVAILABLE, "Microphone could not start", error); }
-        checkWanted(stillWanted);
-        try { output.play(); }
-        catch (RuntimeException error) { throw new LiveAudioFailure(OUTPUT_FAILED, "Audio output could not start", error); }
         PackageManager pm = context.getPackageManager();
         featureLowLatency = pm != null && pm.hasSystemFeature(PackageManager.FEATURE_AUDIO_LOW_LATENCY);
         featureAudioPro = pm != null && pm.hasSystemFeature(PackageManager.FEATURE_AUDIO_PRO);
@@ -212,8 +205,8 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         queueDepth10sMs = -1f;
         driftCorrectionsCount = 0;
 
+        int burst = (framesPerBuffer > 0) ? framesPerBuffer : 192;
         if (output != null) {
-            int burst = framesPerBuffer;
             int capacity = 0;
             int initialUnderruns = 0;
             try { capacity = output.getBufferCapacityInFrames(); } catch (RuntimeException ignored) { }
@@ -231,6 +224,25 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
             driftController = new DriftController(burst, sampleRate, initialTarget, sessionStartTime);
             lastDriftCheck = sessionStartTime;
         }
+
+        // Warm-start: put AudioTrack into PLAYSTATE_PLAYING and prime with 1 burst of silence
+        // before starting input to prevent cold-start pipeline stalls.
+        checkWanted(stillWanted);
+        try {
+            output.play();
+            short[] silence = new short[burst];
+            int primed = output.write(silence, 0, silence.length);
+            if (primed > 0) {
+                totalFramesWritten += primed;
+            }
+        } catch (RuntimeException error) {
+            throw new LiveAudioFailure(OUTPUT_FAILED, "Audio output could not start", error);
+        }
+
+        checkWanted(stillWanted);
+        try { input.startRecording(); }
+        catch (SecurityException error) { throw new LiveAudioFailure(PERMISSION, "Microphone access denied", error); }
+        catch (RuntimeException error) { throw new LiveAudioFailure(MICROPHONE_UNAVAILABLE, "Microphone could not start", error); }
 
         if (input.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING)
             throw new LiveAudioFailure(MICROPHONE_UNAVAILABLE, "Microphone could not start");

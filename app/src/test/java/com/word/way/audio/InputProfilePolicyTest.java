@@ -63,4 +63,14 @@ public class InputProfilePolicyTest {
         assertEquals("MIC (1)", InputProfilePolicy.sourceName(MediaRecorder.AudioSource.MIC));
         assertEquals("VOICE_COMMUNICATION (7)", InputProfilePolicy.sourceName(MediaRecorder.AudioSource.VOICE_COMMUNICATION));
     }
+
+    @Test
+    public void outputUsage_mapsProfileToAppropriateAudioAttributesUsage() {
+        assertEquals(android.media.AudioAttributes.USAGE_MEDIA,
+                InputProfilePolicy.outputUsage(InputProfilePolicy.PROFILE_LOW_LATENCY));
+        assertEquals(android.media.AudioAttributes.USAGE_MEDIA,
+                InputProfilePolicy.outputUsage(InputProfilePolicy.PROFILE_BALANCED));
+        assertEquals(android.media.AudioAttributes.USAGE_VOICE_COMMUNICATION,
+                InputProfilePolicy.outputUsage(InputProfilePolicy.PROFILE_NOISY_ROOM));
+    }
 }
