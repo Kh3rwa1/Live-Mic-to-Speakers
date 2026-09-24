@@ -44,6 +44,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     private static Boolean testIsBluetoothOutput = null;
     private boolean bluetoothRequested = false;
 
+    private long lastMicClickTime = 0L;
     /** Monitoring gain 0..1, read by the audio worker and updated live by the slider. */
     private volatile float liveGain = 0.8f;
     private final ActivityResultLauncher<String> microphonePermission = registerForActivityResult(
@@ -157,7 +158,12 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             binding.layoutMicHero.setFocusable(false);
             binding.layoutMicHero.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         }
-        View.OnClickListener micTrigger = v -> handleStartStop();
+        View.OnClickListener micTrigger = v -> {
+            long now = android.os.SystemClock.elapsedRealtime();
+            if (now - lastMicClickTime < 300) return;
+            lastMicClickTime = now;
+            handleStartStop();
+        };
         binding.ivMic.setOnClickListener(micTrigger);
         if (binding.layoutMicHero != null) binding.layoutMicHero.setOnClickListener(micTrigger);
         View.OnTouchListener micTouchFeedback = (v, event) -> {
@@ -213,16 +219,16 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             }
         });
 
-        binding.ivStartStopNew.setOnClickListener(v -> handleStartStop());
+        binding.ivStartStopNew.setOnClickListener(micTrigger);
         stopMic();
     }
 
     private void handleStartStop() {
-        if (viewModel.isStarting()) {
-            return;
-        }
         if (requested || viewModel.isRunning()) {
             stopMic();
+            return;
+        }
+        if (viewModel.isStarting()) {
             return;
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
