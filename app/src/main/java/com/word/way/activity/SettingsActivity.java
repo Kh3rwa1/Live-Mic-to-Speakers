@@ -53,6 +53,38 @@ public class SettingsActivity extends AppCompatActivity {
             binding.scroller.setOverScrollMode(android.view.View.OVER_SCROLL_NEVER);
             binding.scroller.setVerticalScrollBarEnabled(false);
         }
+        setupInputProfileSelection();
+    }
+
+    private void setupInputProfileSelection() {
+        if (binding.rgAudioProfile == null) return;
+        com.word.way.util.MyPref prefs = new com.word.way.util.MyPref(this);
+        int currentProfile = prefs.getInt(com.word.way.util.MyPref.KEY_INPUT_PROFILE, com.word.way.util.MyPref.PROFILE_LOW_LATENCY);
+        switch (currentProfile) {
+            case com.word.way.util.MyPref.PROFILE_BALANCED:
+                binding.rbProfileBalanced.setChecked(true);
+                break;
+            case com.word.way.util.MyPref.PROFILE_NOISY_ROOM:
+                binding.rbProfileNoisy.setChecked(true);
+                break;
+            case com.word.way.util.MyPref.PROFILE_LOW_LATENCY:
+            default:
+                binding.rbProfileLowLatency.setChecked(true);
+                break;
+        }
+
+        binding.rgAudioProfile.setOnCheckedChangeListener((group, checkedId) -> {
+            int selectedProfile;
+            if (checkedId == R.id.rb_profile_balanced) {
+                selectedProfile = com.word.way.util.MyPref.PROFILE_BALANCED;
+            } else if (checkedId == R.id.rb_profile_noisy) {
+                selectedProfile = com.word.way.util.MyPref.PROFILE_NOISY_ROOM;
+            } else {
+                selectedProfile = com.word.way.util.MyPref.PROFILE_LOW_LATENCY;
+            }
+            prefs.setInt(com.word.way.util.MyPref.KEY_INPUT_PROFILE, selectedProfile);
+            Toast.makeText(this, R.string.settings_profile_updated_note, Toast.LENGTH_SHORT).show();
+        });
     }
     @Override protected void onPostResume() { super.onPostResume(); AdConsent.request(this); }
     private void openPolicy() {

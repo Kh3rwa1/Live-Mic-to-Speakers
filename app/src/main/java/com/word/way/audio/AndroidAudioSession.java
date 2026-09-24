@@ -65,6 +65,23 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private long lastUnderrunLog;
     private boolean hasFocus;
 
+    private OutputBufferTuner bufferTuner;
+    private long lastBufferTuningCheck;
+    private DriftController driftController;
+    private long lastDriftCheck;
+
+    // Diagnostics telemetry (updated on worker at most every 500 ms)
+    private boolean featureLowLatency;
+    private boolean featureAudioPro;
+    private String audioSourceName = "VOICE_COMMUNICATION (7)";
+    private long sessionStartTime;
+    private long lastDiagnosticsUpdate;
+    private long totalFramesWritten;
+    private long lastRawHead;
+    private long headWrapCount;
+    private float queueDepth10sMs = -1f;
+    private int driftCorrectionsCount = 0;
+
     public AndroidAudioSession(Context context, Meter meter, Runnable interrupted) {
         this(context, meter, interrupted, () -> 1f);
     }
@@ -92,7 +109,10 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) throw new LiveAudioFailure(PERMISSION, "Microphone permission required");
         if (manager == null) throw new LiveAudioFailure(SERVICE_UNAVAILABLE, "Audio service unavailable");
-        AudioAttributes attributes = new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
+        com.word.way.util.MyPref prefs = new com.word.way.util.MyPref(context);
+        int inputProfile = prefs.getInt(com.word.way.util.MyPref.KEY_INPUT_PROFILE, com.word.way.util.MyPref.PROFILE_LOW_LATENCY);
+        int usage = InputProfilePolicy.outputUsage(inputProfile);
+        AudioAttributes attributes = new AudioAttributes.Builder().setUsage(usage)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build();
         if (Build.VERSION.SDK_INT >= 26) {
             focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
@@ -108,65 +128,129 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         // Native output rate/burst first so the input and output run on the device's own clock.
         nativeRate = integerProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
         int nativeBurst = integerProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
+        int[] candidateSources = InputProfilePolicy.candidateSources(Build.VERSION.SDK_INT, inputProfile);
+        int actualSource = -1;
         Exception failure = null;
         for (int rate : AudioBufferSizing.candidateRates(nativeRate)) {
             checkWanted(stillWanted);
-            try {
-                int recMin = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-                int playMin = AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
-                if (recMin <= 0 || playMin <= 0) continue;
-                int recBytes = AudioBufferSizing.bufferBytes(recMin, nativeBurst, CHANNELS, BYTES_PER_SAMPLE);
-                int playBytes = AudioBufferSizing.bufferBytes(playMin, nativeBurst, CHANNELS, BYTES_PER_SAMPLE);
-                input = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, rate,
-                        AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, recBytes);
-                output = createOutput(attributes, rate, playBytes);
-                if (input.getState() != AudioRecord.STATE_INITIALIZED || output.getState() != AudioTrack.STATE_INITIALIZED)
-                    throw new IOException("Unsupported audio configuration");
-                output.addOnRoutingChangedListener(routing, new Handler(Looper.getMainLooper()));
-                sampleRate = rate;
-                framesPerBuffer = nativeBurst;
-                recordBufferBytes = recBytes;
-                trackBufferBytes = playBytes;
-                buffer = new short[AudioBufferSizing.scratchSamples(recBytes, playBytes, BYTES_PER_SAMPLE)];
-                // A fresh processor per session restarts the gain ramp and clears any mute.
-                gain = new LiveGainProcessor(rate);
+            int recMin = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+            int playMin = AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
+            if (recMin <= 0 || playMin <= 0) continue;
+            int recBytes = AudioBufferSizing.bufferBytes(recMin, nativeBurst, CHANNELS, BYTES_PER_SAMPLE);
+            int playBytes = AudioBufferSizing.bufferBytes(playMin, nativeBurst, CHANNELS, BYTES_PER_SAMPLE);
+
+            for (int source : candidateSources) {
+                checkWanted(stillWanted);
+                try {
+                    AudioRecord rec = new AudioRecord(source, rate,
+                            AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, recBytes);
+                    if (rec.getState() != AudioRecord.STATE_INITIALIZED) {
+                        rec.release();
+                        continue;
+                    }
+                    AudioTrack trk = createOutput(attributes, rate, playBytes);
+                    if (trk.getState() != AudioTrack.STATE_INITIALIZED) {
+                        rec.release();
+                        trk.release();
+                        continue;
+                    }
+                    input = rec;
+                    output = trk;
+                    actualSource = source;
+                    output.addOnRoutingChangedListener(routing, new Handler(Looper.getMainLooper()));
+                    sampleRate = rate;
+                    framesPerBuffer = nativeBurst;
+                    recordBufferBytes = recBytes;
+                    trackBufferBytes = playBytes;
+                    buffer = new short[AudioBufferSizing.scratchSamples(recBytes, playBytes, BYTES_PER_SAMPLE)];
+                    // A fresh processor per session restarts the gain ramp and clears any mute.
+                    gain = new LiveGainProcessor(rate);
+                    break;
+                } catch (SecurityException error) {
+                    releaseDevices();
+                    throw new LiveAudioFailure(PERMISSION, "Microphone access changed during preparation", error);
+                } catch (Exception error) {
+                    failure = error;
+                    releaseDevices();
+                }
+            }
+            if (input != null && output != null) {
                 break;
-            } catch (SecurityException error) {
-                releaseDevices();
-                throw new LiveAudioFailure(PERMISSION, "Microphone access changed during preparation", error);
-            } catch (Exception error) {
-                failure = error;
-                releaseDevices();
             }
         }
         if (buffer == null) throw new LiveAudioFailure(UNSUPPORTED_CONFIGURATION,
                 "No supported microphone/output configuration", failure);
+        boolean enableAec = InputProfilePolicy.isAecRequested(inputProfile);
+        boolean enableNs = InputProfilePolicy.isNsRequested(inputProfile);
         try {
-            if (AcousticEchoCanceler.isAvailable()) {
+            if (enableAec && AcousticEchoCanceler.isAvailable()) {
                 aec = AcousticEchoCanceler.create(input.getAudioSessionId());
                 if (aec != null) aec.setEnabled(true);
             }
-            if (NoiseSuppressor.isAvailable()) {
+            if (enableNs && NoiseSuppressor.isAvailable()) {
                 ns = NoiseSuppressor.create(input.getAudioSessionId());
                 if (ns != null) ns.setEnabled(true);
             }
         } catch (RuntimeException ignored) { /* Optional hardware processing. */ }
-        // Keep cancellation checks on both sides of platform start calls.
+        PackageManager pm = context.getPackageManager();
+        featureLowLatency = pm != null && pm.hasSystemFeature(PackageManager.FEATURE_AUDIO_LOW_LATENCY);
+        featureAudioPro = pm != null && pm.hasSystemFeature(PackageManager.FEATURE_AUDIO_PRO);
+        audioSourceName = InputProfilePolicy.sourceName(actualSource);
+        sessionStartTime = SystemClock.elapsedRealtime();
+        lastBufferTuningCheck = sessionStartTime;
+        lastDiagnosticsUpdate = 0L;
+        totalFramesWritten = 0L;
+        lastRawHead = 0L;
+        headWrapCount = 0L;
+        queueDepth10sMs = -1f;
+        driftCorrectionsCount = 0;
+
+        int burst = (framesPerBuffer > 0) ? framesPerBuffer : 192;
+        if (output != null) {
+            int capacity = 0;
+            int initialUnderruns = 0;
+            try { capacity = output.getBufferCapacityInFrames(); } catch (RuntimeException ignored) { }
+            try { initialUnderruns = output.getUnderrunCount(); } catch (RuntimeException ignored) { }
+            bufferTuner = new OutputBufferTuner(burst, capacity, initialUnderruns, sessionStartTime);
+            int initialTarget = bufferTuner.getCurrentTargetFrames();
+            try {
+                int actualSize = output.setBufferSizeInFrames(initialTarget);
+                bufferTuner.recordActualSize(actualSize);
+                if (debug) {
+                    Log.d(TAG, "Output buffer tuned at startup: target=" + initialTarget + " actual=" + actualSize
+                            + " capacity=" + capacity + " burst=" + burst);
+                }
+            } catch (RuntimeException ignored) { }
+            driftController = new DriftController(burst, sampleRate, initialTarget, sessionStartTime);
+            lastDriftCheck = sessionStartTime;
+        }
+
+        // Warm-start: put AudioTrack into PLAYSTATE_PLAYING and prime with 1 burst of silence
+        // before starting input to prevent cold-start pipeline stalls.
+        checkWanted(stillWanted);
+        try {
+            output.play();
+            short[] silence = new short[burst];
+            int primed = output.write(silence, 0, silence.length);
+            if (primed > 0) {
+                totalFramesWritten += primed;
+            }
+        } catch (RuntimeException error) {
+            throw new LiveAudioFailure(OUTPUT_FAILED, "Audio output could not start", error);
+        }
+
         checkWanted(stillWanted);
         try { input.startRecording(); }
         catch (SecurityException error) { throw new LiveAudioFailure(PERMISSION, "Microphone access denied", error); }
         catch (RuntimeException error) { throw new LiveAudioFailure(MICROPHONE_UNAVAILABLE, "Microphone could not start", error); }
-        checkWanted(stillWanted);
-        try { output.play(); }
-        catch (RuntimeException error) { throw new LiveAudioFailure(OUTPUT_FAILED, "Audio output could not start", error); }
+
         if (input.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING)
             throw new LiveAudioFailure(MICROPHONE_UNAVAILABLE, "Microphone could not start");
         if (debug) {
             Log.d(TAG, "started rate=" + sampleRate + " nativeRate=" + nativeRate
                     + " framesPerBuffer=" + framesPerBuffer + " recordBuffer=" + recordBufferBytes
                     + " trackBuffer=" + trackBufferBytes + " lowLatency=" + (Build.VERSION.SDK_INT >= 26));
-            AudioDiagnostics.update(new AudioDiagnostics(sampleRate, nativeRate, framesPerBuffer,
-                    recordBufferBytes, trackBufferBytes, 0, "Initializing", Build.VERSION.SDK_INT >= 26, (float) userGain.getAsDouble()));
+            updateDiagnosticsIfDue(0, "Initializing", sessionStartTime, true);
         }
     }
     /** API 26+ requests the platform low-latency output path; 24-25 keep the legacy constructor. */
@@ -194,19 +278,40 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
             return 0;
         }
     }
+    private int runningPeak;
+
     /**
-     * Blocking read/write pump. The record device paces this loop, so the worker no longer sleeps
-     * or busy-waits. One read returns within roughly one buffer duration, which bounds how long
-     * {@link #close()} can wait after a stop request without ever blocking the UI thread.
+     * Blocking read/write pump. The record device paces this loop in burst-sized chunks (e.g. 192
+     * frames = 4 ms), bounding input latency and ensuring close() returns promptly.
      */
     @Override public int pump() throws IOException {
         if (!signal.isActive()) return 0;
         final AudioRecord source = input;
         final AudioTrack sink = output;
         if (source == null || sink == null) return 0;
-        int read = source.read(buffer, 0, buffer.length);
+        int burst = (framesPerBuffer > 0) ? framesPerBuffer : 192;
+        int toRead = Math.min(burst, buffer.length);
+        int read = source.read(buffer, 0, toRead);
         if (read < 0) throw new LiveAudioFailure(READ_FAILED, "Microphone read failed (" + read + ")");
         if (read == 0) return 0;
+
+        long now = SystemClock.elapsedRealtime();
+        if (driftController != null && now - lastDriftCheck >= 50) {
+            lastDriftCheck = now;
+            int rawHead = 0;
+            try { rawHead = sink.getPlaybackHeadPosition(); } catch (RuntimeException ignored) { }
+            int drop = driftController.evaluate(totalFramesWritten, rawHead, now);
+            if (drop > 0 && read > drop) {
+                int crossfade = Math.min(drop / 2, 48);
+                read = DriftController.applyCrossfadeDrop(buffer, read, drop, crossfade);
+                driftCorrectionsCount++;
+                if (debug) {
+                    Log.d(TAG, "Drift corrected: dropped " + drop + " frames with " + crossfade
+                            + " crossfade, totalCorrections=" + driftCorrectionsCount);
+                }
+            }
+        }
+
         meterIfDue(read);
         if (gain != null) {
             gain.setUserGain((float) userGain.getAsDouble());
@@ -221,15 +326,21 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
             if (step == 0) break;
             written += step;
         }
+        totalFramesWritten += written;
+        checkBufferTuningIfDue(sink);
         logUnderrunsIfDue(sink);
         return written;
     }
     private void meterIfDue(int read) {
+        for (int i = 0; i < read; i++) {
+            int abs = Math.abs((int) buffer[i]);
+            if (abs > runningPeak) runningPeak = abs;
+        }
         long now = SystemClock.elapsedRealtime();
         if (now - lastMeter < 150) return;
         lastMeter = now;
-        int peak = 0;
-        for (int i = 0; i < read; i++) peak = Math.max(peak, Math.abs((int) buffer[i]));
+        int peak = runningPeak;
+        runningPeak = 0;
         String route;
         try {
             AudioDeviceInfo device = output.getRoutedDevice();
@@ -242,13 +353,58 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         }
         meter.update(Math.min(100, peak * 100 / 32768), route);
         if (debug) {
-            int underruns = 0;
-            if (output != null) {
-                try { underruns = output.getUnderrunCount(); } catch (RuntimeException ignored) { }
-            }
-            AudioDiagnostics.update(new AudioDiagnostics(sampleRate, nativeRate, framesPerBuffer,
-                    recordBufferBytes, trackBufferBytes, underruns, route, Build.VERSION.SDK_INT >= 26, (float) userGain.getAsDouble()));
+            updateDiagnosticsIfDue(read, route, now, false);
         }
+    }
+
+    private void updateDiagnosticsIfDue(int read, String route, long now, boolean force) {
+        if (!force && now - lastDiagnosticsUpdate < 500) return;
+        lastDiagnosticsUpdate = now;
+        int underruns = 0;
+        int capacityFrames = 0;
+        int sizeFrames = 0;
+        int rawHeadInt = 0;
+        String perfMode = (Build.VERSION.SDK_INT >= 26) ? "UNKNOWN" : "N/A (pre-26)";
+        final AudioTrack sink = output;
+        if (sink != null) {
+            try { underruns = sink.getUnderrunCount(); } catch (RuntimeException ignored) { }
+            try { capacityFrames = sink.getBufferCapacityInFrames(); } catch (RuntimeException ignored) { }
+            try { sizeFrames = sink.getBufferSizeInFrames(); } catch (RuntimeException ignored) { }
+            try { rawHeadInt = sink.getPlaybackHeadPosition(); } catch (RuntimeException ignored) { }
+            if (Build.VERSION.SDK_INT >= 26) {
+                try {
+                    int mode = sink.getPerformanceMode();
+                    if (mode == AudioTrack.PERFORMANCE_MODE_LOW_LATENCY) perfMode = "LOW_LATENCY";
+                    else if (mode == AudioTrack.PERFORMANCE_MODE_NONE) perfMode = "NONE";
+                    else if (mode == AudioTrack.PERFORMANCE_MODE_POWER_SAVING) perfMode = "POWER_SAVING";
+                    else perfMode = String.valueOf(mode);
+                } catch (RuntimeException ignored) { }
+            }
+        }
+        long rawHead = (long) rawHeadInt & 0xFFFFFFFFL;
+        if (rawHead < (lastRawHead & 0xFFFFFFFFL)) {
+            headWrapCount++;
+        }
+        lastRawHead = rawHead;
+        long unwrappedHead = (headWrapCount << 32) | rawHead;
+        long queueFrames = Math.max(0L, totalFramesWritten - unwrappedHead);
+        float queueDepthMs = (sampleRate > 0) ? (queueFrames * 1000f / sampleRate) : 0f;
+        long uptime = Math.max(0L, now - sessionStartTime);
+        if (uptime >= 10000 && queueDepth10sMs < 0f) {
+            queueDepth10sMs = queueDepthMs;
+        }
+        boolean aecOn = false;
+        try { if (aec != null) aecOn = aec.getEnabled(); } catch (RuntimeException ignored) { }
+        boolean nsOn = false;
+        try { if (ns != null) nsOn = ns.getEnabled(); } catch (RuntimeException ignored) { }
+
+        AudioDiagnostics.update(new AudioDiagnostics(
+                featureLowLatency, featureAudioPro,
+                audioSourceName, aecOn, nsOn,
+                perfMode, capacityFrames, sizeFrames, underruns,
+                read, framesPerBuffer, sampleRate, nativeRate,
+                queueDepthMs, queueDepth10sMs, uptime, driftCorrectionsCount,
+                route, (float) userGain.getAsDouble()));
     }
     /** Debug-only latency evidence: sample rate, burst and cumulative underruns. */
     private void logUnderrunsIfDue(AudioTrack sink) {
@@ -259,7 +415,41 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         Log.d(TAG, "underruns=" + sink.getUnderrunCount() + " rate=" + sampleRate
                 + " framesPerBuffer=" + framesPerBuffer + " trackBuffer=" + trackBufferBytes);
     }
+    private void checkBufferTuningIfDue(AudioTrack sink) {
+        if (bufferTuner == null) return;
+        long now = SystemClock.elapsedRealtime();
+        if (now - lastBufferTuningCheck < OutputBufferTuner.DEFAULT_COOLDOWN_MS) return;
+        lastBufferTuningCheck = now;
+        int underruns = 0;
+        try { underruns = sink.getUnderrunCount(); } catch (RuntimeException ignored) { return; }
+        int newTarget = bufferTuner.onUnderrunCheck(underruns, now);
+        if (newTarget > 0) {
+            try {
+                int actual = sink.setBufferSizeInFrames(newTarget);
+                bufferTuner.recordActualSize(actual);
+                if (driftController != null) {
+                    driftController.setTargetQueueDepthFrames(bufferTuner.getCurrentTargetFrames());
+                }
+                if (debug) {
+                    Log.d(TAG, "Output buffer adapted on underrun: target=" + newTarget
+                            + " actual=" + actual + " underruns=" + underruns);
+                }
+            } catch (RuntimeException ignored) { }
+        }
+    }
+
+    OutputBufferTuner getBufferTuner() {
+        return bufferTuner;
+    }
+
+    DriftController getDriftController() {
+        return driftController;
+    }
+
     private void releaseDevices() {
+        bufferTuner = null;
+        driftController = null;
+        runningPeak = 0;
         if (input != null) { try { input.release(); } catch (RuntimeException ignored) { } input = null; }
         if (output != null) {
             try { output.removeOnRoutingChangedListener(routing); } catch (RuntimeException ignored) { }

@@ -14,12 +14,26 @@ public class MyPref {
     public static final String BT_CONNECT_ASKED = "btConnectAsked";
     /** True once the user acknowledged speaker feedback safety warning. */
     public static final String SAFETY_ACK_SPEAKER = "safetyAckSpeaker";
+    /** Input audio profile (0=Low Latency, 1=Balanced, 2=Noisy Room). Default is 0. */
+    public static final String KEY_INPUT_PROFILE = "inputAudioProfile";
+    public static final int PROFILE_LOW_LATENCY = 0;
+    public static final int PROFILE_BALANCED = 1;
+    public static final int PROFILE_NOISY_ROOM = 2;
     private final SharedPreferences pref;
     private final SharedPreferences.Editor editor;
 
     public MyPref(Context context) {
         this.pref = context.getSharedPreferences(PREF_NAME, 0);
         this.editor = this.pref.edit();
+    }
+
+    public int getInt(String key, int fallback) {
+        return this.pref.getInt(key, fallback);
+    }
+
+    public void setInt(String key, int value) {
+        this.editor.putInt(key, value);
+        this.editor.apply();
     }
 
     /** Hold-to-speak recordings folder (external app storage, internal as fallback). */

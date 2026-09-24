@@ -350,6 +350,23 @@
                 android:gravity="center"
                 android:text="@string/studio_output_idle" />
 
+            <TextView
+                android:id="@+id/studio_bluetooth_notice"
+                style="@style/ToolBody"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_squircle_lavender_soft"
+                android:paddingStart="12dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="8dp"
+                android:gravity="center"
+                android:text="@string/bluetooth_latency_notice"
+                android:textColor="@color/quality_text"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
             <include
                 layout="@layout/studio_input_meter"
                 android:visibility="gone" />

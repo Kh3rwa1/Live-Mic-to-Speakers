@@ -39,7 +39,57 @@ adb logcat -s RecordingRecovery:D RecordingFiles:D
 
 ---
 
-## 2. Step-by-Step Test Procedures
+## 2. Latency Measurement & Empirical Benchmarking
+
+Follow these exact steps to benchmark and measure live mic-to-speaker latency across physical devices:
+
+### 2.1 Benchmark Steps
+1. **OboeTester Hardware Baseline**:
+   - Install [OboeTester](https://github.com/google/oboe/tree/main/apps/OboeTester) on the test device.
+   - Navigate to **Round Trip Latency** test.
+   - Run the test using the device's native sample rate and low-latency MMAP or AAudio path.
+   - Record the measured latency in milliseconds. This represents the physical theoretical minimum for the device hardware and acoustic path.
+2. **App Acoustic Clap Test**:
+   - In a quiet room, place the test device running Live Mic to Speaker next to a secondary recording device (e.g. laptop or second phone running an audio recorder at 48 kHz).
+   - Start live monitoring on the test device with monitoring gain at 80%.
+   - Perform a sharp acoustic clap ~10 cm from the microphone. Both the direct physical clap and the amplified speaker output will be picked up by the secondary recorder.
+   - Import the recording into an audio editor (e.g., Audacity).
+   - Zoom in to waveform level and measure the time delta between the direct clap transient peak and the amplified output transient peak.
+   - Perform 5 claps and record the **median** value in ms.
+3. **AudioFlinger Fast-Track ("F") Audit**:
+   - While monitoring is active, execute:
+     ```bash
+     adb shell dumpsys media.audio_flinger
+     ```
+   - In the command output, locate the active mixer thread (e.g., `FastMixer` or `MixerThread`) and search for the app's PID (`adb shell pidof com.word.way`).
+   - Inspect the `Tracks` or `FastTracks` column. Verify that the track flags contain **`F`** (Fast track enabled). If absent or showing `None`, the HAL or framework has denied the fast mixer path.
+4. **Telemetry Snapshot & Copy**:
+   - Long-press the output route label on the Live Microphone screen to open the **Audio Diagnostics** dialog.
+   - Tap **Copy** to capture the full telemetry snapshot.
+5. **Session Duration & Drift Checks**:
+   - Record diagnostics and clap test at **10 seconds** into the session.
+   - Let the session run uninterrupted for **5 minutes**, then record diagnostics and clap test again.
+   - Check whether the queue depth has drifted and whether any underruns accumulated.
+6. **Route Matrix**:
+   - Repeat measurements for:
+     - Built-in speaker
+     - 3.5mm wired headphones / headset
+     - Bluetooth audio (A2DP / BLE)
+
+### 2.2 Latency Benchmark Results Table
+
+| Device Model | Android Version | Build SHA | Route | OboeTester RTL (ms) | App Clap Median (ms) | Fast Track ("F") (Y/N) | Underruns (5 min) | Queue Depth (10s / 5min) | Audio Config (Source, AEC, NS) | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| *e.g. Pixel 8* | *Android 14 (API 34)* | | Built-in Speaker | | | | | | | |
+| *e.g. Pixel 8* | *Android 14 (API 34)* | | Wired Headset | | | | | | | |
+| *e.g. Pixel 8* | *Android 14 (API 34)* | | Bluetooth (A2DP) | | | | | | | |
+| *e.g. Galaxy A34* | *Android 14 (API 34)* | | Built-in Speaker | | | | | | | |
+| *e.g. Galaxy A34* | *Android 14 (API 34)* | | Wired Headset | | | | | | | |
+| *e.g. Galaxy A34* | *Android 14 (API 34)* | | Bluetooth (A2DP) | | | | | | | |
+
+---
+
+## 3. Step-by-Step Functional Test Procedures
 
 ### Test 1: Live Mic — Internal Built-in Speaker
 *Validates: Speaker feedback safety dialog, startup gain ramp, soft limiter, and acoustic feedback detection.*
@@ -108,6 +158,42 @@ adb logcat -s RecordingRecovery:D RecordingFiles:D
    - **Expected**: Subsequent starts do not repeatedly prompt for Bluetooth permission.
 4. Verify audio output over Bluetooth:
    - Note: Bluetooth A2DP inherently has higher latency (~100–200ms) than wired routes due to Bluetooth codec buffer frames.
+
+---
+
+### Test 4b: Audio Input Profiles & Low-Latency Source Selection
+*Validates: Input profile selection in Settings, persistent preferences, and active pipeline hardware effect configuration.*
+
+1. Open **Settings** screen.
+2. Locate the **Audio Input Profile** card:
+   - **Low latency (Recommended)**: Raw audio without filter delays.
+   - **Balanced**: Standard mic with noise suppression.
+   - **Noisy room / Call-style**: Voice communication with echo cancellation and noise suppression.
+3. Select **Low latency**:
+   - Verify Toast: *"Audio profile updated. Changes apply to the next live session."*
+4. Return to **Live Microphone**, tap **Start**, and long-press the output route label to view Diagnostics:
+   - Verify source is `VOICE_PERFORMANCE` (API 29+) or `VOICE_RECOGNITION` (API 24–28).
+   - Verify AEC: `false`, NS: `false`.
+5. Return to **Settings**, select **Noisy room / Call-style**, and restart Live Microphone:
+   - Verify source is `VOICE_COMMUNICATION (7)`.
+   - Verify AEC: `true` (if available), NS: `true` (if available).
+6. Verify profile setting persists across app restart.
+
+---
+
+### Test 4c: Bluetooth Honesty Notice Verification
+*Validates: Non-blocking warning on wireless Bluetooth routes and proper suppression on wired/USB routes.*
+
+1. Connect a Bluetooth audio device (A2DP or SCO).
+2. Open **Live Microphone** and tap **Start**:
+   - **Expected**: A non-blocking notice card appears below the route label: *"Bluetooth adds noticeable delay. Wired headphones give the lowest latency."*
+   - **Expected**: The notice does not block interaction, monitoring gain slider, or stopping/starting.
+3. While live monitoring is active, plug in 3.5mm wired headphones or a USB-C headset:
+   - **Expected**: Audio reroutes to wired headphones and monitoring halts safely on route change.
+4. Tap **Start** with wired headphones connected:
+   - **Expected**: The Bluetooth notice is GONE (`visibility = GONE`).
+5. Disconnect wired headphones so output falls back to Bluetooth:
+   - **Expected**: Bluetooth notice reappears when Bluetooth output is active.
 
 ---
 

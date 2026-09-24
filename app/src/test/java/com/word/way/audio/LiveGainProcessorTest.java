@@ -334,6 +334,49 @@ public class LiveGainProcessorTest {
         }
     }
 
+    @Test public void variousBurstSizesHandleFeedbackAndSpeechCorrectly() {
+        int[] burstSizes = {96, 144, 192, 240, 256};
+        int rate = 48000;
+        for (int burst : burstSizes) {
+            // Test 1: Feedback sine wave must trigger between 0.8s and 1.2s
+            LiveGainProcessor fbProc = new LiveGainProcessor(rate);
+            fbProc.setUserGain(1.0f);
+            short[] sine = TestSignals.sine(rate, 1000, 0.70, 1.5);
+            int triggerIndex = runSignal(fbProc, sine, burst);
+            assertTrue("Sine feedback at burst " + burst + " must trigger", triggerIndex >= 0);
+            double triggerSec = (double) triggerIndex / rate;
+            assertTrue("Trigger time " + triggerSec + "s for burst " + burst + " must be >= 0.8s", triggerSec >= 0.8);
+            assertTrue("Trigger time " + triggerSec + "s for burst " + burst + " must be <= 1.2s", triggerSec <= 1.2);
+            assertTrue(fbProc.isFeedbackLatched());
+            assertTrue(fbProc.isMuted());
+
+            // Test 2: Speech-like audio must NOT trigger
+            LiveGainProcessor speechProc = new LiveGainProcessor(rate);
+            speechProc.setUserGain(1.0f);
+            short[] speech = TestSignals.speechLike(rate, 3.0, 1234L);
+            int speechTrigger = runSignal(speechProc, speech, burst);
+            assertEquals("Speech must not trigger at burst " + burst, -1, speechTrigger);
+            assertFalse(speechProc.isFeedbackLatched());
+            assertFalse(speechProc.isMuted());
+
+            // Test 3: Ramp must work across bursts
+            LiveGainProcessor rampProc = new LiveGainProcessor(1000); // 300 samples ramp
+            short[] step = filled(400, 1000);
+            int pos = 0;
+            short[] chunk = new short[burst];
+            while (pos < step.length) {
+                int toRead = Math.min(burst, step.length - pos);
+                System.arraycopy(step, pos, chunk, 0, toRead);
+                rampProc.process(chunk, toRead);
+                System.arraycopy(chunk, 0, step, pos, toRead);
+                pos += toRead;
+            }
+            assertEquals("First sample must be silence for burst " + burst, 0, step[0]);
+            assertEquals("Ramp must reach target at sample 300 for burst " + burst, 1000, step[300]);
+            assertEquals(1000, step[399]);
+        }
+    }
+
     // JVM micro-benchmark: process 60 s of 48 kHz audio and print elapsed time
     @Test public void microBenchmark60sAudio() {
         int rate = 48000;

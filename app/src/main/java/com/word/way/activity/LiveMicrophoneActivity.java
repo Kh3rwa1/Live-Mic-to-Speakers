@@ -200,6 +200,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
                         binding.tvStartStopNew.setText(R.string.quality_mic_on);
                         if (binding.studioFeedback != null) binding.studioFeedback.setText(R.string.tool_mic_active);
                         maybeRequestBluetoothPermission();
+                        updateBluetoothNotice();
                     }
                 });
             }
@@ -379,6 +380,19 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
         return true;
     }
 
+    public boolean isBluetoothOutputActive() {
+        if (testIsBluetoothOutput != null) return testIsBluetoothOutput;
+        if (isHeadphonesOrHeadsetConnected()) return false;
+        return isBluetoothOutputConnected();
+    }
+
+    public void updateBluetoothNotice() {
+        if (binding != null && binding.studioBluetoothNotice != null) {
+            boolean show = requested && isBluetoothOutputActive();
+            binding.studioBluetoothNotice.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+    }
+
     @androidx.annotation.VisibleForTesting
     public static void setTestAudioRoute(Boolean builtinSpeaker, Boolean bluetooth) {
         testIsBuiltinSpeaker = builtinSpeaker;
@@ -493,6 +507,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
         if (binding.studioFeedback != null) binding.studioFeedback.setText(R.string.studio_ready);
         ToolUi.level(this, 0);
         if (binding.studioOutputRoute != null) binding.studioOutputRoute.setText(R.string.studio_output_idle);
+        if (binding.studioBluetoothNotice != null) binding.studioBluetoothNotice.setVisibility(View.GONE);
     }
 
     void showAudioError(Exception error) {
@@ -523,9 +538,14 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
         if (binding.studioOutputRoute != null) {
             binding.studioOutputRoute.setText(getString(R.string.studio_output_route, route));
         }
+        updateBluetoothNotice();
     }
 
-    @Override protected void onResume() { super.onResume(); visible = true; }
+    @Override protected void onResume() {
+        super.onResume();
+        visible = true;
+        updateBluetoothNotice();
+    }
     // No UMP consent request here: consent is gathered on home screens so no privacy form
     // can interrupt a live microphone session. Banners still render once consent allows ads.
     @Override protected void onPause() {
