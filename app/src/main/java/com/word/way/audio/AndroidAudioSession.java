@@ -43,15 +43,25 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private AudioRouteGuard routeGuard;
     private AudioRecord input;
     private volatile AudioTrack output;
+    private final String defaultRouteLabel;
+    private volatile String cachedRouteLabel;
     private int routedOutputId;
-    private final AudioRouting.OnRoutingChangedListener routing = router -> {
-        if (router != output || !signal.isActive()) return;
-        AudioDeviceInfo device = router.getRoutedDevice();
-        if (device == null) { if (routedOutputId != 0) interrupt(); return; }
-        int next = device.getId();
-        if (routedOutputId != 0 && routedOutputId != next) interrupt();
-        routedOutputId = next;
-    };
+    private final AudioRouting.OnRoutingChangedListener routing;
+
+    private void updateCachedRouteLabel(AudioDeviceInfo device) {
+        if (device == null) {
+            cachedRouteLabel = defaultRouteLabel;
+            return;
+        }
+        try {
+            CharSequence product = device.getProductName();
+            cachedRouteLabel = (product != null && product.length() > 0)
+                    ? product.toString()
+                    : defaultRouteLabel;
+        } catch (RuntimeException ignored) {
+            cachedRouteLabel = defaultRouteLabel;
+        }
+    }
     private AcousticEchoCanceler aec;
     private NoiseSuppressor ns;
     private LiveGainProcessor gain;
@@ -69,6 +79,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private long lastBufferTuningCheck;
     private DriftController driftController;
     private long lastDriftCheck;
+    private final AudioTimestamp inputTimestamp = new AudioTimestamp();
 
     // Diagnostics telemetry (updated on worker at most every 500 ms)
     private boolean featureLowLatency;
@@ -76,6 +87,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private String audioSourceName = "VOICE_COMMUNICATION (7)";
     private long sessionStartTime;
     private long lastDiagnosticsUpdate;
+    private long totalFramesRead;
     private long totalFramesWritten;
     private long lastRawHead;
     private long headWrapCount;
@@ -94,6 +106,21 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         this.userGain = userGain == null ? () -> 1f : userGain;
         this.debug = (this.context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         this.focusListener = change -> { if (change < 0) interrupt(); };
+        this.defaultRouteLabel = this.context.getString(com.word.way.R.string.library_system_output);
+        this.cachedRouteLabel = this.defaultRouteLabel;
+        this.routing = router -> {
+            if (router != output || !signal.isActive()) return;
+            AudioDeviceInfo device = router.getRoutedDevice();
+            if (device == null) {
+                cachedRouteLabel = defaultRouteLabel;
+                if (routedOutputId != 0) interrupt();
+                return;
+            }
+            int next = device.getId();
+            if (routedOutputId != 0 && routedOutputId != next) interrupt();
+            routedOutputId = next;
+            updateCachedRouteLabel(device);
+        };
     }
     private void interrupt() {
         if (signal.requestStop()) interrupted.run();
@@ -199,6 +226,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         sessionStartTime = SystemClock.elapsedRealtime();
         lastBufferTuningCheck = sessionStartTime;
         lastDiagnosticsUpdate = 0L;
+        totalFramesRead = 0L;
         totalFramesWritten = 0L;
         lastRawHead = 0L;
         headWrapCount = 0L;
@@ -234,6 +262,11 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
             int primed = output.write(silence, 0, silence.length);
             if (primed > 0) {
                 totalFramesWritten += primed;
+            }
+            try {
+                updateCachedRouteLabel(output.getRoutedDevice());
+            } catch (RuntimeException ignored) {
+                cachedRouteLabel = defaultRouteLabel;
             }
         } catch (RuntimeException error) {
             throw new LiveAudioFailure(OUTPUT_FAILED, "Audio output could not start", error);
@@ -294,13 +327,30 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         int read = source.read(buffer, 0, toRead);
         if (read < 0) throw new LiveAudioFailure(READ_FAILED, "Microphone read failed (" + read + ")");
         if (read == 0) return 0;
+        totalFramesRead += read;
 
         long now = SystemClock.elapsedRealtime();
         if (driftController != null && now - lastDriftCheck >= 50) {
             lastDriftCheck = now;
             int rawHead = 0;
             try { rawHead = sink.getPlaybackHeadPosition(); } catch (RuntimeException ignored) { }
-            int drop = driftController.evaluate(totalFramesWritten, rawHead, now);
+
+            long inputBacklog = -1L;
+            try {
+                if (source.getTimestamp(inputTimestamp, AudioTimestamp.TIMEBASE_BOOTTIME) == AudioRecord.SUCCESS) {
+                    long hwFrames = inputTimestamp.framePosition;
+                    if (hwFrames >= totalFramesRead) {
+                        inputBacklog = hwFrames - totalFramesRead;
+                    }
+                }
+            } catch (RuntimeException ignored) { }
+            if (inputBacklog < 0L) {
+                inputBacklog = driftController.computeInputBacklog(totalFramesRead, now);
+            }
+
+            boolean isRamping = (gain != null && gain.isRamping());
+            boolean feedbackLatched = (gain != null && gain.isFeedbackLatched());
+            int drop = driftController.evaluate(inputBacklog, totalFramesWritten, rawHead, now, isRamping, feedbackLatched);
             if (drop > 0 && read > drop) {
                 int crossfade = Math.min(drop / 2, 48);
                 read = DriftController.applyCrossfadeDrop(buffer, read, drop, crossfade);
@@ -341,16 +391,8 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         lastMeter = now;
         int peak = runningPeak;
         runningPeak = 0;
-        String route;
-        try {
-            AudioDeviceInfo device = output.getRoutedDevice();
-            CharSequence product = device == null ? null : device.getProductName();
-            route = (product == null || product.length() == 0)
-                    ? context.getString(com.word.way.R.string.library_system_output)
-                    : product.toString();
-        } catch (RuntimeException ignored) {
-            route = context.getString(com.word.way.R.string.library_system_output);
-        }
+        String route = cachedRouteLabel;
+        if (route == null) route = defaultRouteLabel;
         meter.update(Math.min(100, peak * 100 / 32768), route);
         if (debug) {
             updateDiagnosticsIfDue(read, route, now, false);

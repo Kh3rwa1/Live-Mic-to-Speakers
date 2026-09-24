@@ -18,16 +18,13 @@ public final class InputProfilePolicy {
      * Determines AudioAttributes usage based on input profile.
      *
      * <p>{@link AudioAttributes#USAGE_MEDIA} with {@link AudioAttributes#CONTENT_TYPE_SPEECH}
-     * is used for {@link #PROFILE_LOW_LATENCY} and {@link #PROFILE_BALANCED} to qualify for
-     * platform fast-track mixer without telephony DSP delay.
-     *
-     * <p>{@link AudioAttributes#USAGE_VOICE_COMMUNICATION} is used for {@link #PROFILE_NOISY_ROOM}
-     * because call-style processing and telephony AEC match the VOICE_COMMUNICATION input source.
+     * is used for all profiles to ensure output routes to the loudspeaker (or connected headphones/
+     * Bluetooth) rather than the phone earpiece receiver (which is the default routing for
+     * {@link AudioAttributes#USAGE_VOICE_COMMUNICATION} on telephony-capable devices).
+     * Only the input source and hardware effects (AEC, NS) differ per profile.
      */
     public static int outputUsage(int profile) {
-        return profile == PROFILE_NOISY_ROOM
-                ? AudioAttributes.USAGE_VOICE_COMMUNICATION
-                : AudioAttributes.USAGE_MEDIA;
+        return AudioAttributes.USAGE_MEDIA;
     }
 
     /**

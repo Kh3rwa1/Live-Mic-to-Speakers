@@ -4,13 +4,21 @@ package com.word.way.audio;
  * Pure Java drift controller that detects and corrects clock mismatch between
  * audio input and audio output devices.
  *
- * <p>Every hardware device has subtle clock crystal frequency variations. Over time,
- * if the microphone clock runs faster than the DAC playback clock, samples accumulate
- * in the playback queue and latency drifts upward.
+ * <p>With blocking {@code AudioTrack.write} into an output buffer capped by
+ * {@link OutputBufferTuner}, extra delay cannot build up on the output side.
+ * When the physical microphone clock runs faster than the DAC playback clock,
+ * unread audio accumulates in the {@code AudioRecord} buffer instead.
  *
- * <p>When queue depth remains continuously above the target depth for more than 1 second,
- * the controller triggers a smooth correction (dropping up to 1 burst, &lt;= 2 ms) with
- * crossfading. Corrections are rate-limited to at most once per 250 ms.
+ * <p>This controller tracks input backlog (e.g. from {@code AudioRecord.getTimestamp}
+ * or total frames read vs. elapsed session time). When input backlog remains continuously
+ * above burst + 1 burst margin for more than 1.0 second, a smooth crossfade correction
+ * (dropping up to 1 burst, &lt;= 2 ms) drains excess delay without audible clicks or pops.
+ *
+ * <p>Corrections are rate-limited to at most once per 250 ms, and are suppressed
+ * during the start-up gain ramp or after acoustic feedback has latched.
+ *
+ * <p>The output queue depth is retained as a non-correcting diagnostic metric,
+ * with a 1-burst margin added to avoid false alarms from stepwise head updates.
  */
 public final class DriftController {
 
@@ -20,6 +28,7 @@ public final class DriftController {
     private final int framesPerBuffer;
     private final int sampleRate;
     private int targetQueueDepthFrames;
+    private final long sessionStartTimeMs;
 
     private long lastRawHead = 0L;
     private long headWrapCount = 0L;
@@ -27,6 +36,10 @@ public final class DriftController {
     private long aboveTargetStartTimeMs = -1L;
     private long lastCorrectionTimeMs = 0L;
     private int totalCorrections = 0;
+
+    private long lastInputBacklog = 0L;
+    private long lastOutputQueueDepth = 0L;
+    private boolean lastOutputQueueAboveDiagnosticThreshold = false;
 
     public DriftController(int framesPerBuffer, int sampleRate, int targetQueueDepthFrames) {
         this(framesPerBuffer, sampleRate, targetQueueDepthFrames, 0L);
@@ -36,6 +49,7 @@ public final class DriftController {
         this.framesPerBuffer = Math.max(1, framesPerBuffer);
         this.sampleRate = Math.max(1, sampleRate);
         this.targetQueueDepthFrames = Math.max(1, targetQueueDepthFrames);
+        this.sessionStartTimeMs = initialTimeMs;
         this.lastCorrectionTimeMs = initialTimeMs;
     }
 
@@ -57,8 +71,34 @@ public final class DriftController {
         }
     }
 
+    public long getSessionStartTimeMs() {
+        return sessionStartTimeMs;
+    }
+
     public int getTotalCorrections() {
         return totalCorrections;
+    }
+
+    public long getLastInputBacklog() {
+        return lastInputBacklog;
+    }
+
+    public long getLastOutputQueueDepth() {
+        return lastOutputQueueDepth;
+    }
+
+    public boolean isOutputQueueAboveDiagnosticThreshold() {
+        return lastOutputQueueAboveDiagnosticThreshold;
+    }
+
+    /** Threshold for input backlog corrections: burst + 1 burst of margin. */
+    public int getInputBacklogThresholdFrames() {
+        return framesPerBuffer * 2;
+    }
+
+    /** Diagnostic threshold for output queue: target + 1 burst of margin. */
+    public int getOutputDiagnosticThresholdFrames() {
+        return targetQueueDepthFrames + framesPerBuffer;
     }
 
     /**
@@ -74,25 +114,56 @@ public final class DriftController {
     }
 
     /**
-     * Evaluates queue depth and returns the number of frames to skip if sustained drift
-     * has been detected for &gt; 1 second and the 250ms cooldown has elapsed.
+     * Estimates expected frames captured based on elapsed time since session start.
+     */
+    public long computeExpectedFrames(long nowMs) {
+        long elapsedMs = Math.max(0L, nowMs - sessionStartTimeMs);
+        return (elapsedMs * (long) sampleRate) / 1000L;
+    }
+
+    /**
+     * Computes input backlog from total frames read and elapsed session time.
+     */
+    public long computeInputBacklog(long totalFramesRead, long nowMs) {
+        long expected = computeExpectedFrames(nowMs);
+        return Math.max(0L, expected - totalFramesRead);
+    }
+
+    /**
+     * Evaluates input backlog and triggers drift correction if sustained for &gt; 1 s.
      *
+     * @param inputBacklog backlog of unread frames in the input pipeline
      * @param framesWritten total frames written to AudioTrack so far
      * @param rawPlaybackHead raw 32-bit playback head position from AudioTrack
      * @param nowMs current monotonic time in milliseconds
+     * @param isRamping true if start-up gain ramp is active
+     * @param feedbackLatched true if acoustic feedback has latched mute
      * @return number of frames to drop (0 if no correction is needed)
      */
-    public int evaluate(long framesWritten, long rawPlaybackHead, long nowMs) {
+    public int evaluate(long inputBacklog, long framesWritten, long rawPlaybackHead, long nowMs,
+                        boolean isRamping, boolean feedbackLatched) {
+        // Output-side check is kept ONLY as a diagnostic, with 1-burst margin added.
         long unwrappedHead = unwrapHeadPosition(rawPlaybackHead);
-        long queueDepth = Math.max(0L, framesWritten - unwrappedHead);
+        this.lastOutputQueueDepth = Math.max(0L, framesWritten - unwrappedHead);
+        this.lastOutputQueueAboveDiagnosticThreshold =
+                (lastOutputQueueDepth > (long) targetQueueDepthFrames + framesPerBuffer);
 
-        if (queueDepth > targetQueueDepthFrames) {
+        this.lastInputBacklog = Math.max(0L, inputBacklog);
+
+        // No drops during startup ramp or after feedback has latched.
+        if (isRamping || feedbackLatched) {
+            aboveTargetStartTimeMs = -1L;
+            return 0;
+        }
+
+        int threshold = framesPerBuffer * 2; // burst + 1 burst margin
+        if (inputBacklog > threshold) {
             if (aboveTargetStartTimeMs < 0L) {
                 aboveTargetStartTimeMs = nowMs;
             } else if (nowMs - aboveTargetStartTimeMs >= SUSTAINED_DRIFT_THRESHOLD_MS) {
                 if (nowMs - lastCorrectionTimeMs >= MIN_CORRECTION_INTERVAL_MS) {
-                    int maxDrop = Math.min(framesPerBuffer, Math.max(1, sampleRate * 2 / 1000)); // <= 1 burst, <= 2ms
-                    int excess = (int) Math.min((long) maxDrop, queueDepth - targetQueueDepthFrames);
+                    int maxDrop = Math.min(framesPerBuffer, Math.max(1, sampleRate * 2 / 1000)); // <= 1 burst, <= 2 ms
+                    int excess = (int) Math.min((long) maxDrop, inputBacklog - threshold);
                     int dropFrames = Math.max(1, excess);
 
                     lastCorrectionTimeMs = nowMs;
@@ -106,6 +177,33 @@ public final class DriftController {
         }
 
         return 0;
+    }
+
+    public int evaluate(long inputBacklog, long framesWritten, long rawPlaybackHead, long nowMs) {
+        return evaluate(inputBacklog, framesWritten, rawPlaybackHead, nowMs, false, false);
+    }
+
+    public int evaluateWithFramesRead(long totalFramesRead, long expectedMicFrames, long framesWritten,
+                                      long rawPlaybackHead, long nowMs, boolean isRamping, boolean feedbackLatched) {
+        long backlog = Math.max(0L, expectedMicFrames - totalFramesRead);
+        return evaluate(backlog, framesWritten, rawPlaybackHead, nowMs, isRamping, feedbackLatched);
+    }
+
+    public int evaluateWithFramesRead(long totalFramesRead, long framesWritten, long rawPlaybackHead, long nowMs,
+                                      boolean isRamping, boolean feedbackLatched) {
+        long backlog = computeInputBacklog(totalFramesRead, nowMs);
+        return evaluate(backlog, framesWritten, rawPlaybackHead, nowMs, isRamping, feedbackLatched);
+    }
+
+    public int evaluateWithFramesRead(long totalFramesRead, long framesWritten, long rawPlaybackHead, long nowMs) {
+        return evaluateWithFramesRead(totalFramesRead, framesWritten, rawPlaybackHead, nowMs, false, false);
+    }
+
+    /**
+     * Compatibility overload: evaluates using total frames read (or written) against elapsed time.
+     */
+    public int evaluate(long framesWritten, long rawPlaybackHead, long nowMs) {
+        return evaluateWithFramesRead(framesWritten, framesWritten, rawPlaybackHead, nowMs, false, false);
     }
 
     /**
