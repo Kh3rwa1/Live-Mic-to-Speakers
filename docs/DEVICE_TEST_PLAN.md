@@ -99,7 +99,7 @@ Follow these exact steps to benchmark and measure live mic-to-speaker latency ac
 3. Tap **Start**.
    - **Expected**: Exactly ONE dialog appears ("Prevent loud feedback").
 4. Tap **Start** in the dialog without checking "Don't show again".
-   - **Expected**: Audio begins smoothly without pops or clicks (50ms linear ramp).
+   - **Expected**: Audio begins smoothly without pops or clicks (300 ms linear ramp).
    - **Expected**: Spoken audio is amplified cleanly without harsh digital distortion (soft limiter active).
 5. Move the microphone close to the speaker at moderate volume to induce feedback howl:
    - **Expected**: Within ~1 second of sustained howl, audio automatically mutes completely.

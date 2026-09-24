@@ -14,7 +14,7 @@ This document describes safeguards and release gates; it does not assign a measu
 ## Implemented safeguards
 
 - Serialized live-audio sessions with cancellation, device-paced blocking PCM transfer, low-latency API 26+ fast path, focus handling, route interruption, and deterministic cleanup.
-- Pure-Java `LiveGainProcessor` with 50ms startup gain ramp, smooth soft limiter below full scale, and tonality-based pre-gain acoustic feedback detection with automatic mute and user restart requirement.
+- Pure-Java `LiveGainProcessor` with 300 ms startup gain ramp, smooth soft limiter (a linear section below the 0.8 FS knee, then an exponential curve towards the ceiling, output always < 32767) below full scale, and tonality-based pre-gain acoustic feedback detection with automatic mute and user restart requirement.
 - In-flight recording protection via process-wide `ActiveRecordings` registry, 0-byte purge only for abandoned files older than 24h, and `.unrecovered` quarantine for unreadable non-empty saves.
 - Serialized recording preparation/finalization, runtime-error recovery, pending-file publication, invalid-capture removal, and dead-screen callback suppression.
 - Focus-aware preview and saved-track playback with headphone-disconnect handling and asynchronous preparation.

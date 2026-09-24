@@ -22,7 +22,7 @@ This engineering pass deliberately defers visual design. It does not change layo
 ## Audio and recording improvements
 
 - Live monitoring probes the native output sample rate/burst and requests the API 26+ low-latency `AudioTrack` path, with device-paced blocking reads replacing sleep polling. Route/focus handling and AEC/NS behavior are unchanged.
-- A pure-Java gain stage (`LiveGainProcessor`) adds a 50 ms start-up linear ramp, a persisted user gain (0..1), and a tanh-like smooth soft limiter preventing digital clipping.
+- A pure-Java gain stage (`LiveGainProcessor`) adds a 300 ms start-up linear ramp, a persisted user gain (0..1), and a smooth soft limiter (a linear section below the 0.8 FS knee, then an exponential curve towards the ceiling, output always < 32767) preventing digital clipping.
 - Feedback detection analyzes pre-gain PCM blocks using zero-crossing tonality scoring combined with an energy threshold and leaky accumulator to reliably identify sustained acoustic howl (even when muted by user gain). Detection auto-mutes the buffer immediately and stops the session, surfacing clear user instructions.
 - In-flight recordings are registered in a thread-safe `ActiveRecordings` registry across the process lifetime, preventing active recordings from being swept or destroyed.
 - Finalized recordings use readable timestamp pending names and collision-suffixed publication. Stale pending file sweeps only delete empty (0-byte) abandoned files older than 24 hours. Interrupted non-empty recordings are quarantined as `.unrecovered` files rather than deleted, and can be reviewed, permanently deleted, or shared via the system share sheet.
