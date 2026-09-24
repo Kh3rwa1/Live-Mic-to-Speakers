@@ -26,6 +26,7 @@ import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,9 +35,17 @@ import static org.junit.Assert.*;
 /** Native layout checks; these do not certify TalkBack usability or real audio quality. */
 @RunWith(AndroidJUnit4.class)
 public class ToolQualityTest {
+    private boolean previousAds;
+
     @Before public void disableAds() {
         Context app = ApplicationProvider.getApplicationContext();
-        AdsHandler.getInstance(app); AdsHandler.setAdsOn(false);
+        AdsHandler.getInstance(app);
+        previousAds = AdsHandler.isEnabledByUser();
+        AdsHandler.setAdsOn(false);
+    }
+
+    @After public void restoreAds() {
+        AdsHandler.setAdsOn(previousAds);
     }
     private static void idle() { InstrumentationRegistry.getInstrumentation().waitForIdleSync(); }
     static void capture(String name) throws Exception {

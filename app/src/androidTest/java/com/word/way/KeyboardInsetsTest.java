@@ -19,6 +19,7 @@ import demo.ads.AdsHandler;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -27,9 +28,17 @@ import static org.junit.Assert.*;
 /** Real IME coverage complements synthetic padding-policy tests on every supported API. */
 @RunWith(AndroidJUnit4.class)
 public class KeyboardInsetsTest {
+    private boolean previousAds;
+
     @Before public void disableAds() {
         Context app = ApplicationProvider.getApplicationContext();
-        AdsHandler.getInstance(app); AdsHandler.setAdsOn(false);
+        AdsHandler.getInstance(app);
+        previousAds = AdsHandler.isEnabledByUser();
+        AdsHandler.setAdsOn(false);
+    }
+
+    @After public void restoreAds() {
+        AdsHandler.setAdsOn(previousAds);
     }
     @Test public void realKeyboardKeepsEditableControlVisible() throws Exception {
         AtomicReference<EditText> field = new AtomicReference<>();

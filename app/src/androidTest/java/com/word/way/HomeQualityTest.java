@@ -19,12 +19,15 @@ import static androidx.test.espresso.matcher.ViewMatchers.*;
 
 @RunWith(AndroidJUnit4.class)
 public class HomeQualityTest {
+    private boolean previousAds;
     @Before public void disableAds() {
         Context app = ApplicationProvider.getApplicationContext();
-        AdsHandler.getInstance(app); AdsHandler.setAdsOn(false);
+        AdsHandler.getInstance(app);
+        previousAds = AdsHandler.isEnabledByUser();
+        AdsHandler.setAdsOn(false);
     }
     @org.junit.After public void restoreAds() {
-        AdsHandler.setAdsOn(true);
+        AdsHandler.setAdsOn(previousAds);
     }
     @Test public void homeControlsHaveLabelsAndLargeTouchTargets() {
         try (ActivityScenario<MainActivity> screen = ActivityScenario.launch(MainActivity.class)) {

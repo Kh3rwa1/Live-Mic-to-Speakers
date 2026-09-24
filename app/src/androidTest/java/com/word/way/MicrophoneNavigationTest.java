@@ -27,14 +27,17 @@ public class MicrophoneNavigationTest {
     // Intentionally no BLUETOOTH_CONNECT grant: phone-speaker mode must still be accessible.
     @Rule public GrantPermissionRule microphone = GrantPermissionRule.grant(Manifest.permission.RECORD_AUDIO);
 
+    private boolean previousAds;
+
     @Before public void disableAds() {
         Context context = ApplicationProvider.getApplicationContext();
         AdsHandler.getInstance(context);
+        previousAds = AdsHandler.isEnabledByUser();
         AdsHandler.setAdsOn(false);
     }
 
     @org.junit.After public void restoreAds() {
-        AdsHandler.setAdsOn(true);
+        AdsHandler.setAdsOn(previousAds);
     }
 
     private static void reveal(ActivityScenario<MainActivity> screen, int id) {

@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -33,9 +34,17 @@ import static org.junit.Assert.*;
 /** Native integration/layout checks, not physical audio or screen-reader certification. */
 @RunWith(AndroidJUnit4.class)
 public final class LibraryQualityTest {
+    private boolean previousAds;
+
     @Before public void disableAds() {
         Context app = ApplicationProvider.getApplicationContext();
-        AdsHandler.getInstance(app); AdsHandler.setAdsOn(false);
+        AdsHandler.getInstance(app);
+        previousAds = AdsHandler.isEnabledByUser();
+        AdsHandler.setAdsOn(false);
+    }
+
+    @After public void restoreAds() {
+        AdsHandler.setAdsOn(previousAds);
     }
     private static <T extends Activity> void await(ActivityScenario<T> screen, Predicate<T> condition) {
         long deadline = SystemClock.elapsedRealtime() + 10_000;

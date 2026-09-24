@@ -17,6 +17,7 @@ import demo.ads.AdsHandler;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -25,9 +26,17 @@ import static org.junit.Assert.*;
 /** Run unchanged throughout the existing API/font-scale matrix; no microphone access needed. */
 @RunWith(AndroidJUnit4.class)
 public class ActiveToolLayoutTest {
+    private boolean previousAds;
+
     @Before public void disableAds() {
         Context app = ApplicationProvider.getApplicationContext();
-        AdsHandler.getInstance(app); AdsHandler.setAdsOn(false);
+        AdsHandler.getInstance(app);
+        previousAds = AdsHandler.isEnabledByUser();
+        AdsHandler.setAdsOn(false);
+    }
+
+    @After public void restoreAds() {
+        AdsHandler.setAdsOn(previousAds);
     }
     private static <T extends Activity> void renderAndWait(ActivityScenario<T> screen, Consumer<T> change)
             throws InterruptedException {

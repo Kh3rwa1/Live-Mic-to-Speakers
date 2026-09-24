@@ -28,11 +28,19 @@ import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public class ScreenRotationTest {
 
+    private boolean previousAds;
+
     @Before
     public void disableAds() {
         Context app = ApplicationProvider.getApplicationContext();
         AdsHandler.getInstance(app);
+        previousAds = AdsHandler.isEnabledByUser();
         AdsHandler.setAdsOn(false);
+    }
+
+    @org.junit.After
+    public void restoreAds() {
+        AdsHandler.setAdsOn(previousAds);
     }
 
     private static void idle() {
