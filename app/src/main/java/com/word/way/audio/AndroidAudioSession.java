@@ -43,15 +43,25 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private AudioRouteGuard routeGuard;
     private AudioRecord input;
     private volatile AudioTrack output;
+    private final String defaultRouteLabel;
+    private volatile String cachedRouteLabel;
     private int routedOutputId;
-    private final AudioRouting.OnRoutingChangedListener routing = router -> {
-        if (router != output || !signal.isActive()) return;
-        AudioDeviceInfo device = router.getRoutedDevice();
-        if (device == null) { if (routedOutputId != 0) interrupt(); return; }
-        int next = device.getId();
-        if (routedOutputId != 0 && routedOutputId != next) interrupt();
-        routedOutputId = next;
-    };
+    private final AudioRouting.OnRoutingChangedListener routing;
+
+    private void updateCachedRouteLabel(AudioDeviceInfo device) {
+        if (device == null) {
+            cachedRouteLabel = defaultRouteLabel;
+            return;
+        }
+        try {
+            CharSequence product = device.getProductName();
+            cachedRouteLabel = (product != null && product.length() > 0)
+                    ? product.toString()
+                    : defaultRouteLabel;
+        } catch (RuntimeException ignored) {
+            cachedRouteLabel = defaultRouteLabel;
+        }
+    }
     private AcousticEchoCanceler aec;
     private NoiseSuppressor ns;
     private LiveGainProcessor gain;
@@ -96,6 +106,21 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         this.userGain = userGain == null ? () -> 1f : userGain;
         this.debug = (this.context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         this.focusListener = change -> { if (change < 0) interrupt(); };
+        this.defaultRouteLabel = this.context.getString(com.word.way.R.string.library_system_output);
+        this.cachedRouteLabel = this.defaultRouteLabel;
+        this.routing = router -> {
+            if (router != output || !signal.isActive()) return;
+            AudioDeviceInfo device = router.getRoutedDevice();
+            if (device == null) {
+                cachedRouteLabel = defaultRouteLabel;
+                if (routedOutputId != 0) interrupt();
+                return;
+            }
+            int next = device.getId();
+            if (routedOutputId != 0 && routedOutputId != next) interrupt();
+            routedOutputId = next;
+            updateCachedRouteLabel(device);
+        };
     }
     private void interrupt() {
         if (signal.requestStop()) interrupted.run();
@@ -238,6 +263,11 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
             if (primed > 0) {
                 totalFramesWritten += primed;
             }
+            try {
+                updateCachedRouteLabel(output.getRoutedDevice());
+            } catch (RuntimeException ignored) {
+                cachedRouteLabel = defaultRouteLabel;
+            }
         } catch (RuntimeException error) {
             throw new LiveAudioFailure(OUTPUT_FAILED, "Audio output could not start", error);
         }
@@ -361,16 +391,8 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         lastMeter = now;
         int peak = runningPeak;
         runningPeak = 0;
-        String route;
-        try {
-            AudioDeviceInfo device = output.getRoutedDevice();
-            CharSequence product = device == null ? null : device.getProductName();
-            route = (product == null || product.length() == 0)
-                    ? context.getString(com.word.way.R.string.library_system_output)
-                    : product.toString();
-        } catch (RuntimeException ignored) {
-            route = context.getString(com.word.way.R.string.library_system_output);
-        }
+        String route = cachedRouteLabel;
+        if (route == null) route = defaultRouteLabel;
         meter.update(Math.min(100, peak * 100 / 32768), route);
         if (debug) {
             updateDiagnosticsIfDue(read, route, now, false);
