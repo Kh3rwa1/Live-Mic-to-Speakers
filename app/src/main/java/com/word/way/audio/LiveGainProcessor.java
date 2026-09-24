@@ -425,6 +425,15 @@ public final class LiveGainProcessor {
                     triggerSampleIndex = i;
                 }
 
+                if (DetectorLogBuffer.getInstance().isLoggingEnabled()) {
+                    float rmsDbfs = (rms > 0f) ? (float) (20.0 * Math.log10(rms / FULL_SCALE)) : -96.0f;
+                    float peakDbfs = (blockPeak > 0) ? (float) (20.0 * Math.log10((double) blockPeak / FULL_SCALE)) : -96.0f;
+                    DetectorLogBuffer.getInstance().logBlock(
+                            System.currentTimeMillis(), rmsDbfs, peakDbfs,
+                            blockZeroCrossings, variance, loud, tonal,
+                            estFreq, freqRelDev, purity, score);
+                }
+
                 // Reset block accumulators for next block
                 blockSumSquares = 0;
                 blockPeak = 0;

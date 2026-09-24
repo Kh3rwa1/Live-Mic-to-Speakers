@@ -398,13 +398,28 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         boolean nsOn = false;
         try { if (ns != null) nsOn = ns.getEnabled(); } catch (RuntimeException ignored) { }
 
+        int fbScore = gain != null ? gain.getFeedbackScore() : 0;
+        float lastRms = gain != null ? gain.getLastBlockRms() : 0f;
+        int lastPeak = gain != null ? gain.getLastBlockPeak() : 0;
+        float rmsDbfs = (lastRms > 0f) ? (float) (20.0 * Math.log10(lastRms / LiveGainProcessor.FULL_SCALE)) : -96.0f;
+        float peakDbfs = (lastPeak > 0) ? (float) (20.0 * Math.log10((double) lastPeak / LiveGainProcessor.FULL_SCALE)) : -96.0f;
+        int lastZcr = gain != null ? gain.getLastBlockZcr() : 0;
+        float zcrVar = gain != null ? gain.getLastBlockZcrVariance() : 0f;
+        boolean fbLoud = gain != null && gain.isLastBlockLoud();
+        boolean fbTonal = gain != null && gain.isLastBlockTonal();
+        float freqDev = gain != null ? gain.getLastBlockFreqRelDev() : 0f;
+        float purity = gain != null ? gain.getLastBlockPurity() : 0f;
+        float freqEst = gain != null ? gain.getLastBlockFreqEst() : 0f;
+
         AudioDiagnostics.update(new AudioDiagnostics(
                 featureLowLatency, featureAudioPro,
                 audioSourceName, aecOn, nsOn,
                 perfMode, capacityFrames, sizeFrames, underruns,
                 read, framesPerBuffer, sampleRate, nativeRate,
                 queueDepthMs, queueDepth10sMs, uptime, driftCorrectionsCount,
-                route, (float) userGain.getAsDouble()));
+                route, (float) userGain.getAsDouble(),
+                fbScore, rmsDbfs, peakDbfs, lastZcr, zcrVar,
+                fbLoud, fbTonal, freqDev, purity, freqEst));
     }
     /** Debug-only latency evidence: sample rate, burst and cumulative underruns. */
     private void logUnderrunsIfDue(AudioTrack sink) {
