@@ -65,6 +65,9 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private long lastUnderrunLog;
     private boolean hasFocus;
 
+    private OutputBufferTuner bufferTuner;
+    private long lastBufferTuningCheck;
+
     // Diagnostics telemetry (updated on worker at most every 500 ms)
     private boolean featureLowLatency;
     private boolean featureAudioPro;
@@ -199,12 +202,31 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         featureAudioPro = pm != null && pm.hasSystemFeature(PackageManager.FEATURE_AUDIO_PRO);
         audioSourceName = InputProfilePolicy.sourceName(actualSource);
         sessionStartTime = SystemClock.elapsedRealtime();
+        lastBufferTuningCheck = sessionStartTime;
         lastDiagnosticsUpdate = 0L;
         totalFramesWritten = 0L;
         lastRawHead = 0L;
         headWrapCount = 0L;
         queueDepth10sMs = -1f;
         driftCorrectionsCount = 0;
+
+        if (output != null) {
+            int burst = framesPerBuffer;
+            int capacity = 0;
+            int initialUnderruns = 0;
+            try { capacity = output.getBufferCapacityInFrames(); } catch (RuntimeException ignored) { }
+            try { initialUnderruns = output.getUnderrunCount(); } catch (RuntimeException ignored) { }
+            bufferTuner = new OutputBufferTuner(burst, capacity, initialUnderruns, sessionStartTime);
+            int initialTarget = bufferTuner.getCurrentTargetFrames();
+            try {
+                int actualSize = output.setBufferSizeInFrames(initialTarget);
+                bufferTuner.recordActualSize(actualSize);
+                if (debug) {
+                    Log.d(TAG, "Output buffer tuned at startup: target=" + initialTarget + " actual=" + actualSize
+                            + " capacity=" + capacity + " burst=" + burst);
+                }
+            } catch (RuntimeException ignored) { }
+        }
 
         if (input.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING)
             throw new LiveAudioFailure(MICROPHONE_UNAVAILABLE, "Microphone could not start");
@@ -268,6 +290,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
             written += step;
         }
         totalFramesWritten += written;
+        checkBufferTuningIfDue(sink);
         logUnderrunsIfDue(sink);
         return written;
     }
@@ -351,7 +374,32 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         Log.d(TAG, "underruns=" + sink.getUnderrunCount() + " rate=" + sampleRate
                 + " framesPerBuffer=" + framesPerBuffer + " trackBuffer=" + trackBufferBytes);
     }
+    private void checkBufferTuningIfDue(AudioTrack sink) {
+        if (bufferTuner == null) return;
+        long now = SystemClock.elapsedRealtime();
+        if (now - lastBufferTuningCheck < OutputBufferTuner.DEFAULT_COOLDOWN_MS) return;
+        lastBufferTuningCheck = now;
+        int underruns = 0;
+        try { underruns = sink.getUnderrunCount(); } catch (RuntimeException ignored) { return; }
+        int newTarget = bufferTuner.onUnderrunCheck(underruns, now);
+        if (newTarget > 0) {
+            try {
+                int actual = sink.setBufferSizeInFrames(newTarget);
+                bufferTuner.recordActualSize(actual);
+                if (debug) {
+                    Log.d(TAG, "Output buffer adapted on underrun: target=" + newTarget
+                            + " actual=" + actual + " underruns=" + underruns);
+                }
+            } catch (RuntimeException ignored) { }
+        }
+    }
+
+    OutputBufferTuner getBufferTuner() {
+        return bufferTuner;
+    }
+
     private void releaseDevices() {
+        bufferTuner = null;
         if (input != null) { try { input.release(); } catch (RuntimeException ignored) { } input = null; }
         if (output != null) {
             try { output.removeOnRoutingChangedListener(routing); } catch (RuntimeException ignored) { }
