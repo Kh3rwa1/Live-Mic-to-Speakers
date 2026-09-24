@@ -44,6 +44,10 @@ Native screenshots illustrate the core surfaces in the refined pastel studio des
 - **What feedback detection cannot do:** It cannot prevent the first second of loud feedback while
   the condition is being verified, it may not catch every acoustic scenario (such as highly distorted,
   multi-frequency or intermittent howl), and it does not replace keeping volume low and using headphones.
+  Natural singing (including vibrato, vocal phrases, and sustained vowels with natural formant harmonics)
+  is distinguished from feedback via pitch stability and Goertzel spectral purity checks; however, an artificial
+  single-frequency tone sustained steadily at high volume without vibrato or harmonics will trigger detection
+  after ~1 second by design.
 - Disconnecting the output stops monitoring; you must start it again deliberately.
 - The input meter is a relative indicator, not a calibrated sound-pressure meter.
 
