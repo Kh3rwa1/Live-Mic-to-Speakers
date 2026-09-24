@@ -217,11 +217,11 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     }
 
     private void handleStartStop() {
-        if (viewModel.isStarting()) {
-            return;
-        }
         if (requested || viewModel.isRunning()) {
             stopMic();
+            return;
+        }
+        if (viewModel.isStarting()) {
             return;
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -237,6 +237,10 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     }
 
     public void confirmStart() {
+        androidx.fragment.app.Fragment fragment = getSupportFragmentManager().findFragmentByTag(TAG_SAFETY_DIALOG);
+        if (fragment instanceof androidx.fragment.app.DialogFragment) {
+            ((androidx.fragment.app.DialogFragment) fragment).dismissAllowingStateLoss();
+        }
         startMicSession();
     }
 
@@ -268,15 +272,23 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     private void showSafetyDialog() {
         if (!visible || isFinishing() || isDestroyed()) return;
         androidx.fragment.app.FragmentManager fm = getSupportFragmentManager();
-        if (fm.findFragmentByTag(TAG_SAFETY_DIALOG) != null) return;
-        new FeedbackSafetyDialogFragment().show(fm, TAG_SAFETY_DIALOG);
+        if (fm.isStateSaved() || fm.findFragmentByTag(TAG_SAFETY_DIALOG) != null) return;
+        try {
+            new FeedbackSafetyDialogFragment().showNow(fm, TAG_SAFETY_DIALOG);
+        } catch (IllegalStateException e) {
+            new FeedbackSafetyDialogFragment().show(fm, TAG_SAFETY_DIALOG);
+        }
     }
 
     private void showBluetoothRationale() {
         if (!visible || isFinishing() || isDestroyed()) return;
         androidx.fragment.app.FragmentManager fm = getSupportFragmentManager();
-        if (fm.findFragmentByTag(TAG_BT_RATIONALE_DIALOG) != null) return;
-        new BluetoothRationaleDialogFragment().show(fm, TAG_BT_RATIONALE_DIALOG);
+        if (fm.isStateSaved() || fm.findFragmentByTag(TAG_BT_RATIONALE_DIALOG) != null) return;
+        try {
+            new BluetoothRationaleDialogFragment().showNow(fm, TAG_BT_RATIONALE_DIALOG);
+        } catch (IllegalStateException e) {
+            new BluetoothRationaleDialogFragment().show(fm, TAG_BT_RATIONALE_DIALOG);
+        }
     }
 
     private void showDiagnosticsDialog() {
@@ -391,7 +403,11 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
 
     @androidx.annotation.VisibleForTesting
     public boolean isSafetyDialogShowing() {
-        androidx.fragment.app.Fragment fragment = getSupportFragmentManager().findFragmentByTag(TAG_SAFETY_DIALOG);
+        androidx.fragment.app.FragmentManager fm = getSupportFragmentManager();
+        try {
+            fm.executePendingTransactions();
+        } catch (RuntimeException ignored) { }
+        androidx.fragment.app.Fragment fragment = fm.findFragmentByTag(TAG_SAFETY_DIALOG);
         return fragment instanceof androidx.fragment.app.DialogFragment
                 && ((androidx.fragment.app.DialogFragment) fragment).getDialog() != null
                 && ((androidx.fragment.app.DialogFragment) fragment).getDialog().isShowing();
@@ -399,7 +415,11 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
 
     @androidx.annotation.VisibleForTesting
     public boolean isBluetoothRationaleShowing() {
-        androidx.fragment.app.Fragment fragment = getSupportFragmentManager().findFragmentByTag(TAG_BT_RATIONALE_DIALOG);
+        androidx.fragment.app.FragmentManager fm = getSupportFragmentManager();
+        try {
+            fm.executePendingTransactions();
+        } catch (RuntimeException ignored) { }
+        androidx.fragment.app.Fragment fragment = fm.findFragmentByTag(TAG_BT_RATIONALE_DIALOG);
         return fragment instanceof androidx.fragment.app.DialogFragment
                 && ((androidx.fragment.app.DialogFragment) fragment).getDialog() != null
                 && ((androidx.fragment.app.DialogFragment) fragment).getDialog().isShowing();

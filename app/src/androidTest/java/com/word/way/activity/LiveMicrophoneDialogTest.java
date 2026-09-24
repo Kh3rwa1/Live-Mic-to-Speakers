@@ -157,6 +157,7 @@ public class LiveMicrophoneDialogTest {
 
             // Next start: ensure BT_CONNECT_ASKED avoids duplicate prompts
             prefs.setBoolean(MyPref.BT_CONNECT_ASKED, true);
+            idle();
             scenario.onActivity(activity -> {
                 int countBefore = activity.getRunnerStartCount();
                 activity.triggerStartStop();
