@@ -33,6 +33,21 @@ def signing = ['LIVE_MIC_KEYSTORE', 'LIVE_MIC_STORE_PASSWORD', 'LIVE_MIC_KEY_ALI
 def versionCodeText = readSetting('LIVE_MIC_VERSION_CODE')
 def versionNameText = readSetting('LIVE_MIC_VERSION_NAME')
 def validVersionCode = versionCodeText ==~ /[1-9][0-9]{0,8}/
+def isStandardDebugCert = { File keystore, String storePass, String alias ->
+    try {
+        def keytool = new File(System.getProperty('java.home'), 'bin/keytool')
+        if (!keytool.exists()) keytool = new File('keytool')
+        def cmd = [keytool.absolutePath, '-list', '-keystore', keystore.absolutePath, '-storepass', storePass ?: 'android', '-alias', alias ?: 'androiddebugkey']
+        def proc = cmd.execute()
+        def out = new StringBuilder()
+        proc.consumeProcessOutput(out, new StringBuilder())
+        proc.waitForOrKill(3000)
+        return proc.exitValue() == 0 && out.toString().contains('CN=Android Debug')
+    } catch (Exception ignored) {
+        return false
+    }
+}
+
 def productionProblems = {
     def problems = []
     if (!production) problems << 'Set -PproductionRelease=true explicitly.'
@@ -52,6 +67,15 @@ def productionProblems = {
         problems << 'LIVE_MIC_KEYSTORE must point to an existing keystore.'
     if (!validVersionCode) problems << 'LIVE_MIC_VERSION_CODE must be a positive integer (maximum 9 digits).'
     if (!versionNameText || versionNameText.length() > 80) problems << 'Configure LIVE_MIC_VERSION_NAME (1–80 characters).'
+
+    def releaseSigning = android.buildTypes.release.signingConfig
+    def storeFile = releaseSigning?.storeFile
+    def isDebugStore = storeFile != null && (storeFile.name == 'debug.keystore' || storeFile.absolutePath.endsWith('/debug.keystore'))
+    def isDebugCert = storeFile != null && storeFile.isFile() && isStandardDebugCert(storeFile, releaseSigning?.storePassword, releaseSigning?.keyAlias)
+    def isDebugConfig = releaseSigning == null || releaseSigning.name == 'debug' || isDebugStore || isDebugCert || (releaseSigning.hasProperty('keyAlias') && releaseSigning.keyAlias == 'androiddebugkey')
+    if (isDebugConfig) {
+        problems << 'release is signed with the debug key.'
+    }
     return problems
 }
 
@@ -60,8 +84,20 @@ def verify = tasks.register('verifyProductionRelease') {
     description = 'Reject missing production settings, sample ads, or absent signing configuration.'
     doLast {
         def problems = productionProblems()
+        if (problems.size() == 1 && problems[0] == 'release is signed with the debug key.') {
+            throw new GradleException('Production release blocked: release is signed with the debug key.')
+        }
         if (!problems.isEmpty()) throw new GradleException('Production release blocked:\n- ' + problems.join('\n- '))
         logger.lifecycle('Production configuration validated. Device, privacy and store sign-off remain required.')
+    }
+}
+
+tasks.register('printReleaseSigning') {
+    group = 'help'
+    description = 'Prints the signing config name and store file for the release build type.'
+    doLast {
+        def config = android.buildTypes.release.signingConfig
+        println "Release signing config: name=${config?.name}, file=${config?.storeFile}"
     }
 }
 

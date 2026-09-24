@@ -62,6 +62,18 @@ bash ./gradlew :app:verifyProductionRelease -PproductionRelease=true
 bash ./gradlew :app:bundleRelease -PproductionRelease=true
 ```
 
+## Signing
+
+- **CI and Local Testing:** The default `assembleRelease` task signs with the standard Android debug key (`signingConfigs.debug`) so that minified release APKs can be installed, tested, and inspected in CI and local developer environments without exposing secrets.
+- **Production Release Gate:** Building an app bundle (`bundleRelease`) or opting in via `-PproductionRelease=true` enforces the `verifyProductionRelease` gate before any packaging can occur.
+- **Debug Key Rejection:** `verifyProductionRelease` actively verifies the resolved signing configuration and will block the release with `"Production release blocked: release is signed with the debug key."` if:
+  - The release variant's signing config is named `"debug"`,
+  - The keystore file resolves to `debug.keystore` or `~/.android/debug.keystore`,
+  - The key alias is `"androiddebugkey"`, or
+  - The keystore certificate matches the standard Android Debug certificate (`CN=Android Debug`).
+- **Configuration Ordering:** The production signing assignment in `gradle/production-release.gradle` is applied after the `android` block and cleanly overrides `signingConfigs.debug` when all four `LIVE_MIC_*` signing properties are supplied.
+- **Diagnostics:** Run `./gradlew :app:printReleaseSigning` to print the active signing config name and store file path.
+
 Production ad resources are generated only for the opted-in release variant. Validation never prints supplied credential values. It does not certify live ads, mediation, regional consent, privacy disclosures, or store compliance.
 
 ## Required before publishing
