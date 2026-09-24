@@ -161,6 +161,42 @@ Follow these exact steps to benchmark and measure live mic-to-speaker latency ac
 
 ---
 
+### Test 4b: Audio Input Profiles & Low-Latency Source Selection
+*Validates: Input profile selection in Settings, persistent preferences, and active pipeline hardware effect configuration.*
+
+1. Open **Settings** screen.
+2. Locate the **Audio Input Profile** card:
+   - **Low latency (Recommended)**: Raw audio without filter delays.
+   - **Balanced**: Standard mic with noise suppression.
+   - **Noisy room / Call-style**: Voice communication with echo cancellation and noise suppression.
+3. Select **Low latency**:
+   - Verify Toast: *"Audio profile updated. Changes apply to the next live session."*
+4. Return to **Live Microphone**, tap **Start**, and long-press the output route label to view Diagnostics:
+   - Verify source is `VOICE_PERFORMANCE` (API 29+) or `VOICE_RECOGNITION` (API 24–28).
+   - Verify AEC: `false`, NS: `false`.
+5. Return to **Settings**, select **Noisy room / Call-style**, and restart Live Microphone:
+   - Verify source is `VOICE_COMMUNICATION (7)`.
+   - Verify AEC: `true` (if available), NS: `true` (if available).
+6. Verify profile setting persists across app restart.
+
+---
+
+### Test 4c: Bluetooth Honesty Notice Verification
+*Validates: Non-blocking warning on wireless Bluetooth routes and proper suppression on wired/USB routes.*
+
+1. Connect a Bluetooth audio device (A2DP or SCO).
+2. Open **Live Microphone** and tap **Start**:
+   - **Expected**: A non-blocking notice card appears below the route label: *"Bluetooth adds noticeable delay. Wired headphones give the lowest latency."*
+   - **Expected**: The notice does not block interaction, monitoring gain slider, or stopping/starting.
+3. While live monitoring is active, plug in 3.5mm wired headphones or a USB-C headset:
+   - **Expected**: Audio reroutes to wired headphones and monitoring halts safely on route change.
+4. Tap **Start** with wired headphones connected:
+   - **Expected**: The Bluetooth notice is GONE (`visibility = GONE`).
+5. Disconnect wired headphones so output falls back to Bluetooth:
+   - **Expected**: Bluetooth notice reappears when Bluetooth output is active.
+
+---
+
 ### Test 5: Hold to Speak
 *Validates: Push-to-talk press, sub-500ms tap discard, normal hold save, and slide-to-cancel.*
 
