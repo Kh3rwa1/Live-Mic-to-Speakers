@@ -180,6 +180,11 @@ public final class LiveGainProcessor {
         return feedbackLatched;
     }
 
+    /** Returns true if the start-up gain ramp from silence to user gain is still active. */
+    public boolean isRamping() {
+        return rampPosition < rampLength;
+    }
+
     /** Returns the current feedback detection score [0, SCORE_MAX]. */
     public int getFeedbackScore() {
         return score;

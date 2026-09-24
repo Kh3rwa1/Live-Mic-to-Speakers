@@ -69,6 +69,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private long lastBufferTuningCheck;
     private DriftController driftController;
     private long lastDriftCheck;
+    private final AudioTimestamp inputTimestamp = new AudioTimestamp();
 
     // Diagnostics telemetry (updated on worker at most every 500 ms)
     private boolean featureLowLatency;
@@ -76,6 +77,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private String audioSourceName = "VOICE_COMMUNICATION (7)";
     private long sessionStartTime;
     private long lastDiagnosticsUpdate;
+    private long totalFramesRead;
     private long totalFramesWritten;
     private long lastRawHead;
     private long headWrapCount;
@@ -199,6 +201,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         sessionStartTime = SystemClock.elapsedRealtime();
         lastBufferTuningCheck = sessionStartTime;
         lastDiagnosticsUpdate = 0L;
+        totalFramesRead = 0L;
         totalFramesWritten = 0L;
         lastRawHead = 0L;
         headWrapCount = 0L;
@@ -294,13 +297,30 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         int read = source.read(buffer, 0, toRead);
         if (read < 0) throw new LiveAudioFailure(READ_FAILED, "Microphone read failed (" + read + ")");
         if (read == 0) return 0;
+        totalFramesRead += read;
 
         long now = SystemClock.elapsedRealtime();
         if (driftController != null && now - lastDriftCheck >= 50) {
             lastDriftCheck = now;
             int rawHead = 0;
             try { rawHead = sink.getPlaybackHeadPosition(); } catch (RuntimeException ignored) { }
-            int drop = driftController.evaluate(totalFramesWritten, rawHead, now);
+
+            long inputBacklog = -1L;
+            try {
+                if (source.getTimestamp(inputTimestamp, AudioTimestamp.TIMEBASE_BOOTTIME) == AudioRecord.SUCCESS) {
+                    long hwFrames = inputTimestamp.framePosition;
+                    if (hwFrames >= totalFramesRead) {
+                        inputBacklog = hwFrames - totalFramesRead;
+                    }
+                }
+            } catch (RuntimeException ignored) { }
+            if (inputBacklog < 0L) {
+                inputBacklog = driftController.computeInputBacklog(totalFramesRead, now);
+            }
+
+            boolean isRamping = (gain != null && gain.isRamping());
+            boolean feedbackLatched = (gain != null && gain.isFeedbackLatched());
+            int drop = driftController.evaluate(inputBacklog, totalFramesWritten, rawHead, now, isRamping, feedbackLatched);
             if (drop > 0 && read > drop) {
                 int crossfade = Math.min(drop / 2, 48);
                 read = DriftController.applyCrossfadeDrop(buffer, read, drop, crossfade);

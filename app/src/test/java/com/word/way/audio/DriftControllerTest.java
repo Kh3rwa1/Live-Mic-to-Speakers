@@ -9,92 +9,163 @@ import org.junit.Test;
 public class DriftControllerTest {
 
     @Test
-    public void simulatedClockDriftTriggersCorrection() {
+    public void simulatedClockDriftKeepsBacklogBounded() {
         int sampleRate = 48000;
         int burstFrames = 192;
         int targetQueue = 384; // 2 bursts
 
         DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
 
-        // Simulated drift: input = 48001 Hz, output = 47999 Hz (+2 frames/sec drift)
-        // Let's advance time by 100ms steps.
-        double inputRate = 48001.0;
-        double outputRate = 47999.0;
+        // Simulated clock drift: mic clock is 0.1% faster than output
+        // micRate = 48048 Hz, outputRate = 48000 Hz (+48 frames/sec drift)
+        double micRate = 48048.0;
+        double outputRate = 48000.0;
 
-        long framesWritten = targetQueue;
-        long framesPlayed = 0;
+        long totalFramesRead = 0;
         long totalDropped = 0;
         int correctionsTriggered = 0;
 
-        for (int step = 0; step < 200; step++) { // 20 seconds total
-            long nowMs = step * 100L;
-            double tSec = nowMs / 1000.0;
+        // Simulate 60 seconds of playback in 4 ms (192 frame) steps
+        int totalSteps = 15000; // 60s / 0.004s = 15000 steps
+        for (int step = 1; step <= totalSteps; step++) {
+            double tSec = step * 0.004;
+            long nowMs = (long) (tSec * 1000.0);
 
-            // Frames produced and consumed up to this timestamp
-            framesWritten = targetQueue + (long) (tSec * inputRate) - totalDropped;
-            framesPlayed = (long) (tSec * outputRate);
+            long micFramesProduced = (long) (tSec * micRate);
+            long outputFramesConsumed = (long) (tSec * outputRate);
 
-            int drop = controller.evaluate(framesWritten, framesPlayed, nowMs);
+            // Read follows output consumption plus any backlog drained by previous drops
+            totalFramesRead = outputFramesConsumed + totalDropped;
+            long backlog = Math.max(0L, micFramesProduced - totalFramesRead);
+
+            // AudioTrack head advances at outputRate
+            long framesWritten = outputFramesConsumed;
+            long rawHead = outputFramesConsumed;
+
+            int drop = controller.evaluate(backlog, framesWritten, rawHead, nowMs, false, false);
             if (drop > 0) {
                 correctionsTriggered++;
                 totalDropped += drop;
-                assertTrue("Drop must be at most 1 burst", drop <= burstFrames);
+                assertTrue("Drop must be at most 1 burst (" + burstFrames + ")", drop <= burstFrames);
                 assertTrue("Drop must be <= 2ms (96 frames at 48k)", drop <= 96);
             }
         }
 
-        assertTrue("Simulated drift must trigger at least one correction", correctionsTriggered > 0);
+        long finalBacklog = (long) (60.0 * micRate) - totalFramesRead;
+        assertTrue("Drift controller must have triggered corrections", correctionsTriggered > 0);
         assertEquals(correctionsTriggered, controller.getTotalCorrections());
+        // Without drift correction, backlog would be 60 * 48 = 2880 frames (60 ms).
+        // With drift correction, backlog stays strictly bounded near threshold (384 frames + 1s drift of 48 = 432 frames).
+        assertTrue("Input backlog must stay bounded (< 500 frames), was " + finalBacklog, finalBacklog < 500);
     }
 
     @Test
-    public void synchronizedClocksNeverTriggerCorrection() {
+    public void equalClocksWithStepwiseHeadPositionZeroCorrectionsOver60s() {
         int sampleRate = 48000;
         int burstFrames = 192;
-        int targetQueue = 384;
+        int targetQueue = 384; // 2 bursts
 
         DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
 
-        // Clocks perfectly matched at 48000 Hz
-        for (int step = 0; step < 600; step++) { // 60 seconds
-            long nowMs = step * 100L;
-            long written = targetQueue + (long) (nowMs * 48.0);
-            long played = (long) (nowMs * 48.0);
+        // Clocks perfectly matched at 48000 Hz over 60 seconds
+        int totalSteps = 15000; // 60s in 4ms steps
+        for (int step = 1; step <= totalSteps; step++) {
+            long nowMs = step * 4L;
+            long totalFramesRead = step * 192L;
+            long micFramesProduced = (nowMs * 48000L) / 1000L;
+            long backlog = Math.max(0L, micFramesProduced - totalFramesRead);
 
-            int drop = controller.evaluate(written, played, nowMs);
-            assertEquals("Synchronized clocks must never trigger corrections", 0, drop);
+            // Output playback head position updates in steps (e.g. every 8 bursts = 1536 frames)
+            long rawHead = (step / 8) * (8L * burstFrames);
+            long framesWritten = step * (long) burstFrames;
+
+            int drop = controller.evaluate(backlog, framesWritten, rawHead, nowMs, false, false);
+            assertEquals("Equal clocks must never trigger corrections even with stepwise head position", 0, drop);
         }
 
         assertEquals(0, controller.getTotalCorrections());
     }
 
     @Test
-    public void transientJitterDoesNotTriggerCorrection() {
+    public void spikeShorterThanOneSecondProducesNoDrop() {
         int sampleRate = 48000;
         int burstFrames = 192;
         int targetQueue = 384;
 
         DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
+        int threshold = burstFrames * 2; // 384 frames
 
-        // Queue spikes above target for 500 ms (less than 1.0s sustained threshold)
-        for (int step = 0; step < 5; step++) {
+        // Backlog spikes to 500 frames (> 384 threshold) for 800 ms (< 1.0 s)
+        for (int step = 0; step < 8; step++) {
             long nowMs = step * 100L;
-            int drop = controller.evaluate(targetQueue + 50, 0, nowMs);
+            int drop = controller.evaluate(500, 1000, 1000, nowMs, false, false);
             assertEquals(0, drop);
         }
 
-        // Drops back to target or below
-        int drop = controller.evaluate(targetQueue, 0, 600L);
-        assertEquals(0, drop);
+        // Backlog drops below threshold at 850 ms
+        int dropReset = controller.evaluate(threshold - 50, 1000, 1000, 850L, false, false);
+        assertEquals(0, dropReset);
 
-        // Stays for another 500 ms: still no trigger because window reset
-        for (int step = 7; step < 12; step++) {
+        // Backlog spikes again for another 600 ms (< 1.0 s)
+        for (int step = 9; step <= 15; step++) {
             long nowMs = step * 100L;
-            int nextDrop = controller.evaluate(targetQueue + 50, 0, nowMs);
-            assertEquals(0, nextDrop);
+            int drop = controller.evaluate(500, 1000, 1000, nowMs, false, false);
+            assertEquals(0, drop);
         }
 
+        assertEquals("Transient spikes under 1s must never trigger corrections", 0, controller.getTotalCorrections());
+    }
+
+    @Test
+    public void noDropsDuringRampOrAfterFeedbackLatched() {
+        int sampleRate = 48000;
+        int burstFrames = 192;
+        int targetQueue = 384;
+
+        DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
+
+        // Sustained backlog of 600 frames (> 384 threshold) for 2.0 s, but during ramp
+        for (int step = 0; step < 20; step++) {
+            long nowMs = step * 100L;
+            int drop = controller.evaluate(600, 1000, 1000, nowMs, true /* isRamping */, false);
+            assertEquals("No drops during ramp", 0, drop);
+        }
         assertEquals(0, controller.getTotalCorrections());
+
+        // Sustained backlog of 600 frames for 2.0 s, but feedback is latched
+        for (int step = 20; step < 40; step++) {
+            long nowMs = step * 100L;
+            int drop = controller.evaluate(600, 1000, 1000, nowMs, false, true /* feedbackLatched */);
+            assertEquals("No drops after feedback latched", 0, drop);
+        }
+        assertEquals(0, controller.getTotalCorrections());
+
+        // When ramp and feedback latch are inactive, sustained drift triggers correction after 1s
+        controller.evaluate(600, 1000, 1000, 4000L, false, false);
+        int drop = controller.evaluate(600, 1000, 1000, 5100L, false, false);
+        assertTrue("Drop must trigger when not ramping and not latched", drop > 0);
+        assertEquals(1, controller.getTotalCorrections());
+    }
+
+    @Test
+    public void diagnosticOutputCheckIncludesOneBurstMargin() {
+        int sampleRate = 48000;
+        int burstFrames = 192;
+        int targetQueue = 384; // 2 bursts
+
+        DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
+
+        // Output queue at targetQueue + 1 (385 frames) -> below target + burst (576 frames)
+        controller.evaluate(0, 385, 0, 100L, false, false);
+        assertFalse("Output diagnostic must include 1-burst margin", controller.isOutputQueueAboveDiagnosticThreshold());
+
+        // Output queue at targetQueue + burst (576 frames) -> not strictly above
+        controller.evaluate(0, 576, 0, 200L, false, false);
+        assertFalse(controller.isOutputQueueAboveDiagnosticThreshold());
+
+        // Output queue at targetQueue + burst + 1 (577 frames) -> strictly above
+        controller.evaluate(0, 577, 0, 300L, false, false);
+        assertTrue(controller.isOutputQueueAboveDiagnosticThreshold());
     }
 
     @Test
@@ -105,15 +176,15 @@ public class DriftControllerTest {
 
         DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
 
-        // Start above target at 0 ms
-        assertEquals(0, controller.evaluate(500, 0, 0L));
+        // Start above target (500 frames backlog > 384 threshold) at 0 ms
+        assertEquals(0, controller.evaluate(500, 0, 0, 0L, false, false));
 
         // Hold above target for 1100 ms -> triggers correction at 1100 ms
-        int drop1 = controller.evaluate(500, 0, 1100L);
+        int drop1 = controller.evaluate(500, 0, 0, 1100L, false, false);
         assertTrue("Drop must be > 0 after 1100ms sustained", drop1 > 0);
 
         // At 1200 ms (only 100 ms later, < 250 ms min interval) -> must not trigger
-        int drop2 = controller.evaluate(500, 0, 1200L);
+        int drop2 = controller.evaluate(500, 0, 0, 1200L, false, false);
         assertEquals(0, drop2);
     }
 
