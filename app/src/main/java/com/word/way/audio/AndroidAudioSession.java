@@ -279,6 +279,10 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
 
         if (input.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING)
             throw new LiveAudioFailure(MICROPHONE_UNAVAILABLE, "Microphone could not start");
+        long recordingStarted = SystemClock.elapsedRealtime();
+        if (driftController != null) {
+            driftController.setFallbackOriginMs(recordingStarted);
+        }
         if (debug) {
             Log.d(TAG, "started rate=" + sampleRate + " nativeRate=" + nativeRate
                     + " framesPerBuffer=" + framesPerBuffer + " recordBuffer=" + recordBufferBytes
