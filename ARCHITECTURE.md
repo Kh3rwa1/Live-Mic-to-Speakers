@@ -17,7 +17,7 @@ Invariants:
 1. Opening the screen does not allocate the microphone.
 2. Only one session can own capture and output at a time.
 3. A stop or lifecycle change invalidates an in-progress start.
-4. Reads and writes are non-blocking; UI callbacks are posted separately.
+4. Audio I/O is performed on a dedicated background worker thread so the UI thread never blocks; UI callbacks are posted separately.
 5. Focus loss or a material output-route change stops the session.
 6. Every exit path releases effects, input, output, route observation, and focus.
 

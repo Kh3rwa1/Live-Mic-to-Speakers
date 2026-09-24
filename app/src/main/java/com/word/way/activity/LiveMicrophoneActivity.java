@@ -44,6 +44,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     private static Boolean testIsBluetoothOutput = null;
     private boolean bluetoothRequested = false;
 
+    private long lastMicClickTime = 0L;
     /** Monitoring gain 0..1, read by the audio worker and updated live by the slider. */
     private volatile float liveGain = 0.8f;
     private final ActivityResultLauncher<String> microphonePermission = registerForActivityResult(
@@ -141,7 +142,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
                 }
             });
         }
-        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+        if (com.word.way.BuildConfig.DEBUG) {
             if (binding.studioOutputRoute != null) {
                 binding.studioOutputRoute.setOnLongClickListener(v -> {
                     showDiagnosticsDialog();
@@ -157,7 +158,12 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             binding.layoutMicHero.setFocusable(false);
             binding.layoutMicHero.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         }
-        View.OnClickListener micTrigger = v -> handleStartStop();
+        View.OnClickListener micTrigger = v -> {
+            long now = android.os.SystemClock.elapsedRealtime();
+            if (now - lastMicClickTime < 300) return;
+            lastMicClickTime = now;
+            handleStartStop();
+        };
         binding.ivMic.setOnClickListener(micTrigger);
         if (binding.layoutMicHero != null) binding.layoutMicHero.setOnClickListener(micTrigger);
         View.OnTouchListener micTouchFeedback = (v, event) -> {
@@ -213,7 +219,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             }
         });
 
-        binding.ivStartStopNew.setOnClickListener(v -> handleStartStop());
+        binding.ivStartStopNew.setOnClickListener(micTrigger);
         stopMic();
     }
 
@@ -273,7 +279,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     private void showSafetyDialog() {
         if (!visible || isFinishing() || isDestroyed()) return;
         androidx.fragment.app.FragmentManager fm = getSupportFragmentManager();
-        if (fm.isStateSaved() || fm.findFragmentByTag(TAG_SAFETY_DIALOG) != null) return;
+        if (fm.isStateSaved() || fm.findFragmentByTag(TAG_SAFETY_DIALOG) != null || fm.findFragmentByTag(TAG_BT_RATIONALE_DIALOG) != null) return;
         try {
             new FeedbackSafetyDialogFragment().showNow(fm, TAG_SAFETY_DIALOG);
         } catch (IllegalStateException e) {
@@ -284,7 +290,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     private void showBluetoothRationale() {
         if (!visible || isFinishing() || isDestroyed()) return;
         androidx.fragment.app.FragmentManager fm = getSupportFragmentManager();
-        if (fm.isStateSaved() || fm.findFragmentByTag(TAG_BT_RATIONALE_DIALOG) != null) return;
+        if (fm.isStateSaved() || fm.findFragmentByTag(TAG_BT_RATIONALE_DIALOG) != null || fm.findFragmentByTag(TAG_SAFETY_DIALOG) != null) return;
         try {
             new BluetoothRationaleDialogFragment().showNow(fm, TAG_BT_RATIONALE_DIALOG);
         } catch (IllegalStateException e) {
@@ -293,20 +299,72 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     }
 
     private void showDiagnosticsDialog() {
-        com.word.way.audio.AudioDiagnostics diag = com.word.way.audio.AudioDiagnostics.get();
-        String text = diag.toFormattedString();
-        new AlertDialog.Builder(this)
-                .setTitle("Audio Diagnostics")
-                .setMessage(text)
-                .setPositiveButton(android.R.string.copy, (dialog, which) -> {
+        if (!com.word.way.BuildConfig.DEBUG) return;
+
+        android.os.Handler uiHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+        android.widget.TextView tv = new android.widget.TextView(this);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        tv.setPadding(pad, pad, pad, pad);
+        tv.setTypeface(android.graphics.Typeface.MONOSPACE);
+        tv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
+
+        CheckBox logToggle = new CheckBox(this);
+        logToggle.setText(R.string.tool_detector_log_toggle);
+        logToggle.setChecked(com.word.way.audio.DetectorLogBuffer.getInstance().isLoggingEnabled());
+        logToggle.setOnCheckedChangeListener((btn, isChecked) -> {
+            com.word.way.audio.DetectorLogBuffer.getInstance().setLoggingEnabled(isChecked);
+        });
+
+        android.widget.LinearLayout layout = new android.widget.LinearLayout(this);
+        layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+        layout.addView(logToggle);
+        layout.addView(tv);
+
+        android.widget.ScrollView scroller = new android.widget.ScrollView(this);
+        scroller.addView(layout);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.tool_audio_diagnostics_title)
+                .setView(scroller)
+                .setPositiveButton(android.R.string.copy, (d, which) -> {
+                    String clipText;
+                    if (com.word.way.audio.DetectorLogBuffer.getInstance().isLoggingEnabled()) {
+                        String csv = com.word.way.audio.DetectorLogBuffer.getInstance().exportCsv();
+                        clipText = (csv == null || csv.isEmpty())
+                                ? com.word.way.audio.AudioDiagnostics.get().toFormattedString()
+                                : csv;
+                    } else {
+                        clipText = com.word.way.audio.AudioDiagnostics.get().toFormattedString();
+                    }
                     android.content.ClipboardManager cb = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     if (cb != null) {
-                        cb.setPrimaryClip(android.content.ClipData.newPlainText("Audio Diagnostics", text));
-                        Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show();
+                        cb.setPrimaryClip(android.content.ClipData.newPlainText("Audio Diagnostics", clipText));
+                        Toast.makeText(this, R.string.tool_diagnostics_copied, Toast.LENGTH_SHORT).show();
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                .create();
+
+        Runnable updater = new Runnable() {
+            @Override
+            public void run() {
+                if (dialog.isShowing()) {
+                    tv.setText(com.word.way.audio.AudioDiagnostics.get().toFormattedString());
+                    uiHandler.postDelayed(this, 500);
+                }
+            }
+        };
+
+        dialog.setOnShowListener(d -> {
+            tv.setText(com.word.way.audio.AudioDiagnostics.get().toFormattedString());
+            uiHandler.postDelayed(updater, 500);
+        });
+
+        dialog.setOnDismissListener(d -> {
+            uiHandler.removeCallbacks(updater);
+        });
+
+        dialog.show();
     }
 
     public void requestBluetoothPermission() {

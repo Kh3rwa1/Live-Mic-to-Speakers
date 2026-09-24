@@ -12,7 +12,9 @@ public final class AudioDiagnostics {
             "Unknown", 0, 0, 0,
             0, 0, 0, 0,
             0f, -1f, 0L, 0,
-            "Idle", 0f
+            "Idle", 0f,
+            0, -96f, -96f, 0, 0f,
+            false, false, 0f, 0f, 0f
     );
 
     // Platform features
@@ -47,6 +49,18 @@ public final class AudioDiagnostics {
     public final float userGain;
     public final long timestamp;
 
+    // Feedback detector telemetry
+    public final int feedbackScore;
+    public final float feedbackRmsDbfs;
+    public final float feedbackPeakDbfs;
+    public final int feedbackZcr;
+    public final float feedbackZcrVariance;
+    public final boolean feedbackLoud;
+    public final boolean feedbackTonal;
+    public final float feedbackFreqRelDev;
+    public final float feedbackPurity;
+    public final float feedbackFreqEst;
+
     public AudioDiagnostics(boolean featureLowLatency, boolean featureAudioPro,
                             String audioSource, boolean aecEnabled, boolean nsEnabled,
                             String performanceMode, int bufferCapacityFrames,
@@ -56,6 +70,26 @@ public final class AudioDiagnostics {
                             float queueDepthMs, float queueDepth10sMs,
                             long sessionUptimeMs, int driftCorrections,
                             String route, float userGain) {
+        this(featureLowLatency, featureAudioPro, audioSource, aecEnabled, nsEnabled,
+             performanceMode, bufferCapacityFrames, bufferSizeFrames, underrunCount,
+             framesPerRead, burstFrames, sampleRate, nativeRate,
+             queueDepthMs, queueDepth10sMs, sessionUptimeMs, driftCorrections,
+             route, userGain, 0, -96f, -96f, 0, 0f, false, false, 0f, 0f, 0f);
+    }
+
+    public AudioDiagnostics(boolean featureLowLatency, boolean featureAudioPro,
+                            String audioSource, boolean aecEnabled, boolean nsEnabled,
+                            String performanceMode, int bufferCapacityFrames,
+                            int bufferSizeFrames, int underrunCount,
+                            int framesPerRead, int burstFrames,
+                            int sampleRate, int nativeRate,
+                            float queueDepthMs, float queueDepth10sMs,
+                            long sessionUptimeMs, int driftCorrections,
+                            String route, float userGain,
+                            int feedbackScore, float feedbackRmsDbfs, float feedbackPeakDbfs,
+                            int feedbackZcr, float feedbackZcrVariance,
+                            boolean feedbackLoud, boolean feedbackTonal,
+                            float feedbackFreqRelDev, float feedbackPurity, float feedbackFreqEst) {
         this.featureLowLatency = featureLowLatency;
         this.featureAudioPro = featureAudioPro;
         this.audioSource = audioSource != null ? audioSource : "Unknown";
@@ -75,6 +109,16 @@ public final class AudioDiagnostics {
         this.driftCorrections = driftCorrections;
         this.route = route != null ? route : "Unknown";
         this.userGain = userGain;
+        this.feedbackScore = feedbackScore;
+        this.feedbackRmsDbfs = feedbackRmsDbfs;
+        this.feedbackPeakDbfs = feedbackPeakDbfs;
+        this.feedbackZcr = feedbackZcr;
+        this.feedbackZcrVariance = feedbackZcrVariance;
+        this.feedbackLoud = feedbackLoud;
+        this.feedbackTonal = feedbackTonal;
+        this.feedbackFreqRelDev = feedbackFreqRelDev;
+        this.feedbackPurity = feedbackPurity;
+        this.feedbackFreqEst = feedbackFreqEst;
         this.timestamp = System.currentTimeMillis();
     }
 
@@ -103,7 +147,15 @@ public final class AudioDiagnostics {
                 "• Drift Corrections: " + driftCorrections + "\n" +
                 "• Uptime: " + String.format(Locale.US, "%.1fs", sessionUptimeMs / 1000f) + "\n" +
                 "• Route: " + route + "\n" +
-                "• Monitoring Gain: " + Math.round(userGain * 100) + "%";
+                "• Monitoring Gain: " + Math.round(userGain * 100) + "%\n" +
+                "• Feedback Detector: score=" + feedbackScore + "/" + LiveGainProcessor.TRIGGER_SCORE +
+                ", loud=" + (feedbackLoud ? "YES" : "NO") + ", tonal=" + (feedbackTonal ? "YES" : "NO") + "\n" +
+                "• Detector Metrics: RMS=" + String.format(Locale.US, "%.1f dBFS", feedbackRmsDbfs) +
+                ", peak=" + String.format(Locale.US, "%.1f dBFS", feedbackPeakDbfs) +
+                ", ZCR=" + feedbackZcr + " (var=" + String.format(Locale.US, "%.2f", feedbackZcrVariance) + ")\n" +
+                "• Detector Spectral: freq=" + String.format(Locale.US, "%.1f Hz", feedbackFreqEst) +
+                ", stability=" + String.format(Locale.US, "%.2f%%", feedbackFreqRelDev * 100f) +
+                ", purity=" + String.format(Locale.US, "%.1f%%", feedbackPurity * 100f);
     }
 
     @Override public String toString() {

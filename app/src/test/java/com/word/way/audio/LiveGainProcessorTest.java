@@ -399,4 +399,64 @@ public class LiveGainProcessorTest {
         System.out.println("Processed 60.0s of 48 kHz audio in: " + elapsedMs + " ms (" + String.format("%.2f", 60000.0 / elapsedMs) + "x real-time)");
         System.out.println("=========================================");
     }
+
+    // Task 1: Singing tests
+    @Test public void sungVowelWithVibratoNeverTriggers() {
+        int rate = 48000;
+        double[] f0List = {110.0, 220.0, 440.0, 660.0};
+        for (double f0 : f0List) {
+            LiveGainProcessor processor = new LiveGainProcessor(rate);
+            processor.setUserGain(1.0f);
+            // 3.0 s loud sung vowel at 0.8 FS with vibrato (5.5 Hz, +-45 cents)
+            short[] vowel = TestSignals.sungVowel(rate, f0, 3.0, 0.80, 5.5, 45.0, 42L);
+            int trigger = runSignal(processor, vowel, 480);
+            assertEquals("Sung vowel at f0=" + f0 + " Hz must NOT trigger feedback detector", -1, trigger);
+            assertFalse(processor.isFeedbackLatched());
+        }
+    }
+
+    @Test public void singingPhraseNeverTriggers() {
+        int rate = 48000;
+        LiveGainProcessor processor = new LiveGainProcessor(rate);
+        processor.setUserGain(1.0f);
+        // 20 s singing phrase peaking at 0.9 FS
+        short[] phrase = TestSignals.singingPhrase(rate, 20.0, 777L);
+        int trigger = runSignal(processor, phrase, 480);
+        assertEquals("20s singing phrase peaking at 0.9 FS must NOT trigger feedback detector", -1, trigger);
+        assertFalse(processor.isFeedbackLatched());
+    }
+
+    @Test public void heldNoteNoVibratoDoesNotTriggerWithin1_5s() {
+        int rate = 48000;
+        double[] f0List = {220.0, 440.0, 660.0};
+        for (double f0 : f0List) {
+            LiveGainProcessor processor = new LiveGainProcessor(rate);
+            processor.setUserGain(1.0f);
+            // 1.5 s held harmonic note at 0.8 FS with no vibrato
+            short[] held = TestSignals.heldNoteNoVibrato(rate, f0, 1.5, 0.80);
+            int trigger = runSignal(processor, held, 480);
+            assertEquals("Held note without vibrato at f0=" + f0 + " Hz must NOT trigger within 1.5 s", -1, trigger);
+            assertFalse(processor.isFeedbackLatched());
+        }
+    }
+
+    @Test public void growingFeedbackTriggersWithinWindow() {
+        int rate = 48000;
+        double[] freqs = {1000.0, 2500.0};
+        for (double freq : freqs) {
+            LiveGainProcessor processor = new LiveGainProcessor(rate);
+            processor.setUserGain(1.0f);
+            // Sine starting at 0.30 FS, growing at 20 dB/s for 2.0 s.
+            // Exceeds peak threshold (0.60 FS) at t ≈ 0.301 s.
+            // Must trigger within 1.2 s of exceeding threshold (by t <= 1.501 s).
+            short[] growing = TestSignals.growingFeedback(rate, freq, 2.0, 0.30, 20.0);
+            int trigger = runSignal(processor, growing, 480);
+            assertTrue("Growing feedback at " + freq + " Hz must trigger", trigger >= 0);
+            double triggerSec = (double) trigger / rate;
+            // Loudness threshold exceeded at ~0.301 s; detector requires ~0.8-1.2 s from loudness onset
+            assertTrue("Trigger time " + triggerSec + "s must be >= 1.0s", triggerSec >= 1.0);
+            assertTrue("Trigger time " + triggerSec + "s must be <= 1.55s (within 1.2s of loudness onset)", triggerSec <= 1.55);
+            assertTrue(processor.isFeedbackLatched());
+        }
+    }
 }

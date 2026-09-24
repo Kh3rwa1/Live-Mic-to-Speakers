@@ -52,4 +52,7 @@
     <string name="tool_elapsed">Elapsed: %1$s</string>
     <string name="tool_duration">Duration: %1$s</string>
     <string name="tool_mic_active">Microphone active</string>
+    <string name="tool_detector_log_toggle">Detector Log (last 30s CSV)</string>
+    <string name="tool_audio_diagnostics_title">Audio Diagnostics</string>
+    <string name="tool_diagnostics_copied">Copied to clipboard</string>
 </resources>
