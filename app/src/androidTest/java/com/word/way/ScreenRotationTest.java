@@ -119,4 +119,11 @@ public class ScreenRotationTest {
             assertTrue(track.delete());
         }
     }
+
+    @Test
+    public void musicListActivityRotatesWithoutCrash() {
+        try (ActivityScenario<com.word.way.player.activity.MusicListActivity> scenario = ActivityScenario.launch(com.word.way.player.activity.MusicListActivity.class)) {
+            rotateLandscapeAndPortrait(scenario);
+        }
+    }
 }

@@ -1,12 +1,16 @@
 package com.word.way.activity;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.CheckBox;
 import android.widget.SeekBar;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
@@ -29,12 +33,17 @@ import com.word.way.viewmodel.LiveMicrophoneViewModel;
 import demo.ads.GoogleAds;
 
 public class LiveMicrophoneActivity extends AppCompatActivity {
+    public static final String TAG_SAFETY_DIALOG = "FeedbackSafetyDialog";
+
     private ActivityLiveMicrophoneNewBinding binding;
     private LiveMicrophoneViewModel viewModel;
     private AudioSessionRunner runner;
     private boolean requested, visible;
-    private AlertDialog startDialog;
     private MyPref prefs;
+    private static Boolean testIsBuiltinSpeaker = null;
+    private static Boolean testIsBluetoothOutput = null;
+    private boolean bluetoothRequested = false;
+
     /** Monitoring gain 0..1, read by the audio worker and updated live by the slider. */
     private volatile float liveGain = 0.8f;
     private final ActivityResultLauncher<String> microphonePermission = registerForActivityResult(
@@ -43,10 +52,54 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
                         : R.string.quality_mic_permission_denied, Toast.LENGTH_LONG).show();
                 if (!granted) ToolUi.permissionDenied(this);
             });
+    public static final String TAG_BT_RATIONALE_DIALOG = "BluetoothRationaleDialog";
+
     private final ActivityResultLauncher<String> bluetoothPermission = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(), granted -> {
-                // Optional: Bluetooth names degrade to system output when denied.
+                if (prefs == null) prefs = new MyPref(this);
+                prefs.setBoolean(MyPref.BT_CONNECT_ASKED, true);
             });
+
+    public static class FeedbackSafetyDialogFragment extends androidx.fragment.app.DialogFragment {
+        @androidx.annotation.NonNull
+        @Override
+        public android.app.Dialog onCreateDialog(Bundle savedInstanceState) {
+            androidx.fragment.app.FragmentActivity activity = requireActivity();
+            View view = LayoutInflater.from(activity).inflate(R.layout.dialog_feedback_safety, null);
+            CheckBox checkBox = view.findViewById(R.id.safety_dont_show_again);
+            return new AlertDialog.Builder(activity)
+                    .setTitle(R.string.quality_feedback_title)
+                    .setView(view)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(R.string.quality_start, (dialog, which) -> {
+                        if (checkBox != null && checkBox.isChecked()) {
+                            new MyPref(requireContext()).setBoolean(MyPref.SAFETY_ACK_SPEAKER, true);
+                        }
+                        if (getActivity() instanceof LiveMicrophoneActivity) {
+                            ((LiveMicrophoneActivity) getActivity()).confirmStart();
+                        }
+                    })
+                    .create();
+        }
+    }
+
+    public static class BluetoothRationaleDialogFragment extends androidx.fragment.app.DialogFragment {
+        @androidx.annotation.NonNull
+        @Override
+        public android.app.Dialog onCreateDialog(Bundle savedInstanceState) {
+            androidx.fragment.app.FragmentActivity activity = requireActivity();
+            return new AlertDialog.Builder(activity)
+                    .setTitle(R.string.bluetooth_rationale_title)
+                    .setMessage(R.string.bluetooth_rationale_message)
+                    .setPositiveButton(R.string.quality_start, (dialog, which) -> {
+                        if (getActivity() instanceof LiveMicrophoneActivity) {
+                            ((LiveMicrophoneActivity) getActivity()).requestBluetoothPermission();
+                        }
+                    })
+                    .setNegativeButton(R.string.btn_cancel, null)
+                    .create();
+        }
+    }
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -96,7 +149,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             binding.layoutMicHero.setFocusable(false);
             binding.layoutMicHero.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         }
-        View.OnClickListener micTrigger = v -> binding.ivStartStopNew.performClick();
+        View.OnClickListener micTrigger = v -> handleStartStop();
         binding.ivMic.setOnClickListener(micTrigger);
         if (binding.layoutMicHero != null) binding.layoutMicHero.setOnClickListener(micTrigger);
         View.OnTouchListener micTouchFeedback = (v, event) -> {
@@ -133,69 +186,203 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
                 }), () -> liveGain), new AudioSessionRunner.Listener() {
             @Override public void onStarted(long generation) {
                 runOnUiThread(() -> {
+                    viewModel.setStarting(false);
+                    viewModel.setRunning(true);
                     if (visible && runner.isCurrent(generation)) {
                         binding.tvStartStopNew.setText(R.string.quality_mic_on);
                         if (binding.studioFeedback != null) binding.studioFeedback.setText(R.string.tool_mic_active);
+                        maybeRequestBluetoothPermission();
                     }
                 });
             }
             @Override public void onError(long generation, Exception error) {
                 runOnUiThread(() -> {
+                    viewModel.setStarting(false);
+                    viewModel.setRunning(false);
                     if (runner.isCurrent(generation)) showAudioError(error);
                 });
             }
         });
 
-        binding.ivStartStopNew.setOnClickListener(v -> {
-            if (requested) { stopMic(); return; }
-            if (startDialog != null && startDialog.isShowing()) return;
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                microphonePermission.launch(Manifest.permission.RECORD_AUDIO); return;
-            }
-            if (Build.VERSION.SDK_INT >= 31 && ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                showBluetoothRationale();
-            }
-            startDialog = new AlertDialog.Builder(this).setTitle(R.string.quality_feedback_title)
-                    .setMessage(R.string.quality_feedback_message)
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .setPositiveButton(R.string.quality_start, (dialog, which) -> {
-                        if (!visible || requested) return;
-                        requested = true;
-                        binding.ivStartStopNew.setContentDescription(getString(R.string.quality_stop_microphone));
-                        binding.ivMic.setContentDescription(getString(R.string.quality_stop_microphone));
-                        binding.ivStartStopNew.setImageResource(R.drawable.tool_stop);
-                        binding.tvStartStopNew.setText(R.string.quality_mic_starting);
-                        if (binding.visualizerLive != null) {
-                            binding.visualizerLive.setRecording(true);
-                        }
-                        if (binding.lottieMicPulse != null) {
-                            binding.lottieMicPulse.setVisibility(View.VISIBLE);
-                            binding.lottieMicPulse.playAnimation();
-                        }
-                        if (binding.lottieSoundwave != null) {
-                            binding.lottieSoundwave.setVisibility(View.VISIBLE);
-                            binding.lottieSoundwave.playAnimation();
-                        }
-                        binding.ivMic.animate().scaleX(1.05f).scaleY(1.05f).setDuration(400).start();
-                        runner.start();
-                    }).create();
-            startDialog.setOnDismissListener(dialog -> startDialog = null);
-            startDialog.show();
-        });
+        binding.ivStartStopNew.setOnClickListener(v -> handleStartStop());
         stopMic();
     }
 
+    private void handleStartStop() {
+        if (viewModel.isStarting()) {
+            return;
+        }
+        if (requested || viewModel.isRunning()) {
+            stopMic();
+            return;
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            microphonePermission.launch(Manifest.permission.RECORD_AUDIO);
+            return;
+        }
+        if (prefs == null) prefs = new MyPref(this);
+        if (isBuiltinSpeakerOutput() && !prefs.getBoolean(MyPref.SAFETY_ACK_SPEAKER, false)) {
+            showSafetyDialog();
+            return;
+        }
+        startMicSession();
+    }
+
+    public void confirmStart() {
+        startMicSession();
+    }
+
+    private synchronized void startMicSession() {
+        if (isFinishing() || isDestroyed() || requested || viewModel.isStarting() || viewModel.isRunning()) {
+            return;
+        }
+        viewModel.setStarting(true);
+        requested = true;
+        binding.ivStartStopNew.setContentDescription(getString(R.string.quality_stop_microphone));
+        binding.ivMic.setContentDescription(getString(R.string.quality_stop_microphone));
+        binding.ivStartStopNew.setImageResource(R.drawable.tool_stop);
+        binding.tvStartStopNew.setText(R.string.quality_mic_starting);
+        if (binding.visualizerLive != null) {
+            binding.visualizerLive.setRecording(true);
+        }
+        if (binding.lottieMicPulse != null) {
+            binding.lottieMicPulse.setVisibility(View.VISIBLE);
+            binding.lottieMicPulse.playAnimation();
+        }
+        if (binding.lottieSoundwave != null) {
+            binding.lottieSoundwave.setVisibility(View.VISIBLE);
+            binding.lottieSoundwave.playAnimation();
+        }
+        binding.ivMic.animate().scaleX(1.05f).scaleY(1.05f).setDuration(400).start();
+        runner.start();
+    }
+
+    private void showSafetyDialog() {
+        if (!visible || isFinishing() || isDestroyed()) return;
+        androidx.fragment.app.FragmentManager fm = getSupportFragmentManager();
+        if (fm.findFragmentByTag(TAG_SAFETY_DIALOG) != null) return;
+        new FeedbackSafetyDialogFragment().show(fm, TAG_SAFETY_DIALOG);
+    }
+
     private void showBluetoothRationale() {
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.bluetooth_rationale_title)
-                .setMessage(R.string.bluetooth_rationale_message)
-                .setPositiveButton(R.string.quality_start, (dialog, which) -> {
-                    try {
-                        bluetoothPermission.launch(Manifest.permission.BLUETOOTH_CONNECT);
-                    } catch (RuntimeException ignored) { }
-                })
-                .setNegativeButton(R.string.btn_cancel, null)
-                .show();
+        if (!visible || isFinishing() || isDestroyed()) return;
+        androidx.fragment.app.FragmentManager fm = getSupportFragmentManager();
+        if (fm.findFragmentByTag(TAG_BT_RATIONALE_DIALOG) != null) return;
+        new BluetoothRationaleDialogFragment().show(fm, TAG_BT_RATIONALE_DIALOG);
+    }
+
+    public void requestBluetoothPermission() {
+        try {
+            bluetoothPermission.launch(Manifest.permission.BLUETOOTH_CONNECT);
+        } catch (RuntimeException ignored) { }
+    }
+
+    private void maybeRequestBluetoothPermission() {
+        if (Build.VERSION.SDK_INT < 31) return;
+        if (prefs == null) prefs = new MyPref(this);
+        if (prefs.getBoolean(MyPref.BT_CONNECT_ASKED, false)) return;
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        if (isBluetoothOutputConnected()) {
+            prefs.setBoolean(MyPref.BT_CONNECT_ASKED, true);
+            bluetoothRequested = true;
+            showBluetoothRationale();
+        }
+    }
+
+    public boolean isBluetoothOutputConnected() {
+        if (testIsBluetoothOutput != null) return testIsBluetoothOutput;
+        AudioManager manager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        if (manager == null) return false;
+        try {
+            AudioDeviceInfo[] devices = manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+            for (AudioDeviceInfo device : devices) {
+                int type = device.getType();
+                if (type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+                    return true;
+                }
+                if (Build.VERSION.SDK_INT >= 31) {
+                    if (type == AudioDeviceInfo.TYPE_BLE_HEADSET || type == AudioDeviceInfo.TYPE_BLE_SPEAKER) {
+                        return true;
+                    }
+                }
+            }
+        } catch (RuntimeException ignored) { }
+        return false;
+    }
+
+    public boolean isHeadphonesOrHeadsetConnected() {
+        AudioManager manager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        if (manager == null) return false;
+        try {
+            AudioDeviceInfo[] devices = manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+            for (AudioDeviceInfo device : devices) {
+                int type = device.getType();
+                if (type == AudioDeviceInfo.TYPE_WIRED_HEADSET
+                        || type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
+                        || type == AudioDeviceInfo.TYPE_USB_HEADSET
+                        || type == AudioDeviceInfo.TYPE_USB_DEVICE
+                        || type == AudioDeviceInfo.TYPE_USB_ACCESSORY
+                        || type == AudioDeviceInfo.TYPE_LINE_ANALOG
+                        || type == AudioDeviceInfo.TYPE_LINE_DIGITAL
+                        || type == AudioDeviceInfo.TYPE_AUX_LINE) {
+                    return true;
+                }
+            }
+        } catch (RuntimeException ignored) { }
+        return false;
+    }
+
+    public boolean isBuiltinSpeakerOutput() {
+        if (testIsBuiltinSpeaker != null) return testIsBuiltinSpeaker;
+        if (isBluetoothOutputConnected() || isHeadphonesOrHeadsetConnected()) {
+            return false;
+        }
+        return true;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void setTestAudioRoute(Boolean builtinSpeaker, Boolean bluetooth) {
+        testIsBuiltinSpeaker = builtinSpeaker;
+        testIsBluetoothOutput = bluetooth;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void resetTestAudioRoute() {
+        testIsBuiltinSpeaker = null;
+        testIsBluetoothOutput = null;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public boolean wasBluetoothRequested() {
+        return bluetoothRequested;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public int getRunnerStartCount() {
+        return runner != null ? runner.getStartCount() : 0;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public boolean isSafetyDialogShowing() {
+        androidx.fragment.app.Fragment fragment = getSupportFragmentManager().findFragmentByTag(TAG_SAFETY_DIALOG);
+        return fragment instanceof androidx.fragment.app.DialogFragment
+                && ((androidx.fragment.app.DialogFragment) fragment).getDialog() != null
+                && ((androidx.fragment.app.DialogFragment) fragment).getDialog().isShowing();
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public boolean isBluetoothRationaleShowing() {
+        androidx.fragment.app.Fragment fragment = getSupportFragmentManager().findFragmentByTag(TAG_BT_RATIONALE_DIALOG);
+        return fragment instanceof androidx.fragment.app.DialogFragment
+                && ((androidx.fragment.app.DialogFragment) fragment).getDialog() != null
+                && ((androidx.fragment.app.DialogFragment) fragment).getDialog().isShowing();
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public void triggerStartStop() {
+        handleStartStop();
     }
 
     /** Accessible monitoring-gain slider; the value persists and applies to a running session. */
@@ -234,6 +421,10 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     }
 
     private void stopMic() {
+        if (viewModel != null) {
+            viewModel.setStarting(false);
+            viewModel.setRunning(false);
+        }
         requested = false;
         if (runner != null) runner.stop();
         binding.ivStartStopNew.setContentDescription(getString(R.string.quality_start_microphone));
@@ -294,8 +485,8 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     // can interrupt a live microphone session. Banners still render once consent allows ads.
     @Override protected void onPause() {
         visible = false;
-        if (startDialog != null) startDialog.dismiss();
-        stopMic(); super.onPause();
+        stopMic();
+        super.onPause();
     }
     @Override protected void onDestroy() { if (runner != null) runner.close(); super.onDestroy(); }
 }

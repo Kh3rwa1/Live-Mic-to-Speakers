@@ -131,21 +131,18 @@
 
         <activity
             android:name="com.word.way.player.activity.MusicListActivity"
-            android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="false"
             android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name="com.word.way.activity.MusicActivity"
-            android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="false"
             android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name="com.word.way.activity.SettingsActivity"
-            android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="false"
             android:theme="@style/Theme.DecMictospeaker"
             android:windowSoftInputMode="adjustResize" />

@@ -34,4 +34,23 @@ public class LiveMicrophoneViewModel extends ViewModel {
     public void setLastRoute(String lastRoute) {
         this.lastRoute = lastRoute != null ? lastRoute : "";
     }
+
+    private boolean running;
+    private boolean starting;
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    public void setRunning(boolean running) {
+        this.running = running;
+    }
+
+    public boolean isStarting() {
+        return starting;
+    }
+
+    public void setStarting(boolean starting) {
+        this.starting = starting;
+    }
 }

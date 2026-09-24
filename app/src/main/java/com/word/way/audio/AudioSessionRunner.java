@@ -33,18 +33,22 @@ public final class AudioSessionRunner implements AutoCloseable {
     private volatile long generation;
     private volatile boolean closed;
 
+    private final java.util.concurrent.atomic.AtomicInteger startCount = new java.util.concurrent.atomic.AtomicInteger(0);
+
     public AudioSessionRunner(Factory factory, Listener listener) {
         this.factory = factory;
         this.listener = listener;
     }
     public synchronized long start() {
         if (closed) throw new IllegalStateException("Audio runner is closed");
+        startCount.incrementAndGet();
         long ticket = ++generation;
         worker.execute(() -> run(ticket));
         return ticket;
     }
     public synchronized void stop() { generation++; }
     public boolean isCurrent(long ticket) { return !closed && generation == ticket; }
+    public int getStartCount() { return startCount.get(); }
 
     private void run(long ticket) {
         if (!isCurrent(ticket)) return;

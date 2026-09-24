@@ -10,6 +10,10 @@ public class MyPref {
     private static final String PREF_NAME = "MIC_TO_SPEAK";
     /** Persisted live-monitoring gain, 0..1. */
     public static final String LiveMonitoringGain = "LiveMonitoringGain";
+    /** True once Bluetooth connect permission was requested or handled. */
+    public static final String BT_CONNECT_ASKED = "btConnectAsked";
+    /** True once the user acknowledged speaker feedback safety warning. */
+    public static final String SAFETY_ACK_SPEAKER = "safetyAckSpeaker";
     private final SharedPreferences pref;
     private final SharedPreferences.Editor editor;
 
@@ -47,5 +51,14 @@ public class MyPref {
 
     public float getPref(String str, float fallback) {
         return this.pref.getFloat(str, fallback);
+    }
+
+    public void setBoolean(String key, boolean value) {
+        this.editor.putBoolean(key, value);
+        this.editor.apply();
+    }
+
+    public boolean getBoolean(String key, boolean fallback) {
+        return this.pref.getBoolean(key, fallback);
     }
 }

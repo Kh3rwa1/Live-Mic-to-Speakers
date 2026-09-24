@@ -44,4 +44,5 @@
     <string name="unrecovered_delete_dialog_message">These recordings were interrupted and cannot be played. Delete them permanently?</string>
     <string name="unrecovered_delete_dialog_confirm">Delete</string>
     <string name="unrecovered_share_title">Share unrecovered recording</string>
+    <string name="safety_dont_show_again">Don\'t show again</string>
 </resources>
