@@ -93,7 +93,9 @@ public class DriftControllerTest {
         int targetQueue = 384;
 
         DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
-        int threshold = burstFrames * 2; // 384 frames
+        controller.setBaselineBacklogFrames(burstFrames); // baseline = 192, threshold = 384
+        long threshold = controller.getInputBacklogThresholdFrames();
+        assertEquals(384L, threshold);
 
         // Backlog spikes to 500 frames (> 384 threshold) for 800 ms (< 1.0 s)
         for (int step = 0; step < 8; step++) {
@@ -123,8 +125,9 @@ public class DriftControllerTest {
         int targetQueue = 384;
 
         DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
+        controller.setBaselineBacklogFrames(0L); // threshold is 192 frames
 
-        // Sustained backlog of 600 frames (> 384 threshold) for 2.0 s, but during ramp
+        // Sustained backlog of 600 frames (> 192 threshold) for 2.0 s, but during ramp
         for (int step = 0; step < 20; step++) {
             long nowMs = step * 100L;
             int drop = controller.evaluate(600, 1000, 1000, nowMs, true /* isRamping */, false);
@@ -175,8 +178,9 @@ public class DriftControllerTest {
         int targetQueue = 384;
 
         DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
+        controller.setBaselineBacklogFrames(0L);
 
-        // Start above target (500 frames backlog > 384 threshold) at 0 ms
+        // Start above target (500 frames backlog > 192 threshold) at 0 ms
         assertEquals(0, controller.evaluate(500, 0, 0, 0L, false, false));
 
         // Hold above target for 1100 ms -> triggers correction at 1100 ms
@@ -186,6 +190,143 @@ public class DriftControllerTest {
         // At 1200 ms (only 100 ms later, < 250 ms min interval) -> must not trigger
         int drop2 = controller.evaluate(500, 0, 0, 1200L, false, false);
         assertEquals(0, drop2);
+    }
+
+    @Test
+    public void constantBacklogTenBurstsZeroCorrectionsOver120s() {
+        int sampleRate = 48000;
+        int burstFrames = 192;
+        int targetQueue = 384;
+        long constantBacklog = 10L * burstFrames; // 1920 frames
+
+        DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
+
+        // 120 seconds in 50 ms steps (2400 steps)
+        for (int step = 1; step <= 2400; step++) {
+            long nowMs = step * 50L;
+            int drop = controller.evaluate(constantBacklog, 1000, 1000, nowMs, false, false);
+            assertEquals("No drops with constant backlog", 0, drop);
+        }
+
+        assertTrue(controller.hasBaseline());
+        assertEquals(constantBacklog, controller.getBaselineBacklogFrames());
+        assertEquals(0, controller.getTotalCorrections());
+    }
+
+    @Test
+    public void startupOffsetOf100msZeroCorrections() {
+        int sampleRate = 48000;
+        int burstFrames = 192;
+        int targetQueue = 384;
+
+        DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
+        // 100 ms startup offset at 48 kHz is 4800 frames
+        long startupOffsetFrames = 4800L;
+
+        // Simulate 60 seconds with steady 100ms offset (no drift)
+        for (int step = 1; step <= 1200; step++) {
+            long nowMs = step * 50L;
+            int drop = controller.evaluate(startupOffsetFrames, 1000, 1000, nowMs, false, false);
+            assertEquals(0, drop);
+        }
+
+        assertTrue(controller.hasBaseline());
+        assertEquals(startupOffsetFrames, controller.getBaselineBacklogFrames());
+        assertEquals(0, controller.getTotalCorrections());
+    }
+
+    @Test
+    public void micClockPointOnePercentFastBacklogStaysWithinBaselinePlusTwoBursts() {
+        int sampleRate = 48000;
+        int burstFrames = 192;
+        int targetQueue = 384;
+
+        DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
+
+        double micRate = 48048.0;
+        double outputRate = 48000.0;
+
+        long totalFramesRead = 0;
+        long totalDropped = 0;
+
+        int totalSteps = 15000; // 60s in 4ms steps
+        for (int step = 1; step <= totalSteps; step++) {
+            double tSec = step * 0.004;
+            long nowMs = (long) (tSec * 1000.0);
+
+            long micFramesProduced = (long) (tSec * micRate);
+            long outputFramesConsumed = (long) (tSec * outputRate);
+
+            totalFramesRead = outputFramesConsumed + totalDropped;
+            long backlog = Math.max(0L, micFramesProduced - totalFramesRead);
+
+            int drop = controller.evaluate(backlog, outputFramesConsumed, outputFramesConsumed, nowMs, false, false);
+            if (drop > 0) {
+                totalDropped += drop;
+                assertTrue("Drop must be <= 1 burst (" + burstFrames + ")", drop <= burstFrames);
+                assertTrue("Drop must be <= 2ms (96 frames at 48k)", drop <= 96);
+            }
+
+            if (controller.hasBaseline()) {
+                long maxAllowed = controller.getBaselineBacklogFrames() + 2L * burstFrames;
+                assertTrue("Backlog (" + backlog + ") must stay within baseline ("
+                        + controller.getBaselineBacklogFrames() + ") + 2 bursts (" + maxAllowed + ")",
+                        backlog <= maxAllowed);
+            }
+        }
+
+        assertTrue(controller.hasBaseline());
+        assertTrue(controller.getTotalCorrections() > 0);
+    }
+
+    @Test
+    public void baselineNotSetUntilRampEnds() {
+        int sampleRate = 48000;
+        int burstFrames = 192;
+        int targetQueue = 384;
+
+        DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
+
+        // First 1.5 seconds: ramp is active
+        for (int step = 1; step <= 30; step++) {
+            long nowMs = step * 50L; // up to 1500 ms
+            int drop = controller.evaluate(300, 1000, 1000, nowMs, true /* isRamping */, false);
+            assertEquals(0, drop);
+            assertFalse("Baseline must not be set while ramping", controller.hasBaseline());
+        }
+
+        // Next 1.5 seconds (1550 ms to 3000 ms): ramp ended, but 2s baseline window has not finished
+        for (int step = 31; step <= 60; step++) {
+            long nowMs = step * 50L; // up to 3000 ms (1500 ms after ramp ended < 2000 ms)
+            int drop = controller.evaluate(300, 1000, 1000, nowMs, false /* isRamping */, false);
+            assertEquals(0, drop);
+            assertFalse("Baseline must not be set until 2s after ramp ended", controller.hasBaseline());
+        }
+
+        // At 3550 ms (2050 ms after ramp ended >= 2000 ms): baseline is established
+        controller.evaluate(300, 1000, 1000, 3550L, false, false);
+        assertTrue("Baseline must be set after 2s following ramp end", controller.hasBaseline());
+        assertEquals(300L, controller.getBaselineBacklogFrames());
+    }
+
+    @Test
+    public void fallbackOriginEliminatesStartupDelayInComputeInputBacklog() {
+        int sampleRate = 48000;
+        int burstFrames = 192;
+        int targetQueue = 384;
+
+        DriftController controller = new DriftController(burstFrames, sampleRate, targetQueue, 0L);
+        // Session started at 0 ms, but startRecording() returned at 150 ms
+        controller.setFallbackOriginMs(150L);
+        assertEquals(150L, controller.getFallbackOriginMs());
+
+        // At 150 ms, totalFramesRead is 0. Expected frames is 0, so backlog is 0.
+        long backlogAtStart = controller.computeInputBacklog(0L, 150L);
+        assertEquals(0L, backlogAtStart);
+
+        // At 250 ms (100 ms of recording), mic produced 4800 frames. If we read 4800 frames:
+        long backlog = controller.computeInputBacklog(4800L, 250L);
+        assertEquals(0L, backlog);
     }
 
     @Test

@@ -24,11 +24,7 @@ To inspect pipeline events and underruns in real time over ADB, run:
 
 ```bash
 # Monitor audio session lifecycle, sample rate, buffer bursts, and underruns:
-adb logcat -s AndroidAudioSession:D
-
-# Expected output on session start:
-# D/AndroidAudioSession: started rate=48000 nativeRate=48000 framesPerBuffer=96 recordBuffer=384 trackBuffer=768 lowLatency=true
-# D/AndroidAudioSession: underruns=0 rate=48000 framesPerBuffer=96 trackBuffer=768
+adb logcat -s LiveAudioSession:D
 
 # Monitor audio route changes, noisy output broadcasts, and device disconnections:
 adb logcat -s AudioRouteGuard:D AudioSessionRunner:D
@@ -139,7 +135,7 @@ Follow these exact steps to benchmark and measure live mic-to-speaker latency ac
    - **Expected**: Starts immediately without speaker safety dialog.
    - **Expected**: Output route identifies the USB peripheral.
 3. Verify latency and audio clarity during speech.
-4. Check underruns via long-press diagnostics or logcat: `adb logcat -s AndroidAudioSession:D`.
+4. Check underruns via long-press diagnostics or logcat: `adb logcat -s LiveAudioSession:D`.
    - **Expected**: Underrun count remains stable (0 or near 0).
 5. Disconnect the USB-C adapter during playback:
    - **Expected**: Session halts immediately with route interruption message. Audio does NOT switch to speaker.
@@ -157,7 +153,7 @@ Follow these exact steps to benchmark and measure live mic-to-speaker latency ac
    - **Expected**: If permission is denied, output route cleanly falls back to generic system output without crashing.
    - **Expected**: Subsequent starts do not repeatedly prompt for Bluetooth permission.
 4. Verify audio output over Bluetooth:
-   - Note: Bluetooth A2DP inherently has higher latency (~100–200ms) than wired routes due to Bluetooth codec buffer frames.
+   - Note: Bluetooth A2DP inherently has higher latency than wired routes due to wireless codec buffering (measure the exact round-trip latency on your Bluetooth device using the clap test in Section 2).
 
 ---
 

@@ -24,11 +24,14 @@ public final class DriftController {
 
     public static final long SUSTAINED_DRIFT_THRESHOLD_MS = 1000L;
     public static final long MIN_CORRECTION_INTERVAL_MS = 250L;
+    public static final long BASELINE_DURATION_MS = 2000L;
+    private static final int RING_BUFFER_CAPACITY = 512;
 
     private final int framesPerBuffer;
     private final int sampleRate;
     private int targetQueueDepthFrames;
     private final long sessionStartTimeMs;
+    private long fallbackOriginMs;
 
     private long lastRawHead = 0L;
     private long headWrapCount = 0L;
@@ -41,6 +44,13 @@ public final class DriftController {
     private long lastOutputQueueDepth = 0L;
     private boolean lastOutputQueueAboveDiagnosticThreshold = false;
 
+    private final long[] baselineSamples = new long[RING_BUFFER_CAPACITY];
+    private final long[] medianScratch = new long[RING_BUFFER_CAPACITY];
+    private int baselineSampleCount = 0;
+    private long baselineCollectionStartTimeMs = -1L;
+    private boolean hasBaseline = false;
+    private long baselineBacklogFrames = 0L;
+
     public DriftController(int framesPerBuffer, int sampleRate, int targetQueueDepthFrames) {
         this(framesPerBuffer, sampleRate, targetQueueDepthFrames, 0L);
     }
@@ -50,6 +60,7 @@ public final class DriftController {
         this.sampleRate = Math.max(1, sampleRate);
         this.targetQueueDepthFrames = Math.max(1, targetQueueDepthFrames);
         this.sessionStartTimeMs = initialTimeMs;
+        this.fallbackOriginMs = initialTimeMs;
         this.lastCorrectionTimeMs = initialTimeMs;
     }
 
@@ -75,6 +86,34 @@ public final class DriftController {
         return sessionStartTimeMs;
     }
 
+    public void setFallbackOriginMs(long originMs) {
+        this.fallbackOriginMs = originMs;
+    }
+
+    public long getFallbackOriginMs() {
+        return fallbackOriginMs;
+    }
+
+    public boolean hasBaseline() {
+        return hasBaseline;
+    }
+
+    public long getBaselineBacklogFrames() {
+        return baselineBacklogFrames;
+    }
+
+    public void setBaselineBacklogFrames(long baseline) {
+        this.baselineBacklogFrames = Math.max(0L, baseline);
+        this.hasBaseline = true;
+    }
+
+    public void resetBaseline() {
+        this.hasBaseline = false;
+        this.baselineBacklogFrames = 0L;
+        this.baselineSampleCount = 0;
+        this.baselineCollectionStartTimeMs = -1L;
+    }
+
     public int getTotalCorrections() {
         return totalCorrections;
     }
@@ -91,9 +130,9 @@ public final class DriftController {
         return lastOutputQueueAboveDiagnosticThreshold;
     }
 
-    /** Threshold for input backlog corrections: burst + 1 burst of margin. */
-    public int getInputBacklogThresholdFrames() {
-        return framesPerBuffer * 2;
+    /** Threshold for input backlog corrections: baseline + 1 burst of margin. */
+    public long getInputBacklogThresholdFrames() {
+        return hasBaseline ? (baselineBacklogFrames + framesPerBuffer) : (framesPerBuffer * 2L);
     }
 
     /** Diagnostic threshold for output queue: target + 1 burst of margin. */
@@ -114,10 +153,10 @@ public final class DriftController {
     }
 
     /**
-     * Estimates expected frames captured based on elapsed time since session start.
+     * Estimates expected frames captured based on elapsed time since recording started.
      */
     public long computeExpectedFrames(long nowMs) {
-        long elapsedMs = Math.max(0L, nowMs - sessionStartTimeMs);
+        long elapsedMs = Math.max(0L, nowMs - fallbackOriginMs);
         return (elapsedMs * (long) sampleRate) / 1000L;
     }
 
@@ -151,12 +190,32 @@ public final class DriftController {
         this.lastInputBacklog = Math.max(0L, inputBacklog);
 
         // No drops during startup ramp or after feedback has latched.
+        // Baseline collection does not begin while ramping or when feedback is latched.
         if (isRamping || feedbackLatched) {
             aboveTargetStartTimeMs = -1L;
             return 0;
         }
 
-        int threshold = framesPerBuffer * 2; // burst + 1 burst margin
+        // After the ramp ends, collect backlog samples for ~2 s into preallocated ring buffer
+        if (!hasBaseline) {
+            if (baselineCollectionStartTimeMs < 0L) {
+                baselineCollectionStartTimeMs = nowMs;
+            }
+            baselineSamples[baselineSampleCount % RING_BUFFER_CAPACITY] = inputBacklog;
+            baselineSampleCount++;
+
+            if (nowMs - baselineCollectionStartTimeMs >= BASELINE_DURATION_MS && baselineSampleCount > 0) {
+                int count = Math.min(baselineSampleCount, RING_BUFFER_CAPACITY);
+                System.arraycopy(baselineSamples, 0, medianScratch, 0, count);
+                java.util.Arrays.sort(medianScratch, 0, count);
+                baselineBacklogFrames = medianScratch[count / 2];
+                hasBaseline = true;
+            }
+            // Never correct before the baseline exists.
+            return 0;
+        }
+
+        long threshold = baselineBacklogFrames + (long) framesPerBuffer;
         if (inputBacklog > threshold) {
             if (aboveTargetStartTimeMs < 0L) {
                 aboveTargetStartTimeMs = nowMs;
