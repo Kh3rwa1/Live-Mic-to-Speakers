@@ -13,12 +13,14 @@ This document describes safeguards and release gates; it does not assign a measu
 
 ## Implemented safeguards
 
-- Serialized live-audio sessions with cancellation, non-blocking PCM transfer, focus handling, route interruption, and deterministic cleanup.
+- Serialized live-audio sessions with cancellation, device-paced blocking PCM transfer, low-latency API 26+ fast path, focus handling, route interruption, and deterministic cleanup.
+- Pure-Java `LiveGainProcessor` with 50ms startup gain ramp, smooth soft limiter below full scale, and tonality-based pre-gain acoustic feedback detection with automatic mute and user restart requirement.
+- In-flight recording protection via process-wide `ActiveRecordings` registry, 0-byte purge only for abandoned files older than 24h, and `.unrecovered` quarantine for unreadable non-empty saves.
 - Serialized recording preparation/finalization, runtime-error recovery, pending-file publication, invalid-capture removal, and dead-screen callback suppression.
 - Focus-aware preview and saved-track playback with headphone-disconnect handling and asynchronous preparation.
 - App-specific recording storage, off-main library scans, content-URI playback, stable filtering identity, and read-only sharing through narrow provider roots.
-- Consent-aware ad initialization and requests, screen-owned ad cleanup, privacy choices, and guarded fullscreen completion.
-- Production configuration gates for signing, versioning, and non-test ad identifiers.
+- Consent-aware ad initialization and requests, screen-owned ad cleanup, privacy choices, and guarded fullscreen completion. User ad toggle preserved across sessions.
+- Strict production configuration gates: release builds are verified never to be signed with debug keystores or debug certificates; AdMob test device IDs are injected only in debuggable builds.
 - JVM, lint, helper, dependency-policy, native-alignment, and API 24/34/36/37 instrumentation checks, including 200% font-scale runs on APIs 36 and 37.
 
 ## Building and verifying

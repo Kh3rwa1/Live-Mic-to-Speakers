@@ -22,9 +22,14 @@ This engineering pass deliberately defers visual design. It does not change layo
 ## Audio and recording improvements
 
 - Live monitoring probes the native output sample rate/burst and requests the API 26+ low-latency `AudioTrack` path, with device-paced blocking reads replacing sleep polling. Route/focus handling and AEC/NS behavior are unchanged.
-- A pure-Java gain stage adds a 300 ms start-up ramp, a persisted user gain and a soft limiter below full scale, and latches acoustic feedback into a typed `FEEDBACK_DETECTED` failure with muted output.
-- Finalized recordings use readable timestamp pending names and collision-suffixed publication; an off-UI-thread recovery step on opening history republishes valid leftovers and deletes only empty/invalid ones. History rows gained rename and delete with confirmation.
-- Ad identifiers were moved behind validated `AdsHandler` accessors, and `GoogleAds.checkConnection` dropped its unreachable `NetworkInfo` branch now that `minSdk 24` guarantees `NetworkCapabilities`. `MyPref` was reduced to the members actually used, and the directory helpers were renamed to `holdToSpeakDirectory`/`recordingsDirectory`.
+- A pure-Java gain stage (`LiveGainProcessor`) adds a 50 ms start-up linear ramp, a persisted user gain (0..1), and a tanh-like smooth soft limiter preventing digital clipping.
+- Feedback detection analyzes pre-gain PCM blocks using zero-crossing tonality scoring combined with an energy threshold and leaky accumulator to reliably identify sustained acoustic howl (even when muted by user gain). Detection auto-mutes the buffer immediately and stops the session, surfacing clear user instructions.
+- In-flight recordings are registered in a thread-safe `ActiveRecordings` registry across the process lifetime, preventing active recordings from being swept or destroyed.
+- Finalized recordings use readable timestamp pending names and collision-suffixed publication. Stale pending file sweeps only delete empty (0-byte) abandoned files older than 24 hours. Interrupted non-empty recordings are quarantined as `.unrecovered` files rather than deleted, and can be reviewed, permanently deleted, or shared via the system share sheet.
+- Single dialog flow on live microphone prevents overlapping Bluetooth and safety dialogs; Bluetooth permission is only requested after start on API 31+ when a Bluetooth device is connected. Speaker safety warning includes a persistent "Don't show again" option.
+- User ad on/off preference is preserved across sessions and activity recreation without startup overwrite.
+- Production signing gate rejects builds configured or signed with debug keystores. AdMob test device IDs are restricted strictly to debuggable builds.
+- Refactored duration formatting to `TimeFormat` utility with JVM unit tests, and renamed splash navigation to `navigateHome()`.
 
 ## Regression and maintenance safeguards
 

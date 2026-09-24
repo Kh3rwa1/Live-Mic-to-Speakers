@@ -148,9 +148,7 @@ public abstract class RecordingHistoryActivity extends AppCompatActivity impleme
         });
     }
     public static String formatDuration(long millis) {
-        long seconds = Math.max(0, millis) / 1000;
-        return seconds >= 3600 ? String.format(Locale.getDefault(), "%02d:%02d:%02d", seconds / 3600, (seconds / 60) % 60, seconds % 60)
-                : String.format(Locale.getDefault(), "%02d:%02d", seconds / 60, seconds % 60);
+        return com.word.way.util.TimeFormat.formatDuration(millis);
     }
     @Deprecated
     public static String convertMillieToHMmSs(long millis) {
