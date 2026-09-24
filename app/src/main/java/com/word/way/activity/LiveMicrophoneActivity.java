@@ -141,6 +141,14 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
                 }
             });
         }
+        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            if (binding.studioOutputRoute != null) {
+                binding.studioOutputRoute.setOnLongClickListener(v -> {
+                    showDiagnosticsDialog();
+                    return true;
+                });
+            }
+        }
         if (binding.scroller != null) {
             binding.scroller.setOverScrollMode(View.OVER_SCROLL_NEVER);
             binding.scroller.setVerticalScrollBarEnabled(false);
@@ -269,6 +277,23 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
         androidx.fragment.app.FragmentManager fm = getSupportFragmentManager();
         if (fm.findFragmentByTag(TAG_BT_RATIONALE_DIALOG) != null) return;
         new BluetoothRationaleDialogFragment().show(fm, TAG_BT_RATIONALE_DIALOG);
+    }
+
+    private void showDiagnosticsDialog() {
+        com.word.way.audio.AudioDiagnostics diag = com.word.way.audio.AudioDiagnostics.get();
+        String text = diag.toFormattedString();
+        new AlertDialog.Builder(this)
+                .setTitle("Audio Diagnostics")
+                .setMessage(text)
+                .setPositiveButton(android.R.string.copy, (dialog, which) -> {
+                    android.content.ClipboardManager cb = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    if (cb != null) {
+                        cb.setPrimaryClip(android.content.ClipData.newPlainText("Audio Diagnostics", text));
+                        Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     public void requestBluetoothPermission() {
