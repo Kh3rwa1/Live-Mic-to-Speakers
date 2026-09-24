@@ -80,6 +80,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
+                android:contentDescription="@string/unrecovered_share_title"
                 android:text="@string/unrecovered_share_action"
                 android:visibility="gone" />
             <Button
@@ -87,6 +88,7 @@
                 style="@style/LibraryButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:contentDescription="@string/unrecovered_delete_dialog_title"
                 android:text="@string/unrecovered_delete_action" />
         </LinearLayout>
     </LinearLayout>

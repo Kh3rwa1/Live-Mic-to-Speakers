@@ -97,4 +97,57 @@ public class ActiveRecordingsSessionTest {
             assertEquals("ActiveRecordings must be empty after close", 0, ActiveRecordings.activeCount());
         }
     }
+
+    @Test
+    public void tooShortDiscardUnregistersFile() throws Exception {
+        assertEquals(0, ActiveRecordings.activeCount());
+        RecordingSession session = new RecordingSession();
+        try {
+            session.start(context, directory);
+            // Immediately stop without waiting for MIN_DURATION_MS (too-short discard)
+            File published = session.stop(true);
+            assertNull("Too-short recording must be discarded", published);
+            assertEquals("ActiveRecordings must be unregistered on too-short discard",
+                    0, ActiveRecordings.activeCount());
+        } catch (IOException micUnavailable) {
+            assertEquals(0, ActiveRecordings.activeCount());
+        } finally {
+            session.close();
+            assertEquals(0, ActiveRecordings.activeCount());
+        }
+    }
+
+    @Test
+    public void cancelDuringRecordingUnregistersFile() throws Exception {
+        assertEquals(0, ActiveRecordings.activeCount());
+        RecordingSession session = new RecordingSession();
+        try {
+            session.start(context, directory);
+            // Stop with keep=false (user cancelled)
+            File published = session.stop(false);
+            assertNull("Cancelled recording must not be published", published);
+            assertEquals("ActiveRecordings must be unregistered on cancellation",
+                    0, ActiveRecordings.activeCount());
+        } catch (IOException micUnavailable) {
+            assertEquals(0, ActiveRecordings.activeCount());
+        } finally {
+            session.close();
+            assertEquals(0, ActiveRecordings.activeCount());
+        }
+    }
+
+    @Test
+    public void closeUnregistersFile() throws Exception {
+        assertEquals(0, ActiveRecordings.activeCount());
+        RecordingSession session = new RecordingSession();
+        try {
+            session.start(context, directory);
+            assertEquals(1, ActiveRecordings.activeCount());
+            session.close();
+            assertEquals("ActiveRecordings must be unregistered on close()",
+                    0, ActiveRecordings.activeCount());
+        } catch (IOException micUnavailable) {
+            assertEquals(0, ActiveRecordings.activeCount());
+        }
+    }
 }

@@ -218,11 +218,11 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     }
 
     private void handleStartStop() {
-        if (requested || viewModel.isRunning()) {
-            stopMic();
+        if (viewModel.isStarting()) {
             return;
         }
-        if (viewModel.isStarting()) {
+        if (requested || viewModel.isRunning()) {
+            stopMic();
             return;
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -273,7 +273,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     private void showSafetyDialog() {
         if (!visible || isFinishing() || isDestroyed()) return;
         androidx.fragment.app.FragmentManager fm = getSupportFragmentManager();
-        if (fm.isStateSaved() || fm.findFragmentByTag(TAG_SAFETY_DIALOG) != null) return;
+        if (fm.isStateSaved() || fm.findFragmentByTag(TAG_SAFETY_DIALOG) != null || fm.findFragmentByTag(TAG_BT_RATIONALE_DIALOG) != null) return;
         try {
             new FeedbackSafetyDialogFragment().showNow(fm, TAG_SAFETY_DIALOG);
         } catch (IllegalStateException e) {
@@ -284,7 +284,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     private void showBluetoothRationale() {
         if (!visible || isFinishing() || isDestroyed()) return;
         androidx.fragment.app.FragmentManager fm = getSupportFragmentManager();
-        if (fm.isStateSaved() || fm.findFragmentByTag(TAG_BT_RATIONALE_DIALOG) != null) return;
+        if (fm.isStateSaved() || fm.findFragmentByTag(TAG_BT_RATIONALE_DIALOG) != null || fm.findFragmentByTag(TAG_SAFETY_DIALOG) != null) return;
         try {
             new BluetoothRationaleDialogFragment().showNow(fm, TAG_BT_RATIONALE_DIALOG);
         } catch (IllegalStateException e) {
