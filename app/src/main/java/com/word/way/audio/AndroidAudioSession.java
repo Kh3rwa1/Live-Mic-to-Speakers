@@ -65,6 +65,18 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private long lastUnderrunLog;
     private boolean hasFocus;
 
+    // Diagnostics telemetry (updated on worker at most every 500 ms)
+    private boolean featureLowLatency;
+    private boolean featureAudioPro;
+    private String audioSourceName = "VOICE_COMMUNICATION (7)";
+    private long sessionStartTime;
+    private long lastDiagnosticsUpdate;
+    private long totalFramesWritten;
+    private long lastRawHead;
+    private long headWrapCount;
+    private float queueDepth10sMs = -1f;
+    private int driftCorrectionsCount = 0;
+
     public AndroidAudioSession(Context context, Meter meter, Runnable interrupted) {
         this(context, meter, interrupted, () -> 1f);
     }
@@ -159,14 +171,25 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         checkWanted(stillWanted);
         try { output.play(); }
         catch (RuntimeException error) { throw new LiveAudioFailure(OUTPUT_FAILED, "Audio output could not start", error); }
+        PackageManager pm = context.getPackageManager();
+        featureLowLatency = pm != null && pm.hasSystemFeature(PackageManager.FEATURE_AUDIO_LOW_LATENCY);
+        featureAudioPro = pm != null && pm.hasSystemFeature(PackageManager.FEATURE_AUDIO_PRO);
+        audioSourceName = "VOICE_COMMUNICATION (7)";
+        sessionStartTime = SystemClock.elapsedRealtime();
+        lastDiagnosticsUpdate = 0L;
+        totalFramesWritten = 0L;
+        lastRawHead = 0L;
+        headWrapCount = 0L;
+        queueDepth10sMs = -1f;
+        driftCorrectionsCount = 0;
+
         if (input.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING)
             throw new LiveAudioFailure(MICROPHONE_UNAVAILABLE, "Microphone could not start");
         if (debug) {
             Log.d(TAG, "started rate=" + sampleRate + " nativeRate=" + nativeRate
                     + " framesPerBuffer=" + framesPerBuffer + " recordBuffer=" + recordBufferBytes
                     + " trackBuffer=" + trackBufferBytes + " lowLatency=" + (Build.VERSION.SDK_INT >= 26));
-            AudioDiagnostics.update(new AudioDiagnostics(sampleRate, nativeRate, framesPerBuffer,
-                    recordBufferBytes, trackBufferBytes, 0, "Initializing", Build.VERSION.SDK_INT >= 26, (float) userGain.getAsDouble()));
+            updateDiagnosticsIfDue(0, "Initializing", sessionStartTime, true);
         }
     }
     /** API 26+ requests the platform low-latency output path; 24-25 keep the legacy constructor. */
@@ -221,6 +244,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
             if (step == 0) break;
             written += step;
         }
+        totalFramesWritten += written;
         logUnderrunsIfDue(sink);
         return written;
     }
@@ -242,13 +266,58 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         }
         meter.update(Math.min(100, peak * 100 / 32768), route);
         if (debug) {
-            int underruns = 0;
-            if (output != null) {
-                try { underruns = output.getUnderrunCount(); } catch (RuntimeException ignored) { }
-            }
-            AudioDiagnostics.update(new AudioDiagnostics(sampleRate, nativeRate, framesPerBuffer,
-                    recordBufferBytes, trackBufferBytes, underruns, route, Build.VERSION.SDK_INT >= 26, (float) userGain.getAsDouble()));
+            updateDiagnosticsIfDue(read, route, now, false);
         }
+    }
+
+    private void updateDiagnosticsIfDue(int read, String route, long now, boolean force) {
+        if (!force && now - lastDiagnosticsUpdate < 500) return;
+        lastDiagnosticsUpdate = now;
+        int underruns = 0;
+        int capacityFrames = 0;
+        int sizeFrames = 0;
+        int rawHeadInt = 0;
+        String perfMode = (Build.VERSION.SDK_INT >= 26) ? "UNKNOWN" : "N/A (pre-26)";
+        final AudioTrack sink = output;
+        if (sink != null) {
+            try { underruns = sink.getUnderrunCount(); } catch (RuntimeException ignored) { }
+            try { capacityFrames = sink.getBufferCapacityInFrames(); } catch (RuntimeException ignored) { }
+            try { sizeFrames = sink.getBufferSizeInFrames(); } catch (RuntimeException ignored) { }
+            try { rawHeadInt = sink.getPlaybackHeadPosition(); } catch (RuntimeException ignored) { }
+            if (Build.VERSION.SDK_INT >= 26) {
+                try {
+                    int mode = sink.getPerformanceMode();
+                    if (mode == AudioTrack.PERFORMANCE_MODE_LOW_LATENCY) perfMode = "LOW_LATENCY";
+                    else if (mode == AudioTrack.PERFORMANCE_MODE_NONE) perfMode = "NONE";
+                    else if (mode == AudioTrack.PERFORMANCE_MODE_POWER_SAVING) perfMode = "POWER_SAVING";
+                    else perfMode = String.valueOf(mode);
+                } catch (RuntimeException ignored) { }
+            }
+        }
+        long rawHead = (long) rawHeadInt & 0xFFFFFFFFL;
+        if (rawHead < (lastRawHead & 0xFFFFFFFFL)) {
+            headWrapCount++;
+        }
+        lastRawHead = rawHead;
+        long unwrappedHead = (headWrapCount << 32) | rawHead;
+        long queueFrames = Math.max(0L, totalFramesWritten - unwrappedHead);
+        float queueDepthMs = (sampleRate > 0) ? (queueFrames * 1000f / sampleRate) : 0f;
+        long uptime = Math.max(0L, now - sessionStartTime);
+        if (uptime >= 10000 && queueDepth10sMs < 0f) {
+            queueDepth10sMs = queueDepthMs;
+        }
+        boolean aecOn = false;
+        try { if (aec != null) aecOn = aec.getEnabled(); } catch (RuntimeException ignored) { }
+        boolean nsOn = false;
+        try { if (ns != null) nsOn = ns.getEnabled(); } catch (RuntimeException ignored) { }
+
+        AudioDiagnostics.update(new AudioDiagnostics(
+                featureLowLatency, featureAudioPro,
+                audioSourceName, aecOn, nsOn,
+                perfMode, capacityFrames, sizeFrames, underruns,
+                read, framesPerBuffer, sampleRate, nativeRate,
+                queueDepthMs, queueDepth10sMs, uptime, driftCorrectionsCount,
+                route, (float) userGain.getAsDouble()));
     }
     /** Debug-only latency evidence: sample rate, burst and cumulative underruns. */
     private void logUnderrunsIfDue(AudioTrack sink) {
