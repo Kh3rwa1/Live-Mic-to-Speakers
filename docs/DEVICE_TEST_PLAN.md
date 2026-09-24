@@ -302,3 +302,295 @@ Before approving this release for production:
 - [ ] Release APK is signed with the official release key (verified non-debug via `:app:verifyProductionRelease`).
 - [ ] No test device IDs are packaged in the release build.
 - [ ] User ad preferences are strictly honored across app restarts.
+
+---
+
+## 5. Comprehensive Release Validation Protocol (Tests 1–10)
+
+This section defines the mandatory physical testing protocol that must be executed by a human tester on physical hardware prior to a production release decision.
+
+### Test 1: Physical Device Matrix Setup
+**Objective**: Ensure the release is validated across both resource-constrained hardware and modern flagship devices.
+**Steps**:
+1. Select at least one low-end device (≤ 4 GB RAM, older/budget chipset, e.g., Android 7.0–11 or entry-level Android 14) and at least one modern flagship device (e.g., Pixel 8/9, Galaxy S23/S24).
+2. Connect each device via ADB and record model name, Android OS version, API level, and build number:
+   ```bash
+   adb shell getprop ro.product.model
+   adb shell getprop ro.build.version.release
+   adb shell getprop ro.build.version.sdk
+   adb shell getprop ro.build.display.id
+   ```
+3. Install the candidate build and confirm the application launches cleanly to the home screen.
+
+**Pass Criterion**: Both devices meet the hardware/RAM criteria, are fully cataloged, and launch the candidate build without error.
+
+**Results Table**:
+
+| Device | Android Version | Build SHA | Route | Result | Measured Value | Diagnostics Copied (Y/N) | Notes |
+|---|---|---|---|---|---|---|---|
+| Low-end (≤ 4 GB RAM) | | | N/A | | | | |
+| Flagship | | | N/A | | | | |
+
+---
+
+### Test 2: Round-Trip Latency, Acoustic Clap Test & Fast-Track Mixer Audit
+**Objective**: Measure empirical round-trip audio latency, verify the platform fast-track mixer path, and validate latency stability over time. (Refer to Section 2 for full calibration details).
+**Steps**:
+1. Run OboeTester Round Trip Latency on the device native audio path (record baseline in ms).
+2. Perform the app acoustic clap test: place a secondary recorder (48 kHz) 10 cm between phone mic and speaker/headset, record 5 sharp claps during live monitoring, measure direct-to-amplified transient delta in an audio editor (Audacity), and compute the median.
+3. Inspect the AudioFlinger fast-track mixer flag:
+   ```bash
+   adb shell dumpsys media.audio_flinger | grep -A 20 -E "FastMixer|MixerThread"
+   ```
+   Verify flag `F` is present on the app's playback track.
+4. Execute tests across Built-in Speaker, 3.5mm Wired Headset, USB-C Audio, and Bluetooth routes.
+5. Long-press the output route label to copy audio diagnostics to clipboard at 10s and 5min.
+
+**Pass Criterion**: Fast-track flag `F` is active on supported routes; median clap latency is recorded across all available routes; queue depth remains stable with no runaway buffer growth or excessive underruns (< 5 over 5 minutes).
+
+**Results Table**:
+
+| Device | Android Version | Build SHA | Route | Result | Measured Value | Diagnostics Copied (Y/N) | Notes |
+|---|---|---|---|---|---|---|---|
+| Low-end | | | Built-in Speaker | | | | |
+| Low-end | | | 3.5mm / USB-C Headset | | | | |
+| Low-end | | | Bluetooth (A2DP) | | | | |
+| Flagship | | | Built-in Speaker | | | | |
+| Flagship | | | 3.5mm / USB-C Headset | | | | |
+| Flagship | | | Bluetooth (A2DP) | | | | |
+
+---
+
+### Test 3: Acoustic Feedback Protection Under Maximum Stress
+**Objective**: Validate that acoustic feedback howl is promptly and reliably muted under extreme speaker volume and proximity.
+**Steps**:
+1. Disconnect all external audio accessories; set media speaker volume to 100% (maximum).
+2. Position the microphone 10 cm directly facing the device speaker.
+3. Conduct 5 trials at monitoring gain 0.3: tap Start, time until monitoring stops and auto-mutes using a stopwatch or external audio recorder.
+4. Conduct 5 trials at monitoring gain 0.8.
+5. Conduct 5 trials at monitoring gain 1.0.
+6. Record the measured cutoff duration for each trial.
+
+**Pass Criterion**: Every trial (all 15 trials per device) stops monitoring and mutes audio within 1.5 seconds of howl onset; session safely shuts down with feedback detected prompt.
+
+**Results Table**:
+
+| Device | Android Version | Build SHA | Route | Result | Measured Value | Diagnostics Copied (Y/N) | Notes |
+|---|---|---|---|---|---|---|---|
+| Low-end | | | Built-in Speaker (Gain 0.3, Trial 1) | | | | |
+| Low-end | | | Built-in Speaker (Gain 0.3, Trial 2) | | | | |
+| Low-end | | | Built-in Speaker (Gain 0.3, Trial 3) | | | | |
+| Low-end | | | Built-in Speaker (Gain 0.3, Trial 4) | | | | |
+| Low-end | | | Built-in Speaker (Gain 0.3, Trial 5) | | | | |
+| Low-end | | | Built-in Speaker (Gain 0.8, Trial 1) | | | | |
+| Low-end | | | Built-in Speaker (Gain 0.8, Trial 2) | | | | |
+| Low-end | | | Built-in Speaker (Gain 0.8, Trial 3) | | | | |
+| Low-end | | | Built-in Speaker (Gain 0.8, Trial 4) | | | | |
+| Low-end | | | Built-in Speaker (Gain 0.8, Trial 5) | | | | |
+| Low-end | | | Built-in Speaker (Gain 1.0, Trial 1) | | | | |
+| Low-end | | | Built-in Speaker (Gain 1.0, Trial 2) | | | | |
+| Low-end | | | Built-in Speaker (Gain 1.0, Trial 3) | | | | |
+| Low-end | | | Built-in Speaker (Gain 1.0, Trial 4) | | | | |
+| Low-end | | | Built-in Speaker (Gain 1.0, Trial 5) | | | | |
+| Flagship | | | Built-in Speaker (Gain 0.3, Trial 1) | | | | |
+| Flagship | | | Built-in Speaker (Gain 0.3, Trial 2) | | | | |
+| Flagship | | | Built-in Speaker (Gain 0.3, Trial 3) | | | | |
+| Flagship | | | Built-in Speaker (Gain 0.3, Trial 4) | | | | |
+| Flagship | | | Built-in Speaker (Gain 0.3, Trial 5) | | | | |
+| Flagship | | | Built-in Speaker (Gain 0.8, Trial 1) | | | | |
+| Flagship | | | Built-in Speaker (Gain 0.8, Trial 2) | | | | |
+| Flagship | | | Built-in Speaker (Gain 0.8, Trial 3) | | | | |
+| Flagship | | | Built-in Speaker (Gain 0.8, Trial 4) | | | | |
+| Flagship | | | Built-in Speaker (Gain 0.8, Trial 5) | | | | |
+| Flagship | | | Built-in Speaker (Gain 1.0, Trial 1) | | | | |
+| Flagship | | | Built-in Speaker (Gain 1.0, Trial 2) | | | | |
+| Flagship | | | Built-in Speaker (Gain 1.0, Trial 3) | | | | |
+| Flagship | | | Built-in Speaker (Gain 1.0, Trial 4) | | | | |
+| Flagship | | | Built-in Speaker (Gain 1.0, Trial 5) | | | | |
+
+---
+
+### Test 4: Speech, Singing & Music False-Positive Immunity
+**Objective**: Verify that natural vocal speech, varied singing phrases, and music never trigger false feedback detection stops.
+**Steps**:
+1. Connect wired headphones (3.5mm or USB-C) so no acoustic feedback loop exists.
+2. Set live monitoring gain to 1.0 (100%).
+3. Perform 2 minutes of loud, continuous speech directly into the microphone (read prose or conversation).
+4. Perform 2 minutes of singing directly into the microphone: sing sustained vowels, apply natural vocal vibrato, vary pitch, and include one ~3-second held note.
+5. Play 1 minute of external music (orchestral or pop) from another speaker directly into the microphone at high volume.
+6. Verify whether monitoring continues uninterrupted or stops.
+
+**Pass Criterion**: Zero feedback detector stops during 2 minutes of speech, 2 minutes of singing with vibrato, and 1 minute of music. (A feedback stop is permitted only if a pure, stationary note without vibrato is held continuously for longer than 1.5 seconds, as documented in detector specifications).
+
+**Results Table**:
+
+| Device | Android Version | Build SHA | Route | Result | Measured Value | Diagnostics Copied (Y/N) | Notes |
+|---|---|---|---|---|---|---|---|
+| Low-end | | | Wired Headset (2 min Speech) | | | | |
+| Low-end | | | Wired Headset (2 min Singing) | | | | |
+| Low-end | | | Wired Headset (1 min Music) | | | | |
+| Flagship | | | Wired Headset (2 min Speech) | | | | |
+| Flagship | | | Wired Headset (2 min Singing) | | | | |
+| Flagship | | | Wired Headset (1 min Music) | | | | |
+
+---
+
+### Test 5: Dynamic Routing & Disconnect Safety
+**Objective**: Ensure audio routing changes halt monitoring safely and never switch output to the loudspeaker unprompted.
+**Steps**:
+1. Start live monitoring on the built-in speaker.
+2. Connect wired headphones (3.5mm or USB-C) while monitoring is actively streaming -> verify monitoring stops safely.
+3. Start live monitoring with wired headphones connected.
+4. Disconnect the wired headphones while speaking -> verify monitoring stops immediately and no audio spills to the speaker.
+5. Connect a Bluetooth audio device while live monitoring is active -> verify monitoring stops safely.
+6. Start live monitoring on the Bluetooth route -> disconnect or turn off Bluetooth -> verify monitoring halts immediately and never automatically switches to the built-in speaker.
+
+**Pass Criterion**: Monitoring stops safely on every connection and disconnection event; audio NEVER switches to the built-in speaker automatically without an explicit user tap.
+
+**Results Table**:
+
+| Device | Android Version | Build SHA | Route | Result | Measured Value | Diagnostics Copied (Y/N) | Notes |
+|---|---|---|---|---|---|---|---|
+| Low-end | | | Wired Headphone Connect | | | | |
+| Low-end | | | Wired Headphone Unplug | | | | |
+| Low-end | | | Bluetooth Connect | | | | |
+| Low-end | | | Bluetooth Disconnect | | | | |
+| Flagship | | | Wired Headphone Connect | | | | |
+| Flagship | | | Wired Headphone Unplug | | | | |
+| Flagship | | | Bluetooth Connect | | | | |
+| Flagship | | | Bluetooth Disconnect | | | | |
+
+---
+
+### Test 6: Battery Consumption & Thermal Profile
+**Objective**: Validate energy efficiency and thermal stability during sustained 10-minute live monitoring sessions.
+**Steps**:
+1. Charge device battery to at least 80%; set display brightness to 50%; ensure screen stays on.
+2. Query initial battery state and temperature:
+   ```bash
+   adb shell dumpsys battery | grep -E "level|temperature"
+   ```
+3. Start live monitoring on Live Microphone and run continuously for 10 minutes.
+4. At exactly 10 minutes, query battery state and temperature again:
+   ```bash
+   adb shell dumpsys battery | grep -E "level|temperature"
+   ```
+5. Calculate delta battery % and temperature rise (°C = delta temperature / 10).
+
+**Pass Criterion**: Battery drop over 10 minutes does not exceed 3%; temperature rise does not exceed 5.0°C; no thermal throttling, audio glitches, or crashes occur.
+
+**Results Table**:
+
+| Device | Android Version | Build SHA | Route | Result | Measured Value | Diagnostics Copied (Y/N) | Notes |
+|---|---|---|---|---|---|---|---|
+| Low-end | | | Built-in Speaker (10 min) | | | | |
+| Flagship | | | Built-in Speaker (10 min) | | | | |
+
+---
+
+### Test 7: Process Crash Safety & Recording Recovery
+**Objective**: Validate that interrupted recordings survive process termination and are never silently discarded.
+**Steps**:
+1. Open **Hold to Speak** screen.
+2. Press and hold the recording button to begin capturing audio.
+3. While actively holding and recording (at ~3 seconds), simulate an abrupt OS termination via ADB:
+   ```bash
+   adb shell am force-stop com.word.way
+   ```
+4. Re-launch the application and open **Audio Library**.
+5. Observe the library state and inspect storage:
+   ```bash
+   adb shell ls -la /sdcard/Android/data/com.word.way/files/Music/Recording/
+   adb shell ls -la /sdcard/Android/data/com.word.way/files/Music/HPRecording/
+   ```
+
+**Pass Criterion**: The interrupted recording is recovered and published as a playable `.m4a` file, or quarantined as `.unrecovered` and surfaced in the library recovery banner; zero recorded audio is silently deleted or lost.
+
+**Results Table**:
+
+| Device | Android Version | Build SHA | Route | Result | Measured Value | Diagnostics Copied (Y/N) | Notes |
+|---|---|---|---|---|---|---|---|
+| Low-end | | | Internal Mic (Hold to Speak) | | | | |
+| Flagship | | | Internal Mic (Hold to Speak) | | | | |
+
+---
+
+### Test 8: Comprehensive Accessibility (TalkBack, 200% Font Scale, Landscape)
+**Objective**: Ensure the entire app is fully usable with screen readers, large typography, and device rotation.
+**Steps**:
+1. Enable TalkBack (`Settings > Accessibility > TalkBack`). Navigate through all screens: Live Mic, Hold to Speak, Audio Recorder, Settings, and Audio Library. Verify content descriptions, accessibility headings, and logical focus traversal.
+2. Set font scale to 200%:
+   ```bash
+   adb shell settings put system font_scale 2.0
+   ```
+3. Inspect every screen in portrait mode: verify no truncated text, overlapping buttons, or clipped labels.
+4. Rotate each screen to landscape orientation at 200% font scale:
+   ```bash
+   adb shell settings put system user_rotation 1
+   ```
+   Verify scrollers function, all action buttons remain clickable, and layouts adapt smoothly.
+5. Capture and store screenshots of each screen in portrait and landscape for audit records.
+
+**Pass Criterion**: TalkBack navigates all screens with clear announcements; 200% font scale displays all labels without truncation; landscape layouts adapt cleanly without clipped controls.
+
+**Results Table**:
+
+| Device | Android Version | Build SHA | Route | Result | Measured Value | Diagnostics Copied (Y/N) | Notes |
+|---|---|---|---|---|---|---|---|
+| Low-end | | | Core Screens (TalkBack) | | | | |
+| Low-end | | | Core Screens (200% Font Portrait) | | | | |
+| Low-end | | | Core Screens (200% Font Landscape) | | | | |
+| Flagship | | | Core Screens (TalkBack) | | | | |
+| Flagship | | | Core Screens (200% Font Portrait) | | | | |
+| Flagship | | | Core Screens (200% Font Landscape) | | | | |
+
+---
+
+### Test 9: User Ad Preference Persistence & Privacy Consent
+**Objective**: Confirm user ad toggles survive app kills and restarts, and verify European Economic Area (EEA) consent flows.
+**Steps**:
+1. Open **Settings** and toggle the "Show Ads" switch to OFF.
+2. Force-stop the app and restart it:
+   ```bash
+   adb shell am force-stop com.word.way
+   adb shell monkey -p com.word.way -c android.intent.category.LAUNCHER 1
+   ```
+   Repeat force-stop and relaunch 3 consecutive times.
+3. Check Main, Live Mic, and Settings screens on each relaunch to ensure no ads load.
+4. In a debug build, configure UMP debug geography to simulate EEA:
+   Verify the consent form displays with clear consent choices, and verify no Mobile Ads SDK init occurs prior to consent resolution.
+
+**Pass Criterion**: Ads remain strictly disabled across 3 consecutive app relaunches when toggled off in Settings; EEA consent flow executes properly without premature ad initialization.
+
+**Results Table**:
+
+| Device | Android Version | Build SHA | Route | Result | Measured Value | Diagnostics Copied (Y/N) | Notes |
+|---|---|---|---|---|---|---|---|
+| Low-end | | | Settings Ad Toggle (3 Relaunches) | | | | |
+| Low-end | | | UMP EEA Consent Flow (Debug) | | | | |
+| Flagship | | | Settings Ad Toggle (3 Relaunches) | | | | |
+| Flagship | | | UMP EEA Consent Flow (Debug) | | | | |
+
+---
+
+### Test 10: Master Release Sign-Off Checklist
+**Objective**: Final verification that all required real-device tests (1 through 9) have been executed and verified on both low-end and flagship devices.
+
+**Pre-Release Verification Requirements**:
+- [ ] Test 1: Low-end and Flagship physical devices fully cataloged (model, OS, build SHA).
+- [ ] Test 2: Latency measured, median clap test recorded, AudioFlinger fast track ("F") verified on both devices.
+- [ ] Test 3: Acoustic feedback auto-mute tested under 15 trials (gains 0.3, 0.8, 1.0) and all stopped within 1.5s on both devices.
+- [ ] Test 4: Speech (2 min), singing (2 min), and music (1 min) verified with zero false-positive detector stops on both devices.
+- [ ] Test 5: Audio routing and disconnect safety verified (never switches to speaker automatically) on both devices.
+- [ ] Test 6: 10-minute battery (< 3% drop) and temperature (< 5.0°C rise) verified on both devices.
+- [ ] Test 7: Crash recovery verified (recording preserved or quarantined, never lost) on both devices.
+- [ ] Test 8: TalkBack, 200% font scale, and landscape orientation verified without clipping on both devices.
+- [ ] Test 9: Ad toggle persistence (3 restarts) and EEA UMP consent verified on both devices.
+- [ ] Every results table in Tests 1–9 has been completely filled out with empirical values for both devices.
+- [ ] Release bundle is signed with the official release key (verified non-debug via `:app:verifyProductionRelease`).
+
+| Sign-Off Role | Name | Physical Device Models Tested | Signature / Date | Release Decision (APPROVED / REJECTED) |
+|---|---|---|---|---|
+| Lead QA Engineer | | | | |
+| Audio Lead Engineer | | | | |
+| Release Manager | | | | |
