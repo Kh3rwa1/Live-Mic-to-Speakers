@@ -72,6 +72,10 @@ public class MyPref {
         this.editor.apply();
     }
 
+    public boolean contains(String key) {
+        return this.pref.contains(key);
+    }
+
     public boolean getBoolean(String key, boolean fallback) {
         return this.pref.getBoolean(key, fallback);
     }

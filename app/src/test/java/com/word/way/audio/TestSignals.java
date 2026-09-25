@@ -138,6 +138,27 @@ public final class TestSignals {
     }
 
     /**
+     * Generates an acoustic feedback signal with speaker harmonic distortion (2nd and 3rd harmonics),
+     * modeling physical loudspeaker non-linearity on smartphones.
+     */
+    public static short[] distortedFeedback(int sampleRate, double freqHz, double amplitudeFraction,
+                                            double h2Ratio, double h3Ratio, double seconds) {
+        int length = (int) Math.round(sampleRate * seconds);
+        short[] data = new short[length];
+        double twoPiF = 2.0 * Math.PI * freqHz;
+        double peak = amplitudeFraction * LiveGainProcessor.FULL_SCALE;
+        for (int i = 0; i < length; i++) {
+            double t = (double) i / sampleRate;
+            double s1 = Math.sin(twoPiF * t);
+            double s2 = h2Ratio * Math.sin(2.0 * twoPiF * t + 0.3);
+            double s3 = h3Ratio * Math.sin(3.0 * twoPiF * t + 0.7);
+            double sample = (s1 + s2 + s3) * peak;
+            data[i] = (short) Math.round(Math.max(-LiveGainProcessor.FULL_SCALE, Math.min(LiveGainProcessor.FULL_SCALE, sample)));
+        }
+        return data;
+    }
+
+    /**
      * Generates a growing feedback sine whose amplitude starts at startAmplitude and grows at
      * growthDbPerSecond until saturating at 1.0 full scale.
      */

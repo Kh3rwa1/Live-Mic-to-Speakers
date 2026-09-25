@@ -27,6 +27,7 @@ import com.word.way.util.SystemBars;
 import com.word.way.util.MyPref;
 import com.word.way.util.ToolUi;
 import com.word.way.audio.AndroidAudioSession;
+import com.word.way.audio.AudioRouteClassifier;
 import com.word.way.audio.AudioSessionRunner;
 import com.word.way.audio.LiveAudioFailure;
 import com.word.way.viewmodel.LiveMicrophoneViewModel;
@@ -197,7 +198,7 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
                         if (binding.studioFeedback != null) binding.studioFeedback.setText(R.string.quality_mic_interrupted);
                         Toast.makeText(this, R.string.quality_mic_interrupted, Toast.LENGTH_LONG).show();
                     }
-                }), () -> liveGain), new AudioSessionRunner.Listener() {
+                }), () -> liveGain, this::isBuiltinSpeakerOutput), new AudioSessionRunner.Listener() {
             @Override public void onStarted(long generation) {
                 runOnUiThread(() -> {
                     viewModel.setStarting(false);
@@ -390,44 +391,12 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     public boolean isBluetoothOutputConnected() {
         if (testIsBluetoothOutput != null) return testIsBluetoothOutput;
         AudioManager manager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        if (manager == null) return false;
-        try {
-            AudioDeviceInfo[] devices = manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
-            for (AudioDeviceInfo device : devices) {
-                int type = device.getType();
-                if (type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
-                    return true;
-                }
-                if (Build.VERSION.SDK_INT >= 31) {
-                    if (type == AudioDeviceInfo.TYPE_BLE_HEADSET || type == AudioDeviceInfo.TYPE_BLE_SPEAKER) {
-                        return true;
-                    }
-                }
-            }
-        } catch (RuntimeException ignored) { }
-        return false;
+        return AudioRouteClassifier.hasBluetoothOutput(manager);
     }
 
     public boolean isHeadphonesOrHeadsetConnected() {
         AudioManager manager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        if (manager == null) return false;
-        try {
-            AudioDeviceInfo[] devices = manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
-            for (AudioDeviceInfo device : devices) {
-                int type = device.getType();
-                if (type == AudioDeviceInfo.TYPE_WIRED_HEADSET
-                        || type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
-                        || type == AudioDeviceInfo.TYPE_USB_HEADSET
-                        || type == AudioDeviceInfo.TYPE_USB_DEVICE
-                        || type == AudioDeviceInfo.TYPE_USB_ACCESSORY
-                        || type == AudioDeviceInfo.TYPE_LINE_ANALOG
-                        || type == AudioDeviceInfo.TYPE_LINE_DIGITAL
-                        || type == AudioDeviceInfo.TYPE_AUX_LINE) {
-                    return true;
-                }
-            }
-        } catch (RuntimeException ignored) { }
-        return false;
+        return AudioRouteClassifier.hasWiredOrUsbOutput(manager);
     }
 
     public boolean isBuiltinSpeakerOutput() {
@@ -505,8 +474,9 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
     /** Accessible monitoring-gain slider; the value persists and applies to a running session. */
     private void setupGainControl() {
         prefs = new MyPref(this);
-        float savedGain = prefs.getPref(MyPref.LiveMonitoringGain, 0.8f);
-        if (viewModel.getLiveGain() == 0.8f && savedGain != 0.8f) {
+        float defaultGain = isBuiltinSpeakerOutput() ? 0.5f : 0.8f;
+        float savedGain = prefs.getPref(MyPref.LiveMonitoringGain, defaultGain);
+        if (viewModel.getLiveGain() == 0.8f && (savedGain != 0.8f || (!prefs.contains(MyPref.LiveMonitoringGain) && isBuiltinSpeakerOutput()))) {
             viewModel.setLiveGain(savedGain);
         }
         liveGain = clampGain(viewModel.getLiveGain());
@@ -562,7 +532,10 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             binding.lottieSoundwave.setVisibility(View.VISIBLE);
         }
         binding.tvStartStopNew.setText(R.string.quality_mic_off);
-        if (binding.studioFeedback != null) binding.studioFeedback.setText(R.string.studio_ready);
+        if (binding.studioFeedback != null) {
+            binding.studioFeedback.setText(R.string.studio_ready);
+            binding.studioFeedback.setVisibility(View.GONE);
+        }
         ToolUi.level(this, 0);
         if (binding.studioOutputRoute != null) binding.studioOutputRoute.setText(R.string.studio_output_idle);
         if (binding.studioBluetoothNotice != null) binding.studioBluetoothNotice.setVisibility(View.GONE);
@@ -583,7 +556,11 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             case CANCELLED: message = R.string.live_error_cancelled; break;
             default: message = R.string.quality_mic_error;
         }
-        if (binding.studioFeedback != null) binding.studioFeedback.setText(message);
+        if (binding.studioFeedback != null) {
+            binding.studioFeedback.setText(message);
+            binding.studioFeedback.setVisibility(View.VISIBLE);
+        }
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
     void renderMeter(int peak, String route) {

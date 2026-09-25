@@ -1,6 +1,7 @@
 package com.word.way.audio;
 
 import android.media.AudioDeviceInfo;
+import android.media.AudioManager;
 import android.os.Build;
 
 /**
@@ -36,6 +37,77 @@ public final class AudioRouteClassifier {
             return true;
         }
         return false;
+    }
+
+    public static boolean hasBluetoothOutput(int[] deviceTypes) {
+        if (deviceTypes == null) return false;
+        for (int type : deviceTypes) {
+            if (isBluetooth(type)) return true;
+        }
+        return false;
+    }
+
+    public static boolean hasWiredOrUsbOutput(int[] deviceTypes) {
+        if (deviceTypes == null) return false;
+        for (int type : deviceTypes) {
+            if (isWiredOrUsb(type)) return true;
+        }
+        return false;
+    }
+
+    public static boolean isBuiltinSpeakerActive(int[] deviceTypes) {
+        return !hasWiredOrUsbOutput(deviceTypes) && !hasBluetoothOutput(deviceTypes);
+    }
+
+    public static boolean hasBluetoothOutput(AudioDeviceInfo[] devices) {
+        if (devices == null) return false;
+        for (AudioDeviceInfo device : devices) {
+            if (device != null && isBluetooth(device.getType())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean hasWiredOrUsbOutput(AudioDeviceInfo[] devices) {
+        if (devices == null) return false;
+        for (AudioDeviceInfo device : devices) {
+            if (device != null && isWiredOrUsb(device.getType())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isBuiltinSpeakerActive(AudioDeviceInfo[] devices) {
+        return !hasWiredOrUsbOutput(devices) && !hasBluetoothOutput(devices);
+    }
+
+    public static boolean hasBluetoothOutput(AudioManager manager) {
+        if (manager == null) return false;
+        try {
+            return hasBluetoothOutput(manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS));
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    public static boolean hasWiredOrUsbOutput(AudioManager manager) {
+        if (manager == null) return false;
+        try {
+            return hasWiredOrUsbOutput(manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS));
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    public static boolean isBuiltinSpeakerActive(AudioManager manager) {
+        if (manager == null) return true;
+        try {
+            return isBuiltinSpeakerActive(manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS));
+        } catch (RuntimeException ignored) {
+            return true;
+        }
     }
 
     /**

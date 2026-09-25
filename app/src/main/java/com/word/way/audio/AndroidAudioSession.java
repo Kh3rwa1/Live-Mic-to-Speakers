@@ -36,6 +36,7 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private final Meter meter;
     private final Runnable interrupted;
     private final DoubleSupplier userGain;
+    private final BooleanSupplier isBuiltinSpeakerSupplier;
     private final boolean debug;
     private final AudioStopSignal signal = new AudioStopSignal();
     private final AudioManager.OnAudioFocusChangeListener focusListener;
@@ -95,15 +96,20 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
     private int driftCorrectionsCount = 0;
 
     public AndroidAudioSession(Context context, Meter meter, Runnable interrupted) {
-        this(context, meter, interrupted, () -> 1f);
+        this(context, meter, interrupted, () -> 1f, null);
     }
     /** {@code userGain} supplies the user's monitoring gain (0..1); it may be updated live. */
     public AndroidAudioSession(Context context, Meter meter, Runnable interrupted, DoubleSupplier userGain) {
+        this(context, meter, interrupted, userGain, null);
+    }
+    public AndroidAudioSession(Context context, Meter meter, Runnable interrupted, DoubleSupplier userGain,
+                               BooleanSupplier isBuiltinSpeaker) {
         this.context = context.getApplicationContext();
         this.manager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         this.meter = meter;
         this.interrupted = interrupted;
         this.userGain = userGain == null ? () -> 1f : userGain;
+        this.isBuiltinSpeakerSupplier = isBuiltinSpeaker;
         this.debug = (this.context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         this.focusListener = change -> { if (change < 0) interrupt(); };
         this.defaultRouteLabel = this.context.getString(com.word.way.R.string.library_system_output);
@@ -155,7 +161,10 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         // Native output rate/burst first so the input and output run on the device's own clock.
         nativeRate = integerProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
         int nativeBurst = integerProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
-        int[] candidateSources = InputProfilePolicy.candidateSources(Build.VERSION.SDK_INT, inputProfile);
+        boolean isBuiltinSpeaker = isBuiltinSpeakerSupplier != null
+                ? isBuiltinSpeakerSupplier.getAsBoolean()
+                : AudioRouteClassifier.isBuiltinSpeakerActive(manager);
+        int[] candidateSources = InputProfilePolicy.candidateSources(Build.VERSION.SDK_INT, inputProfile, isBuiltinSpeaker);
         int actualSource = -1;
         Exception failure = null;
         for (int rate : AudioBufferSizing.candidateRates(nativeRate)) {
@@ -207,8 +216,8 @@ public final class AndroidAudioSession implements AudioSessionRunner.Session {
         }
         if (buffer == null) throw new LiveAudioFailure(UNSUPPORTED_CONFIGURATION,
                 "No supported microphone/output configuration", failure);
-        boolean enableAec = InputProfilePolicy.isAecRequested(inputProfile);
-        boolean enableNs = InputProfilePolicy.isNsRequested(inputProfile);
+        boolean enableAec = InputProfilePolicy.isAecRequested(inputProfile, isBuiltinSpeaker);
+        boolean enableNs = InputProfilePolicy.isNsRequested(inputProfile, isBuiltinSpeaker);
         try {
             if (enableAec && AcousticEchoCanceler.isAvailable()) {
                 aec = AcousticEchoCanceler.create(input.getAudioSessionId());

@@ -447,16 +447,33 @@ public class LiveGainProcessorTest {
             LiveGainProcessor processor = new LiveGainProcessor(rate);
             processor.setUserGain(1.0f);
             // Sine starting at 0.30 FS, growing at 20 dB/s for 2.0 s.
-            // Exceeds peak threshold (0.60 FS) at t ≈ 0.301 s.
+            // Exceeds peak threshold at t ≈ 0.301 s.
             // Must trigger within 1.2 s of exceeding threshold (by t <= 1.501 s).
             short[] growing = TestSignals.growingFeedback(rate, freq, 2.0, 0.30, 20.0);
             int trigger = runSignal(processor, growing, 480);
             assertTrue("Growing feedback at " + freq + " Hz must trigger", trigger >= 0);
             double triggerSec = (double) trigger / rate;
-            // Loudness threshold exceeded at ~0.301 s; detector requires ~0.8-1.2 s from loudness onset
             assertTrue("Trigger time " + triggerSec + "s must be >= 1.0s", triggerSec >= 1.0);
             assertTrue("Trigger time " + triggerSec + "s must be <= 1.55s (within 1.2s of loudness onset)", triggerSec <= 1.55);
             assertTrue(processor.isFeedbackLatched());
+        }
+    }
+
+    @Test public void distortedFeedbackTriggersWithinWindow() {
+        int rate = 48000;
+        double[] freqs = {1500.0, 2500.0};
+        for (double freq : freqs) {
+            LiveGainProcessor processor = new LiveGainProcessor(rate);
+            processor.setUserGain(1.0f);
+            // Feedback with 10% 2nd harmonic and 5% 3rd harmonic modeling loudspeaker distortion
+            short[] distorted = TestSignals.distortedFeedback(rate, freq, 0.70, 0.10, 0.05, 1.5);
+            int trigger = runSignal(processor, distorted, 480);
+            assertTrue("Distorted feedback at " + freq + " Hz must trigger", trigger >= 0);
+            double triggerSec = (double) trigger / rate;
+            assertTrue("Trigger time " + triggerSec + "s must be >= 0.8s", triggerSec >= 0.8);
+            assertTrue("Trigger time " + triggerSec + "s must be <= 1.2s", triggerSec <= 1.2);
+            assertTrue(processor.isFeedbackLatched());
+            assertTrue(processor.isMuted());
         }
     }
 }
