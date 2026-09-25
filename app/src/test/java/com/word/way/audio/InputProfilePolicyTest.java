@@ -73,4 +73,38 @@ public class InputProfilePolicyTest {
         assertEquals(android.media.AudioAttributes.USAGE_MEDIA,
                 InputProfilePolicy.outputUsage(InputProfilePolicy.PROFILE_NOISY_ROOM));
     }
+
+    @Test
+    public void builtinSpeaker_alwaysSelectsVoiceCommunicationAndEnablesAecAndNs() {
+        for (int profile : new int[]{InputProfilePolicy.PROFILE_LOW_LATENCY, InputProfilePolicy.PROFILE_BALANCED, InputProfilePolicy.PROFILE_NOISY_ROOM}) {
+            int[] sources = InputProfilePolicy.candidateSources(34, profile, true);
+            assertArrayEquals(new int[]{
+                    MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+                    MediaRecorder.AudioSource.MIC
+            }, sources);
+
+            assertTrue(InputProfilePolicy.isAecRequested(profile, true));
+            assertTrue(InputProfilePolicy.isNsRequested(profile, true));
+        }
+    }
+
+    @Test
+    public void nonBuiltinSpeaker_preservesProfileSpecificSourcesAndEffects() {
+        int[] lowLatencySources = InputProfilePolicy.candidateSources(29, InputProfilePolicy.PROFILE_LOW_LATENCY, false);
+        assertArrayEquals(new int[]{
+                MediaRecorder.AudioSource.VOICE_PERFORMANCE,
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                MediaRecorder.AudioSource.MIC
+        }, lowLatencySources);
+        assertFalse(InputProfilePolicy.isAecRequested(InputProfilePolicy.PROFILE_LOW_LATENCY, false));
+        assertFalse(InputProfilePolicy.isNsRequested(InputProfilePolicy.PROFILE_LOW_LATENCY, false));
+
+        int[] balancedSources = InputProfilePolicy.candidateSources(34, InputProfilePolicy.PROFILE_BALANCED, false);
+        assertArrayEquals(new int[]{
+                MediaRecorder.AudioSource.MIC,
+                MediaRecorder.AudioSource.VOICE_RECOGNITION
+        }, balancedSources);
+        assertFalse(InputProfilePolicy.isAecRequested(InputProfilePolicy.PROFILE_BALANCED, false));
+        assertTrue(InputProfilePolicy.isNsRequested(InputProfilePolicy.PROFILE_BALANCED, false));
+    }
 }

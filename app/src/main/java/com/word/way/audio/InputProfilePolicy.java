@@ -31,6 +31,29 @@ public final class InputProfilePolicy {
      * Ordered candidate audio sources based on API level and user profile preference.
      */
     public static int[] candidateSources(int apiLevel, int profile) {
+        return candidateSources(apiLevel, profile, false);
+    }
+
+    /**
+     * Ordered candidate audio sources based on API level, user profile preference,
+     * and whether audio is routing to the device's built-in loudspeaker.
+     *
+     * <p>When output is the built-in speaker, phone mic and speaker share the chassis
+     * only centimeters apart. In this case, {@link MediaRecorder.AudioSource#VOICE_COMMUNICATION}
+     * is required to activate platform hardware Acoustic Echo Cancellation (AEC), preventing
+     * runaway howling loops regardless of the user profile.
+     *
+     * <p>When output is headphones, external speakers, or Bluetooth ({@code isBuiltinSpeaker == false}),
+     * {@link #PROFILE_LOW_LATENCY} retains {@link MediaRecorder.AudioSource#VOICE_PERFORMANCE} on API 29+
+     * to provide ultra-low latency without echo-cancellation filtering.
+     */
+    public static int[] candidateSources(int apiLevel, int profile, boolean isBuiltinSpeaker) {
+        if (isBuiltinSpeaker) {
+            return new int[]{
+                    MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+                    MediaRecorder.AudioSource.MIC
+            };
+        }
         switch (profile) {
             case PROFILE_BALANCED:
                 // Balanced: MIC (1) or VOICE_RECOGNITION (6)
@@ -63,11 +86,19 @@ public final class InputProfilePolicy {
     }
 
     public static boolean isAecRequested(int profile) {
-        return profile == PROFILE_NOISY_ROOM;
+        return isAecRequested(profile, false);
+    }
+
+    public static boolean isAecRequested(int profile, boolean isBuiltinSpeaker) {
+        return isBuiltinSpeaker || profile == PROFILE_NOISY_ROOM;
     }
 
     public static boolean isNsRequested(int profile) {
-        return profile == PROFILE_BALANCED || profile == PROFILE_NOISY_ROOM;
+        return isNsRequested(profile, false);
+    }
+
+    public static boolean isNsRequested(int profile, boolean isBuiltinSpeaker) {
+        return isBuiltinSpeaker || profile == PROFILE_BALANCED || profile == PROFILE_NOISY_ROOM;
     }
 
     public static String sourceName(int source) {
