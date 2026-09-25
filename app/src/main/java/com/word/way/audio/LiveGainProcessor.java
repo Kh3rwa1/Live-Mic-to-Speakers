@@ -12,20 +12,20 @@ import java.util.Arrays;
  *       ramp or soft limiting are applied. Feedback is detected using multi-criteria block analysis
  *       over a running 500 ms history window (50 blocks at 10 ms/block):
  *       <ul>
- *         <li><b>Loudness:</b> Block RMS must be &ge; {@link #FEEDBACK_RMS_THRESHOLD} (0.30 FS, -10.5 dBFS)
- *             and block peak must be &ge; {@link #FEEDBACK_PEAK_THRESHOLD} (0.60 FS, -4.4 dBFS).</li>
+ *         <li><b>Loudness:</b> Block RMS must be &ge; {@link #FEEDBACK_RMS_THRESHOLD} (0.25 FS, -12 dBFS)
+ *             and block peak must be &ge; {@link #FEEDBACK_PEAK_THRESHOLD} (0.50 FS, -6 dBFS).</li>
  *         <li><b>Zero-Crossing Tonality:</b> Zero crossings per block must match the running mean within
  *             {@link #TONAL_ZCR_TOLERANCE} (15%), with running mean &ge; {@link #MIN_TONAL_CROSSINGS} (2.0 crossings/block,
  *             i.e. &ge; 100 Hz to reject DC and sub-rumble) and variance &le; {@link #MAX_TONAL_VARIANCE} (5.0).</li>
  *         <li><b>Pitch Stability:</b> Dominant frequency is estimated per block using sub-sample interpolated
  *             zero-crossing intervals. Relative frequency standard deviation across the history window must be &le;
- *             {@link #MAX_FREQ_REL_DEVIATION} (0.008 = 0.8%, ~14 cents). Acoustic feedback holds a fixed electromechanical
- *             room resonance with near-zero drift (< 0.3%), whereas vocal vibrato (&plusmn;30-60 cents, relative std dev > 1.8%)
+ *             {@link #MAX_FREQ_REL_DEVIATION} (0.012 = 1.2%, ~21 cents). Acoustic feedback holds a fixed electromechanical
+ *             room resonance with near-zero drift (< 0.5%), whereas vocal vibrato (&plusmn;35-60 cents, relative std dev > 1.8%)
  *             and speech pitch modulation drift significantly.</li>
  *         <li><b>Spectral Purity:</b> Evaluated via a second-order Goertzel resonator tuned to the dominant frequency.
- *             The concentrated energy ratio must be &ge; {@link #FEEDBACK_MIN_PURITY} (0.80 = 80%). Pure acoustic feedback
- *             concentrates &ge; 95% of its energy into a single resonant sinusoid, whereas voiced singing and held vowels
- *             distribute substantial energy across vocal tract formants and harmonics (spectral purity &le; 0.75).</li>
+ *             The concentrated energy ratio must be &ge; {@link #FEEDBACK_MIN_PURITY} (0.78 = 78%). Pure and distorted acoustic
+ *             feedback concentrates &ge; 80% of its energy into the resonant tone and its immediate skirts, whereas voiced singing
+ *             and held vowels distribute substantial energy across vocal tract formants and harmonics (spectral purity &le; 0.75).</li>
  *         <li><b>Leaky Score:</b> Blocks meeting all four criteria increment score by {@link #SCORE_INCREMENT} (+2);
  *             other blocks decrement score by {@link #SCORE_DECREMENT} (-1). Mute triggers at {@link #TRIGGER_SCORE} (200,
  *             equivalent to ~1.0 s of continuous feedback) with ceiling {@link #SCORE_MAX} (250).</li>
@@ -59,11 +59,11 @@ public final class LiveGainProcessor {
     /** Start-up ramp duration from silence to user gain in milliseconds. */
     public static final long RAMP_MS = 300L;
 
-    /** Minimum RMS threshold for a block to be considered loud (approx. -10.5 dBFS). */
-    static final float FEEDBACK_RMS_THRESHOLD = FULL_SCALE * 0.30f;
+    /** Minimum RMS threshold for a block to be considered loud (approx. -12 dBFS). */
+    static final float FEEDBACK_RMS_THRESHOLD = FULL_SCALE * 0.25f;
 
-    /** Minimum peak threshold for a block to be considered loud. */
-    static final float FEEDBACK_PEAK_THRESHOLD = FULL_SCALE * 0.60f;
+    /** Minimum peak threshold for a block to be considered loud (approx. -6 dBFS). */
+    static final float FEEDBACK_PEAK_THRESHOLD = FULL_SCALE * 0.50f;
 
     /** Relative tolerance around the running mean zero-crossing count to classify a block as tonal. */
     static final float TONAL_ZCR_TOLERANCE = 0.15f;
@@ -83,14 +83,14 @@ public final class LiveGainProcessor {
      * Pure sinusoids mathematically have purity >= 0.95 (up to 1.0), while voiced speech and sung
      * vowels with formant harmonics have purity <= 0.75, and noise has purity <= 0.05.
      */
-    static final float FEEDBACK_MIN_PURITY = 0.80f;
+    static final float FEEDBACK_MIN_PURITY = 0.78f;
 
     /**
-     * Maximum relative frequency standard deviation across the history window (< 0.8%, ~14 cents).
-     * Feedback resonance maintains near-zero pitch deviation (< 0.3%), whereas vocal vibrato drifts
-     * by 30-60 cents (relative std dev > 1.8%) and speech pitch drifts continuously.
+     * Maximum relative frequency standard deviation across the history window (&le; 1.2%, ~21 cents).
+     * Acoustic feedback holds a fixed room resonance with small flutter (&le; 1.0%), whereas vocal
+     * vibrato (&plusmn;35-60 cents, relative std dev &ge; 1.8%) and speech pitch drift continuously.
      */
-    static final float MAX_FREQ_REL_DEVIATION = 0.008f;
+    static final float MAX_FREQ_REL_DEVIATION = 0.012f;
 
     /** Leaky score increment when a block is both loud and tonal. */
     static final int SCORE_INCREMENT = 2;

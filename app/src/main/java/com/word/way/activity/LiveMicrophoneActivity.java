@@ -562,7 +562,10 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             binding.lottieSoundwave.setVisibility(View.VISIBLE);
         }
         binding.tvStartStopNew.setText(R.string.quality_mic_off);
-        if (binding.studioFeedback != null) binding.studioFeedback.setText(R.string.studio_ready);
+        if (binding.studioFeedback != null) {
+            binding.studioFeedback.setText(R.string.studio_ready);
+            binding.studioFeedback.setVisibility(View.GONE);
+        }
         ToolUi.level(this, 0);
         if (binding.studioOutputRoute != null) binding.studioOutputRoute.setText(R.string.studio_output_idle);
         if (binding.studioBluetoothNotice != null) binding.studioBluetoothNotice.setVisibility(View.GONE);
@@ -583,7 +586,11 @@ public class LiveMicrophoneActivity extends AppCompatActivity {
             case CANCELLED: message = R.string.live_error_cancelled; break;
             default: message = R.string.quality_mic_error;
         }
-        if (binding.studioFeedback != null) binding.studioFeedback.setText(message);
+        if (binding.studioFeedback != null) {
+            binding.studioFeedback.setText(message);
+            binding.studioFeedback.setVisibility(View.VISIBLE);
+        }
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
     void renderMeter(int peak, String route) {
